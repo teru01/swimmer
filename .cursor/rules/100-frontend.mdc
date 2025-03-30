@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+フロントエンドはReactであり、src/**以下に含まれている。
