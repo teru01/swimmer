@@ -1,49 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [contexts, setContexts] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  useEffect(() => {
+    async function loadContexts() {
+      try {
+        const result = await invoke<string[]>("get_kube_contexts");
+        setContexts(result);
+        setError(null); // Clear previous errors
+      } catch (err) {
+        console.error("Error fetching kube contexts:", err);
+        setError(typeof err === 'string' ? err : "An unknown error occurred.");
+      }
+    }
+    loadContexts();
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   return (
     <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+      <h1>Available Kubernetes Contexts</h1>
 
-      <div className="row">
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+      {error && (
+        <div className="error">
+          <p>Error loading contexts:</p>
+          <pre>{error}</pre>
+        </div>
+      )}
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
+      {contexts.length > 0 ? (
+        <ul>
+          {contexts.map((context) => (
+            <li key={context}>{context}</li>
+          ))}
+        </ul>
+      ) : (
+        !error && <p>Loading contexts...</p>
+      )}
     </main>
   );
 }
