@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
+import { commands } from "./api";
 
 function App() {
   const [contexts, setContexts] = useState<string[]>([]);
@@ -10,7 +9,7 @@ function App() {
   useEffect(() => {
     async function loadContexts() {
       try {
-        const result = await invoke<string[]>("get_kube_contexts");
+        const result = await commands.getKubeContexts();
         setContexts(result);
         setError(null); // Clear previous errors
       } catch (err) {
