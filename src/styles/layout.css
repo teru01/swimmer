@@ -1,0 +1,215 @@
+/* 3ペインレイアウト用のスタイル */
+
+.main-layout {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 左ペイン：コンテキスト一覧 */
+.contexts-pane-container {
+  width: 250px;
+  min-width: 250px;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+  background-color: #f8f9fa;
+}
+
+.contexts-pane {
+  padding: 15px;
+}
+
+.contexts-pane h2 {
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.contexts-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.context-item {
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.context-item:hover {
+  background-color: #e9ecef;
+}
+
+.context-item.selected {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.error {
+  color: #dc3545;
+  padding: 10px;
+  border: 1px solid #dc3545;
+  border-radius: 4px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+/* 中央ペイン：クラスタ情報 */
+.cluster-info-pane-container {
+  flex: 1;
+  overflow-y: auto;
+  border-right: 1px solid #ddd;
+}
+
+.cluster-info-pane {
+  padding: 20px;
+}
+
+.cluster-info-pane h2 {
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.cluster-info-content h3 {
+  margin-bottom: 20px;
+  color: #0d6efd;
+}
+
+.info-section {
+  margin-bottom: 25px;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+}
+
+.info-section h4 {
+  margin-bottom: 10px;
+  color: #495057;
+}
+
+.dummy-data p {
+  margin-bottom: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dashed #e9ecef;
+}
+
+.no-context {
+  color: #6c757d;
+  font-style: italic;
+  margin-top: 30px;
+  text-align: center;
+}
+
+/* 右ペイン：AIチャット */
+.chat-pane-container {
+  width: 350px;
+  min-width: 350px;
+  overflow-y: auto;
+  background-color: #f8f9fa;
+}
+
+.chat-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 15px;
+}
+
+.chat-pane h2 {
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+.message {
+  margin-bottom: 15px;
+  max-width: 90%;
+  border-radius: 10px;
+  padding: 10px 15px;
+  position: relative;
+}
+
+.user-message {
+  background-color: #0d6efd;
+  color: white;
+  align-self: flex-end;
+  margin-left: auto;
+}
+
+.assistant-message {
+  background-color: #e9ecef;
+  color: #212529;
+}
+
+.message-content p {
+  margin: 5px 0;
+}
+
+.message-timestamp {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: right;
+  margin-top: 5px;
+}
+
+.assistant-message .message-timestamp {
+  color: #6c757d;
+}
+
+.chat-input-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-input {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  resize: none;
+}
+
+.send-button {
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 15px;
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.send-button:hover {
+  background-color: #0b5ed7;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 1024px) {
+  .main-layout {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .contexts-pane-container,
+  .cluster-info-pane-container,
+  .chat-pane-container {
+    width: 100%;
+    height: auto;
+    min-height: 300px;
+    max-height: 500px;
+  }
+} 
