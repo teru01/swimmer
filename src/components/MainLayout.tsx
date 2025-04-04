@@ -7,9 +7,8 @@ import ChatPane from './ChatPane';
 
 /**
  * Main Layout Component
- * - Top: Cluster selection tabs
- * - Left: Context hierarchy list
- * - Center (split): Cluster information + Terminal
+ * - Left: Context hierarchy list (full height)
+ * - Center: Cluster tabs on top, Cluster information and Terminal below
  * - Right: AI chat
  */
 function MainLayout() {
@@ -33,21 +32,23 @@ function MainLayout() {
 
   return (
     <div className="main-layout">
-      {/* Cluster tabs */}
-      <ClusterTabs
-        clusters={clusters}
-        activeCluster={selectedCluster}
-        onClusterSelect={handleClusterSelect}
-      />
-      
       <div className="content-area">
-        {/* Left pane: Context hierarchy */}
+        {/* Left pane: Context hierarchy (full height) */}
         <div className="contexts-pane-container">
           <ContextsPane onContextSelect={handleContextSelect} />
         </div>
         
-        {/* Center area: Cluster info + Terminal */}
+        {/* Center area: Cluster tabs + info + Terminal */}
         <div className="center-area">
+          {/* Cluster tabs */}
+          <div className="center-tabs">
+            <ClusterTabs
+              clusters={clusters}
+              activeCluster={selectedCluster}
+              onClusterSelect={handleClusterSelect}
+            />
+          </div>
+          
           {/* Center top: Cluster information */}
           <div className="cluster-info-pane-container">
             <ClusterInfoPane selectedContext={selectedContext} />

@@ -17,37 +17,6 @@ body {
   overflow: hidden;
 }
 
-/* 上部クラスタタブ */
-.cluster-tabs {
-  display: flex;
-  border-bottom: 1px solid #ddd;
-  background-color: #f0f0f0;
-  padding: 3px 3px 0 3px;
-}
-
-.cluster-tab {
-  padding: 6px 12px;
-  cursor: pointer;
-  border: 1px solid #ddd;
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
-  margin-right: 2px;
-  background-color: #f8f9fa;
-  font-size: 12px;
-}
-
-.cluster-tab:hover {
-  background-color: #e9ecef;
-}
-
-.cluster-tab.active {
-  background-color: #fff;
-  border-bottom-color: #fff;
-  position: relative;
-  z-index: 1;
-  font-weight: 600;
-}
-
 /* メインコンテンツエリア */
 .content-area {
   display: flex;
@@ -56,7 +25,7 @@ body {
   min-height: 0; /* flexboxのバグ対策 */
 }
 
-/* 左ペイン：コンテキスト階層一覧 */
+/* 左ペイン：コンテキスト階層一覧 (フルハイト) */
 .contexts-pane-container {
   width: 220px;
   min-width: 180px;
@@ -64,6 +33,7 @@ body {
   border-right: 1px solid #ddd;
   overflow-y: auto;
   background-color: #f8f9fa;
+  height: 100%; /* フルハイトに */
 }
 
 .contexts-pane {
@@ -176,7 +146,7 @@ body {
   font-size: 11px;
 }
 
-/* 中央エリア：クラスタ情報とターミナル */
+/* 中央エリア：クラスタタブ + クラスタ情報 + ターミナル */
 .center-area {
   display: flex;
   flex-direction: column;
@@ -185,7 +155,42 @@ body {
   min-width: 300px;
 }
 
-/* 中央上部：クラスタ情報 */
+/* 中央上部：クラスタタブ */
+.center-tabs {
+  border-bottom: 1px solid #ddd;
+  background-color: #f0f0f0;
+}
+
+/* クラスタタブ */
+.cluster-tabs {
+  display: flex;
+  padding: 3px 3px 0 3px;
+}
+
+.cluster-tab {
+  padding: 6px 12px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  margin-right: 2px;
+  background-color: #f8f9fa;
+  font-size: 12px;
+}
+
+.cluster-tab:hover {
+  background-color: #e9ecef;
+}
+
+.cluster-tab.active {
+  background-color: #fff;
+  border-bottom-color: #fff;
+  position: relative;
+  z-index: 1;
+  font-weight: 600;
+}
+
+/* 中央中部：クラスタ情報 */
 .cluster-info-pane-container {
   flex: 2;
   overflow-y: auto;
@@ -283,6 +288,7 @@ body {
   overflow-y: auto;
   background-color: #f8f9fa;
   border-left: 1px solid #ddd;
+  height: 100%; /* フルハイトに */
 }
 
 .chat-pane {
@@ -372,24 +378,6 @@ body {
 .send-button:hover {
   background-color: #0356b6;
 }
-
-/* レスポンシブデザインを削除 - 常に横並びレイアウトを維持 */
-/* @media (max-width: 1024px) {
-  .content-area {
-    flex-direction: column;
-  }
-  
-  .contexts-pane-container,
-  .chat-pane-container {
-    width: 100%;
-    height: auto;
-    min-height: 250px;
-  }
-  
-  .center-area {
-    min-height: 600px;
-  }
-} */
 
 /* ターミナル入力スタイル */
 .terminal-input-form {
