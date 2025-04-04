@@ -2,12 +2,49 @@
 
 .main-layout {
   display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100vh;
   overflow: hidden;
 }
 
-/* 左ペイン：コンテキスト一覧 */
+/* 上部クラスタタブ */
+.cluster-tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  background-color: #f0f0f0;
+  padding: 5px 5px 0 5px;
+}
+
+.cluster-tab {
+  padding: 8px 15px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  margin-right: 2px;
+  background-color: #f8f9fa;
+}
+
+.cluster-tab:hover {
+  background-color: #e9ecef;
+}
+
+.cluster-tab.active {
+  background-color: #fff;
+  border-bottom-color: #fff;
+  position: relative;
+  z-index: 1;
+}
+
+/* メインコンテンツエリア */
+.content-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 左ペイン：コンテキスト階層一覧 */
 .contexts-pane-container {
   width: 250px;
   min-width: 250px;
@@ -33,12 +70,45 @@
   margin: 0;
 }
 
-.context-item {
-  padding: 8px 12px;
-  margin-bottom: 4px;
-  border-radius: 4px;
+.context-group {
+  margin-bottom: 10px;
+}
+
+.context-group-header {
+  font-weight: bold;
+  padding: 5px 0;
   cursor: pointer;
-  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.context-group-header::before {
+  content: "---";
+  margin-right: 5px;
+  color: #666;
+}
+
+.context-item {
+  padding: 5px 0 5px 20px;
+  margin: 2px 0;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.context-item::before {
+  content: "|-";
+  margin-right: 5px;
+  color: #666;
+}
+
+.context-item.nested {
+  padding-left: 40px;
+}
+
+.context-item.nested::before {
+  content: "  |-";
 }
 
 .context-item:hover {
@@ -59,11 +129,19 @@
   font-size: 0.9rem;
 }
 
-/* 中央ペイン：クラスタ情報 */
-.cluster-info-pane-container {
+/* 中央エリア：クラスタ情報とターミナル */
+.center-area {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  overflow: hidden;
+}
+
+/* 中央上部：クラスタ情報 */
+.cluster-info-pane-container {
+  flex: 2;
   overflow-y: auto;
-  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
 }
 
 .cluster-info-pane {
@@ -107,12 +185,37 @@
   text-align: center;
 }
 
+/* 中央下部：ターミナル */
+.terminal-container {
+  flex: 1;
+  min-height: 150px;
+  background-color: #212529;
+  color: #f8f9fa;
+  padding: 10px;
+  overflow-y: auto;
+  font-family: monospace;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px;
+  border-bottom: 1px solid #444;
+  margin-bottom: 10px;
+}
+
+.terminal-content {
+  padding: 5px;
+  white-space: pre-wrap;
+}
+
 /* 右ペイン：AIチャット */
 .chat-pane-container {
   width: 350px;
   min-width: 350px;
   overflow-y: auto;
   background-color: #f8f9fa;
+  border-left: 1px solid #ddd;
 }
 
 .chat-pane {
@@ -199,17 +302,50 @@
 
 /* レスポンシブデザイン */
 @media (max-width: 1024px) {
-  .main-layout {
+  .content-area {
     flex-direction: column;
-    height: auto;
   }
   
   .contexts-pane-container,
-  .cluster-info-pane-container,
   .chat-pane-container {
     width: 100%;
     height: auto;
-    min-height: 300px;
-    max-height: 500px;
+    min-height: 250px;
   }
+  
+  .center-area {
+    min-height: 600px;
+  }
+}
+
+/* ターミナル入力スタイル */
+.terminal-input-form {
+  margin-top: 10px;
+  padding-top: 5px;
+  border-top: 1px solid #444;
+}
+
+.terminal-input-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.terminal-prompt {
+  color: #0f0;
+  margin-right: 5px;
+  font-weight: bold;
+}
+
+.terminal-input {
+  flex: 1;
+  background-color: transparent;
+  border: none;
+  color: #fff;
+  font-family: monospace;
+  outline: none;
+  caret-color: #fff;
+}
+
+.terminal-input::placeholder {
+  color: #999;
 } 
