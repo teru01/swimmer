@@ -5,7 +5,7 @@ interface ContextsPaneProps {
   onContextSelect?: (context: string) => void;
 }
 
-// コンテキストの階層構造を表現する型
+// Context hierarchy structure type
 interface ContextGroup {
   name: string;
   contexts: {
@@ -15,7 +15,7 @@ interface ContextGroup {
 }
 
 /**
- * 左ペイン：Kubernetes コンテキスト一覧を階層構造で表示するコンポーネント
+ * Left Pane: Kubernetes contexts list with hierarchical structure
  */
 function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const [contexts, setContexts] = useState<string[]>([]);
@@ -24,15 +24,15 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const [selectedContext, setSelectedContext] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   
-  // コンテキスト一覧を取得してグループ化
+  // Fetch and group contexts
   useEffect(() => {
     async function loadContexts() {
       try {
         const result = await commands.getKubeContexts();
         setContexts(result);
         
-        // コンテキスト名を解析して階層構造に変換（ダミー実装）
-        // 実際の実装では kubeconfig から適切に情報を取得する
+        // Parse context names into hierarchical structure (mock implementation)
+        // In a real implementation, this would parse kubeconfig properly
         const groups: ContextGroup[] = [
           {
             name: 'qa',
@@ -64,7 +64,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         ];
         
         setContextGroups(groups);
-        setExpandedGroups(['qa']); // 初期状態では qa グループを展開
+        setExpandedGroups(['qa']); // Initially expand qa group
         
         if (result.length > 0 && !selectedContext) {
           setSelectedContext(result[0]);
@@ -80,7 +80,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     loadContexts();
   }, [onContextSelect, selectedContext]);
 
-  // コンテキストグループの展開/折りたたみトグル
+  // Toggle context group expansion
   const toggleGroup = (groupName: string) => {
     setExpandedGroups(prev => {
       if (prev.includes(groupName)) {
@@ -91,7 +91,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     });
   };
 
-  // コンテキスト選択ハンドラー
+  // Context selection handler
   const handleContextSelect = (contextPath: string) => {
     setSelectedContext(contextPath);
     onContextSelect?.(contextPath);
@@ -116,7 +116,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                 className="context-group-header" 
                 onClick={() => toggleGroup(group.name)}
               >
-                {group.name}
+                {expandedGroups.includes(group.name) ? '▼ ' : '▶ '}{group.name}
               </div>
               
               {expandedGroups.includes(group.name) && (

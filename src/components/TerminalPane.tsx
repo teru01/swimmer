@@ -5,35 +5,35 @@ interface TerminalPaneProps {
 }
 
 /**
- * ターミナルパネルコンポーネント
+ * Terminal pane component
  */
 function TerminalPane({ selectedContext }: TerminalPaneProps) {
   const [terminalOutput, setTerminalOutput] = useState<string[]>([
-    'ターミナルセッションが開始されました',
-    'ここでコマンドを実行できます...',
+    'Terminal session started',
+    'You can run commands here...',
   ]);
   const [inputCommand, setInputCommand] = useState('');
   const terminalContentRef = useRef<HTMLDivElement>(null);
 
-  // ターミナル出力が更新されたら最下部にスクロール
+  // Scroll to bottom when terminal output updates
   useEffect(() => {
     if (terminalContentRef.current) {
       terminalContentRef.current.scrollTop = terminalContentRef.current.scrollHeight;
     }
   }, [terminalOutput]);
 
-  // コマンド送信処理（ダミー実装）
+  // Command submission handler (mock implementation)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputCommand.trim()) return;
 
-    // 実行したコマンドを出力に追加
+    // Add the executed command to output
     const newOutput = [...terminalOutput, `$ ${inputCommand}`];
     
-    // 選択されたコンテキストに応じたダミー応答
+    // Mock response based on selected context
     if (selectedContext) {
       if (inputCommand.includes('kubectl')) {
-        newOutput.push(`実行コンテキスト: ${selectedContext}`);
+        newOutput.push(`Context: ${selectedContext}`);
         
         if (inputCommand.includes('get pods')) {
           newOutput.push('NAME                     READY   STATUS    RESTARTS   AGE');
@@ -44,13 +44,13 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
           newOutput.push('node-1        Ready    master   90d     v1.25.0');
           newOutput.push('node-2        Ready    <none>   90d     v1.25.0');
         } else {
-          newOutput.push('コマンドは正常に実行されました');
+          newOutput.push('Command executed successfully');
         }
       } else {
-        newOutput.push('> コマンドが実行されました');
+        newOutput.push('> Command executed');
       }
     } else {
-      newOutput.push('エラー: Kubernetesコンテキストが選択されていません');
+      newOutput.push('Error: No Kubernetes context selected');
     }
     
     setTerminalOutput(newOutput);
@@ -60,9 +60,9 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
   return (
     <div className="terminal-container">
       <div className="terminal-header">
-        <span>ターミナル</span>
+        <span>Terminal</span>
         <span>
-          {selectedContext ? `コンテキスト: ${selectedContext}` : 'コンテキスト未選択'}
+          {selectedContext ? `Context: ${selectedContext}` : 'No context selected'}
         </span>
       </div>
       <div className="terminal-content" ref={terminalContentRef}>
@@ -80,7 +80,7 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
             value={inputCommand}
             onChange={(e) => setInputCommand(e.target.value)}
             className="terminal-input"
-            placeholder="コマンドを入力..."
+            placeholder="Enter command..."
           />
         </div>
       </form>

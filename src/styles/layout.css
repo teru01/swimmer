@@ -1,5 +1,11 @@
 /* 3ペインレイアウト用のスタイル */
 
+/* 全体のフォントサイズを小さく調整 */
+body {
+  font-size: 13px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
 .main-layout {
   display: flex;
   flex-direction: column;
@@ -13,17 +19,18 @@
   display: flex;
   border-bottom: 1px solid #ddd;
   background-color: #f0f0f0;
-  padding: 5px 5px 0 5px;
+  padding: 3px 3px 0 3px;
 }
 
 .cluster-tab {
-  padding: 8px 15px;
+  padding: 6px 12px;
   cursor: pointer;
   border: 1px solid #ddd;
   border-bottom: none;
   border-radius: 4px 4px 0 0;
   margin-right: 2px;
   background-color: #f8f9fa;
+  font-size: 12px;
 }
 
 .cluster-tab:hover {
@@ -35,6 +42,7 @@
   border-bottom-color: #fff;
   position: relative;
   z-index: 1;
+  font-weight: 600;
 }
 
 /* メインコンテンツエリア */
@@ -54,14 +62,17 @@
 }
 
 .contexts-pane {
-  padding: 15px;
+  padding: 12px;
 }
 
 .contexts-pane h2 {
-  font-size: 1.3rem;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid #eee;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #495057;
 }
 
 .contexts-list {
@@ -70,63 +81,94 @@
   margin: 0;
 }
 
+.context-groups {
+  font-size: 12px;
+}
+
 .context-group {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .context-group-header {
-  font-weight: bold;
-  padding: 5px 0;
+  font-weight: 600;
+  padding: 6px 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
+  background-color: #eee;
+  border-left: 3px solid #ccc;
+  transition: all 0.2s;
+}
+
+.context-group-header:hover {
+  background-color: #e1e1e1;
+  border-left-color: #aaa;
 }
 
 .context-group-header::before {
-  content: "---";
+  content: "—";
   margin-right: 5px;
   color: #666;
 }
 
+.context-group-items {
+  background-color: #fcfcfc;
+  border-left: 3px solid #eee;
+}
+
 .context-item {
-  padding: 5px 0 5px 20px;
-  margin: 2px 0;
+  padding: 5px 8px 5px 20px;
+  margin: 1px 0;
   cursor: pointer;
-  border-radius: 4px;
   display: flex;
   align-items: center;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
 }
 
 .context-item::before {
   content: "|-";
   margin-right: 5px;
-  color: #666;
+  color: #999;
+  font-family: monospace;
 }
 
 .context-item.nested {
-  padding-left: 40px;
+  padding-left: 35px;
+  font-size: 11px;
+  color: #666;
 }
 
 .context-item.nested::before {
   content: "  |-";
+  color: #aaa;
 }
 
 .context-item:hover {
   background-color: #e9ecef;
+  border-left-color: #adb5bd;
 }
 
 .context-item.selected {
-  background-color: #0d6efd;
-  color: white;
+  background-color: #e7f3ff;
+  color: #0366d6;
+  border-left-color: #0366d6;
+  font-weight: 500;
+}
+
+.context-item.selected::before {
+  color: #0366d6;
 }
 
 .error {
   color: #dc3545;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid #dc3545;
   border-radius: 4px;
-  margin-top: 10px;
-  font-size: 0.9rem;
+  margin-top: 8px;
+  font-size: 11px;
 }
 
 /* 中央エリア：クラスタ情報とターミナル */
@@ -145,74 +187,91 @@
 }
 
 .cluster-info-pane {
-  padding: 20px;
+  padding: 15px;
 }
 
 .cluster-info-pane h2 {
-  font-size: 1.3rem;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid #eee;
-}
-
-.cluster-info-content h3 {
-  margin-bottom: 20px;
-  color: #0d6efd;
-}
-
-.info-section {
-  margin-bottom: 25px;
-  padding: 15px;
-  border-radius: 8px;
-  background-color: #f8f9fa;
-}
-
-.info-section h4 {
-  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   color: #495057;
 }
 
-.dummy-data p {
+.cluster-info-content h3 {
+  margin-bottom: 15px;
+  color: #0366d6;
+  font-size: 13px;
+}
+
+.info-section {
+  margin-bottom: 15px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  border: 1px solid #eee;
+}
+
+.info-section h4 {
   margin-bottom: 8px;
-  padding: 5px 0;
+  color: #495057;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.dummy-data p {
+  margin-bottom: 6px;
+  padding: 4px 0;
   border-bottom: 1px dashed #e9ecef;
+  font-size: 12px;
 }
 
 .no-context {
   color: #6c757d;
   font-style: italic;
-  margin-top: 30px;
+  margin-top: 20px;
   text-align: center;
+  font-size: 12px;
 }
 
 /* 中央下部：ターミナル */
 .terminal-container {
   flex: 1;
-  min-height: 150px;
+  min-height: 130px;
   background-color: #212529;
   color: #f8f9fa;
-  padding: 10px;
+  padding: 8px;
   overflow-y: auto;
-  font-family: monospace;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
 }
 
 .terminal-header {
   display: flex;
   justify-content: space-between;
-  padding: 5px;
+  padding: 4px;
   border-bottom: 1px solid #444;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #aaa;
 }
 
 .terminal-content {
-  padding: 5px;
+  padding: 4px;
   white-space: pre-wrap;
+}
+
+.terminal-line {
+  line-height: 1.4;
 }
 
 /* 右ペイン：AIチャット */
 .chat-pane-container {
-  width: 350px;
-  min-width: 350px;
+  width: 300px;
+  min-width: 300px;
   overflow-y: auto;
   background-color: #f8f9fa;
   border-left: 1px solid #ddd;
@@ -222,32 +281,36 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 15px;
+  padding: 12px;
 }
 
 .chat-pane h2 {
-  font-size: 1.3rem;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid #eee;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #495057;
 }
 
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .message {
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   max-width: 90%;
-  border-radius: 10px;
-  padding: 10px 15px;
+  border-radius: 8px;
+  padding: 8px 12px;
   position: relative;
+  font-size: 11px;
 }
 
 .user-message {
-  background-color: #0d6efd;
+  background-color: #0366d6;
   color: white;
   align-self: flex-end;
   margin-left: auto;
@@ -259,14 +322,14 @@
 }
 
 .message-content p {
-  margin: 5px 0;
+  margin: 4px 0;
 }
 
 .message-timestamp {
-  font-size: 0.7rem;
+  font-size: 9px;
   color: rgba(255, 255, 255, 0.7);
   text-align: right;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 
 .assistant-message .message-timestamp {
@@ -280,24 +343,26 @@
 
 .chat-input {
   border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 10px;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
   resize: none;
+  font-size: 11px;
 }
 
 .send-button {
-  background-color: #0d6efd;
+  background-color: #0366d6;
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 8px 15px;
+  border-radius: 6px;
+  padding: 6px 12px;
   cursor: pointer;
   align-self: flex-end;
+  font-size: 11px;
 }
 
 .send-button:hover {
-  background-color: #0b5ed7;
+  background-color: #0356b6;
 }
 
 /* レスポンシブデザイン */
@@ -320,8 +385,8 @@
 
 /* ターミナル入力スタイル */
 .terminal-input-form {
-  margin-top: 10px;
-  padding-top: 5px;
+  margin-top: 8px;
+  padding-top: 4px;
   border-top: 1px solid #444;
 }
 
@@ -341,11 +406,12 @@
   background-color: transparent;
   border: none;
   color: #fff;
-  font-family: monospace;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
   outline: none;
   caret-color: #fff;
 }
 
 .terminal-input::placeholder {
-  color: #999;
+  color: #777;
 } 

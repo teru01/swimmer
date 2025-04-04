@@ -1,5 +1,5 @@
 /**
- * 中央ペイン：クラスタ情報を表示するコンポーネント
+ * Center Pane: Component to display cluster information
  */
 function ClusterInfoPane({ selectedContext }: { selectedContext: string | null }) {
   return (

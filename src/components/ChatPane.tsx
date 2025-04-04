@@ -8,13 +8,13 @@ type Message = {
 };
 
 /**
- * 右ペイン：AIチャットインターフェースを表示するコンポーネント
+ * Right Pane: AI chat interface component
  */
 function ChatPane({ selectedContext }: { selectedContext: string | null }) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: 'こんにちは！Kubernetesクラスタについて質問があればお答えします。',
+      text: 'Hello! Ask me anything about your Kubernetes cluster.',
       sender: 'assistant',
       timestamp: new Date()
     }
@@ -26,7 +26,7 @@ function ChatPane({ selectedContext }: { selectedContext: string | null }) {
     
     if (!inputText.trim()) return;
     
-    // ユーザーメッセージを追加
+    // Add user message
     const userMessage: Message = {
       id: messages.length + 1,
       text: inputText,
@@ -37,11 +37,11 @@ function ChatPane({ selectedContext }: { selectedContext: string | null }) {
     setMessages([...messages, userMessage]);
     setInputText('');
     
-    // ダミーのアシスタント応答（実際にはAI APIを呼び出す）
+    // Mock assistant response (in production would call AI API)
     setTimeout(() => {
       const botMessage: Message = {
         id: messages.length + 2,
-        text: `"${inputText}" についての情報ですね。${selectedContext || '現在のコンテキスト'}に関連する情報を調べています...\n\nこれはダミー応答です。実際にはここでAIモデルからのレスポンスが表示されます。`,
+        text: `Regarding "${inputText}". I'm looking up information related to ${selectedContext || 'the current context'}...\n\nThis is a mock response. In production, an AI model would provide a real answer here.`,
         sender: 'assistant',
         timestamp: new Date()
       };
@@ -76,11 +76,11 @@ function ChatPane({ selectedContext }: { selectedContext: string | null }) {
         <textarea 
           value={inputText}
           onChange={e => setInputText(e.target.value)}
-          placeholder="K8sクラスタについて質問してください..."
+          placeholder="Ask a question about your K8s cluster..."
           className="chat-input"
           rows={3}
         />
-        <button type="submit" className="send-button">送信</button>
+        <button type="submit" className="send-button">Send</button>
       </form>
     </div>
   );
