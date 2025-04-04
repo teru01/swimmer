@@ -7,7 +7,7 @@ interface ClusterTabsProps {
 }
 
 /**
- * 上部のクラスタタブを表示するコンポーネント
+ * Component to display cluster tabs at the top
  */
 function ClusterTabs({ clusters, activeCluster, onClusterSelect }: ClusterTabsProps) {
   return (

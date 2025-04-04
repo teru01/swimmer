@@ -4,6 +4,9 @@
 body {
   font-size: 13px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .main-layout {
@@ -50,12 +53,14 @@ body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  min-height: 0; /* flexboxのバグ対策 */
 }
 
 /* 左ペイン：コンテキスト階層一覧 */
 .contexts-pane-container {
-  width: 250px;
-  min-width: 250px;
+  width: 220px;
+  min-width: 180px;
+  flex-shrink: 0;
   border-right: 1px solid #ddd;
   overflow-y: auto;
   background-color: #f8f9fa;
@@ -177,6 +182,7 @@ body {
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  min-width: 300px;
 }
 
 /* 中央上部：クラスタ情報 */
@@ -184,6 +190,7 @@ body {
   flex: 2;
   overflow-y: auto;
   border-bottom: 1px solid #ddd;
+  min-height: 150px;
 }
 
 .cluster-info-pane {
@@ -270,8 +277,9 @@ body {
 
 /* 右ペイン：AIチャット */
 .chat-pane-container {
-  width: 300px;
-  min-width: 300px;
+  width: 250px;
+  min-width: 200px;
+  flex-shrink: 0;
   overflow-y: auto;
   background-color: #f8f9fa;
   border-left: 1px solid #ddd;
@@ -365,8 +373,8 @@ body {
   background-color: #0356b6;
 }
 
-/* レスポンシブデザイン */
-@media (max-width: 1024px) {
+/* レスポンシブデザインを削除 - 常に横並びレイアウトを維持 */
+/* @media (max-width: 1024px) {
   .content-area {
     flex-direction: column;
   }
@@ -381,7 +389,7 @@ body {
   .center-area {
     min-height: 600px;
   }
-}
+} */
 
 /* ターミナル入力スタイル */
 .terminal-input-form {
