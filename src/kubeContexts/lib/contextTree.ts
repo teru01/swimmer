@@ -140,3 +140,49 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
 
   return tree;
 };
+
+// Validate folder name
+export const validateFolderName = (
+  contextTree: ContextNode[],
+  name: string,
+  parentId: string | null,
+  nodeId?: string
+): string | null => {
+  // Check for valid format using regex
+  if (!name.match(/^[a-zA-Z0-9\-_]+$/)) {
+    return 'Folder name can only contain letters, numbers, hyphens and underscores';
+  }
+
+  // 親フォルダのノードを検索
+  const findParentNode = (nodes: ContextNode[], id: string | null): ContextNode | null => {
+    if (id === null) return null;
+
+    for (const node of nodes) {
+      if (node.id === id) {
+        return node;
+      }
+      if (node.children) {
+        const found = findParentNode(node.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const parentNode = parentId ? findParentNode(contextTree, parentId) : null;
+
+  // Check for duplicate folder name at the same level
+  const isDuplicate = (nodes: ContextNode[]): boolean => {
+    const sameLevel = parentNode ? parentNode.children || [] : contextTree;
+
+    return sameLevel.some(
+      n => n.type === 'folder' && n.name === name && (!nodeId || n.id !== nodeId) // Ignore current node when renaming
+    );
+  };
+
+  if (isDuplicate(contextTree)) {
+    return 'A folder with this name already exists at this level';
+  }
+
+  return null; // No validation error
+};

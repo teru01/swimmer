@@ -4,7 +4,12 @@ import { commands } from '../../api';
 import * as yaml from 'yaml';
 import { Button, Input, Tag, Dropdown, Menu } from '../../main/ui';
 import '../styles/contextsPane.css';
-import { ContextNode, organizeContextsToTree, findParentFolderId } from '../lib/contextTree';
+import {
+  ContextNode,
+  organizeContextsToTree,
+  findParentFolderId,
+  validateFolderName,
+} from '../lib/contextTree';
 import K8sContextModal from './K8sContextModal';
 import { mockFs, STORAGE_KEY, saveConfig } from '../lib/fs';
 
@@ -86,7 +91,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         tags: availableTags,
       });
     },
-    [contextTree, availableTags, onContextSelect, saveConfig]
+    [contextTree, availableTags, onContextSelect]
   );
 
   // Handle node rename with validation
@@ -96,7 +101,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const parentFolderId = findParentFolderId(contextTree, nodeId);
 
       // Validate the new name
-      const validationError = validateFolderName(newName, parentFolderId, nodeId);
+      const validationError = validateFolderName(contextTree, newName, parentFolderId, nodeId);
       if (validationError) {
         setError(validationError);
         // Keep the node in edit mode by forcing a re-edit after a short delay
@@ -130,7 +135,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         return updatedTree;
       });
     },
-    [availableTags, saveConfig, contextTree]
+    [availableTags, contextTree]
   );
 
   // Handle tree structure changes (after drag & drop)
@@ -163,7 +168,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
       return updatedTree;
     });
-  }, [selectedContextId, availableTags, saveConfig]);
+  }, [selectedContextId, availableTags]);
 
   // Show modal for creating a new context
   const handleNewContextClick = () => {
@@ -271,12 +276,12 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
   // Create a new folder
   const handleNewFolderClick = () => {
-    const parentId = selectedContextId ? findParentFolderId(contextTree, selectedContextId) : null;
+    const parentId = findParentFolderId(contextTree, selectedContextId);
 
-    const newFolderId = `folder-new-${Date.now()}`;
+    const newFolderId = `folder-${crypto.randomUUID()}`;
     const newFolder: ContextNode = {
       id: newFolderId,
-      name: 'New Folder',
+      name: 'NewFolder',
       type: 'folder',
       children: [],
       isExpanded: true,
@@ -329,51 +334,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         treeInstance.edit(newFolderId);
       }
     }, 100);
-  };
-
-  // Validate folder name
-  const validateFolderName = (
-    name: string,
-    parentId: string | null,
-    nodeId?: string
-  ): string | null => {
-    // Check for valid format using regex
-    if (!name.match(/^[a-zA-Z0-9\-_]+$/)) {
-      return 'Folder name can only contain letters, numbers, hyphens and underscores';
-    }
-
-    // 親フォルダのノードを検索
-    const findParentNode = (nodes: ContextNode[], id: string | null): ContextNode | null => {
-      if (id === null) return null;
-
-      for (const node of nodes) {
-        if (node.id === id) {
-          return node;
-        }
-        if (node.children) {
-          const found = findParentNode(node.children, id);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const parentNode = parentId ? findParentNode(contextTree, parentId) : null;
-
-    // Check for duplicate folder name at the same level
-    const isDuplicate = (nodes: ContextNode[]): boolean => {
-      const sameLevel = parentNode ? parentNode.children || [] : contextTree;
-
-      return sameLevel.some(
-        n => n.type === 'folder' && n.name === name && (!nodeId || n.id !== nodeId) // Ignore current node when renaming
-      );
-    };
-
-    if (isDuplicate(contextTree)) {
-      return 'A folder with this name already exists at this level';
-    }
-
-    return null; // No validation error
   };
 
   // Add tag to context
