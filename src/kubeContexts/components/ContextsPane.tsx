@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Tree, NodeRendererProps } from 'react-arborist';
 import { commands } from '../../api';
-// import { fs } from '@tauri-apps/api/fs';
 import * as yaml from 'yaml';
 import { Button, Input, Tag, Dropdown, Menu } from '../../main/ui';
 import '../styles/contextsPane.css';
-import { ContextNode, organizeContextsToTree } from '../contextTree';
+import { ContextNode, organizeContextsToTree } from '../lib/contextTree';
 import K8sContextModal from './K8sContextModal';
+import { mockFs, STORAGE_KEY, saveConfig } from '../lib/fs';
 
 interface ContextsPaneProps {
   onContextSelect?: (context: string) => void;
@@ -27,50 +27,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const [showContextModal, setShowContextModal] = useState(false);
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const treeRef = useRef(null);
-
-  // Configuration storage key
-  const STORAGE_KEY = 'swimmer.contextTree';
-
-  // Mock file system operations
-  const mockFs = useMemo(
-    () => ({
-      // Read file from local storage
-      readTextFile: async (_path: string): Promise<string> => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (!stored) throw new Error('Configuration not found');
-        return stored;
-      },
-
-      // Write file to local storage
-      writeTextFile: async (_path: string, content: string): Promise<void> => {
-        localStorage.setItem(STORAGE_KEY, content);
-      },
-
-      // Create directory (mock - no operation needed)
-      createDir: async (_path: string, _options?: { recursive: boolean }): Promise<void> => {
-        return;
-      },
-    }),
-    []
-  );
-
-  // Save configuration
-  const saveConfig = useCallback(
-    async (config: {
-      contextTree: ContextNode[];
-      lastSelectedContext?: string;
-      tags: string[];
-    }) => {
-      try {
-        const configYaml = yaml.stringify(config);
-        await mockFs.writeTextFile(STORAGE_KEY, configYaml);
-      } catch (err) {
-        console.error('Error saving config:', err);
-        setError('Failed to save configuration');
-      }
-    },
-    [mockFs]
-  );
 
   // Initialize: Load configuration
   useEffect(() => {
@@ -115,7 +71,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     }
 
     loadContexts();
-  }, [mockFs, onContextSelect, saveConfig]);
+  }, [onContextSelect]);
 
   // Find the parent folder ID of the selected context
   const findParentFolderId = useCallback(
