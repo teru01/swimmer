@@ -5,11 +5,11 @@ function ClusterInfoPane({ selectedContext }: { selectedContext: string | null }
   return (
     <div className="cluster-info-pane">
       <h2>Cluster Information</h2>
-      
+
       {selectedContext ? (
         <div className="cluster-info-content">
           <h3>Context: {selectedContext}</h3>
-          
+
           <div className="info-section">
             <h4>Nodes</h4>
             <div className="dummy-data">
@@ -18,7 +18,7 @@ function ClusterInfoPane({ selectedContext }: { selectedContext: string | null }
               <p>node3 (Ready) - 4 CPU, 16GB Memory</p>
             </div>
           </div>
-          
+
           <div className="info-section">
             <h4>Namespaces</h4>
             <div className="dummy-data">
@@ -28,7 +28,7 @@ function ClusterInfoPane({ selectedContext }: { selectedContext: string | null }
               <p>monitoring</p>
             </div>
           </div>
-          
+
           <div className="info-section">
             <h4>Deployments</h4>
             <div className="dummy-data">
@@ -45,4 +45,4 @@ function ClusterInfoPane({ selectedContext }: { selectedContext: string | null }
   );
 }
 
-export default ClusterInfoPane; 
+export default ClusterInfoPane;

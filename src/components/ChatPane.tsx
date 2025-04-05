@@ -16,36 +16,36 @@ function ChatPane({ selectedContext }: { selectedContext: string | null }) {
       id: 1,
       text: 'Hello! Ask me anything about your Kubernetes cluster.',
       sender: 'assistant',
-      timestamp: new Date()
-    }
+      timestamp: new Date(),
+    },
   ]);
   const [inputText, setInputText] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!inputText.trim()) return;
-    
+
     // Add user message
     const userMessage: Message = {
       id: messages.length + 1,
       text: inputText,
       sender: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
+
     setMessages([...messages, userMessage]);
     setInputText('');
-    
+
     // Mock assistant response (in production would call AI API)
     setTimeout(() => {
       const botMessage: Message = {
         id: messages.length + 2,
         text: `Regarding "${inputText}". I'm looking up information related to ${selectedContext || 'the current context'}...\n\nThis is a mock response. In production, an AI model would provide a real answer here.`,
         sender: 'assistant',
-        timestamp: new Date()
+        timestamp: new Date(),
       };
-      
+
       setMessages(prev => [...prev, botMessage]);
     }, 1000);
   };
@@ -53,10 +53,10 @@ function ChatPane({ selectedContext }: { selectedContext: string | null }) {
   return (
     <div className="chat-pane">
       <h2>AI Chat Assistant</h2>
-      
+
       <div className="chat-messages">
         {messages.map(message => (
-          <div 
+          <div
             key={message.id}
             className={`message ${message.sender === 'user' ? 'user-message' : 'assistant-message'}`}
           >
@@ -65,25 +65,25 @@ function ChatPane({ selectedContext }: { selectedContext: string | null }) {
                 <p key={i}>{line}</p>
               ))}
             </div>
-            <div className="message-timestamp">
-              {message.timestamp.toLocaleTimeString()}
-            </div>
+            <div className="message-timestamp">{message.timestamp.toLocaleTimeString()}</div>
           </div>
         ))}
       </div>
-      
+
       <form className="chat-input-form" onSubmit={handleSubmit}>
-        <textarea 
+        <textarea
           value={inputText}
           onChange={e => setInputText(e.target.value)}
           placeholder="Ask a question about your K8s cluster..."
           className="chat-input"
           rows={3}
         />
-        <button type="submit" className="send-button">Send</button>
+        <button type="submit" className="send-button">
+          Send
+        </button>
       </form>
     </div>
   );
 }
 
-export default ChatPane; 
+export default ChatPane;

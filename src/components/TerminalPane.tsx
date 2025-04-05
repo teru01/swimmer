@@ -29,12 +29,12 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
 
     // Add the executed command to output
     const newOutput = [...terminalOutput, `$ ${inputCommand}`];
-    
+
     // Mock response based on selected context
     if (selectedContext) {
       if (inputCommand.includes('kubectl')) {
         newOutput.push(`Context: ${selectedContext}`);
-        
+
         if (inputCommand.includes('get pods')) {
           newOutput.push('NAME                     READY   STATUS    RESTARTS   AGE');
           newOutput.push('app-deployment-1-xyzabc   1/1     Running   0          3d2h');
@@ -52,7 +52,7 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
     } else {
       newOutput.push('Error: No Kubernetes context selected');
     }
-    
+
     setTerminalOutput(newOutput);
     setInputCommand('');
   };
@@ -61,9 +61,7 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
     <div className="terminal-container">
       <div className="terminal-header">
         <span>Terminal</span>
-        <span>
-          {selectedContext ? `Context: ${selectedContext}` : 'No context selected'}
-        </span>
+        <span>{selectedContext ? `Context: ${selectedContext}` : 'No context selected'}</span>
       </div>
       <div className="terminal-content" ref={terminalContentRef}>
         {terminalOutput.map((line, index) => (
@@ -78,7 +76,7 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
           <input
             type="text"
             value={inputCommand}
-            onChange={(e) => setInputCommand(e.target.value)}
+            onChange={e => setInputCommand(e.target.value)}
             className="terminal-input"
             placeholder="Enter command..."
           />
@@ -88,4 +86,4 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
   );
 }
 
-export default TerminalPane; 
+export default TerminalPane;

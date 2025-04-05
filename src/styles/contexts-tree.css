@@ -81,7 +81,8 @@
   flex: 1;
 }
 
-.folder-icon, .context-icon {
+.folder-icon,
+.context-icon {
   margin-right: 4px;
   color: #555;
   display: inline-flex;
@@ -110,11 +111,12 @@
   opacity: 1;
 }
 
-.loading, .error-message {
+.loading,
+.error-message {
   padding: 16px;
   text-align: center;
 }
 
 .error-message {
   color: #dc3545;
-} 
+}

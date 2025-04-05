@@ -38,7 +38,7 @@ function MainLayout() {
         <div className="contexts-pane-container">
           <ContextsPane onContextSelect={handleContextSelect} />
         </div>
-        
+
         {/* Center area: Cluster tabs + info + Terminal */}
         <div className="center-area">
           {/* Cluster tabs */}
@@ -49,16 +49,16 @@ function MainLayout() {
               onClusterSelect={handleClusterSelect}
             />
           </div>
-          
+
           {/* Center top: Cluster information */}
           <div className="cluster-info-pane-container">
             <ClusterInfoPane selectedContext={selectedContext} />
           </div>
-          
+
           {/* Center bottom: Terminal */}
           <TerminalPane selectedContext={selectedContext} />
         </div>
-        
+
         {/* Right pane: AI chat */}
         <div className="chat-pane-container">
           <ChatPane selectedContext={selectedContext} />
@@ -68,4 +68,4 @@ function MainLayout() {
   );
 }
 
-export default MainLayout; 
+export default MainLayout;

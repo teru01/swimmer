@@ -25,4 +25,4 @@ function ClusterTabs({ clusters, activeCluster, onClusterSelect }: ClusterTabsPr
   );
 }
 
-export default ClusterTabs; 
+export default ClusterTabs;

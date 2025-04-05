@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+.vscode
+public
+*.d.ts
+*.log
+*.lock
+package-lock.json 
