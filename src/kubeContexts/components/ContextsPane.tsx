@@ -161,9 +161,29 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     [contextTree, availableTags, onContextSelect, saveConfig]
   );
 
-  // Handle node rename
+  // Handle node rename with validation
   const handleRename = useCallback(
     (nodeId: string, newName: string) => {
+      // Get the parent folder of the node being renamed
+      const parentFolderId = findParentFolderId(nodeId);
+
+      // Validate the new name
+      const validationError = validateFolderName(newName, parentFolderId, nodeId);
+      if (validationError) {
+        setError(validationError);
+        // Keep the node in edit mode by forcing a re-edit after a short delay
+        setTimeout(() => {
+          const treeInstance = treeRef.current as { edit: (id: string) => void } | null;
+          if (treeInstance?.edit) {
+            treeInstance.edit(nodeId);
+          }
+        }, 100);
+        return;
+      }
+
+      // Clear any previous error
+      setError(null);
+
       setContextTree(prev => {
         const updateNodeName = (nodes: ContextNode[]): ContextNode[] => {
           return nodes.map(node => {
@@ -182,7 +202,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         return updatedTree;
       });
     },
-    [availableTags, saveConfig]
+    [availableTags, saveConfig, contextTree, findParentFolderId]
   );
 
   // Handle tree structure changes (after drag & drop)
@@ -344,6 +364,33 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     }, 100);
   };
 
+  // Validate folder name
+  const validateFolderName = (
+    name: string,
+    parentId: string | null,
+    nodeId?: string
+  ): string | null => {
+    // Check for valid format using regex
+    if (!name.match(/^[a-zA-Z0-9\-_]+$/)) {
+      return 'Folder name can only contain letters, numbers, hyphens and underscores';
+    }
+
+    // Check for duplicate folder name at the same level
+    const isDuplicate = (nodes: ContextNode[]): boolean => {
+      const sameLevel = parentId ? nodes.find(n => n.id === parentId)?.children || [] : nodes;
+
+      return sameLevel.some(
+        n => n.type === 'folder' && n.name === name && (!nodeId || n.id !== nodeId) // Ignore current node when renaming
+      );
+    };
+
+    if (isDuplicate(contextTree)) {
+      return 'A folder with this name already exists at this level';
+    }
+
+    return null; // No validation error
+  };
+
   // Add tag to context
   const handleAddTag = (nodeId: string, tag: string) => {
     // Add tag if it doesn't exist
@@ -444,11 +491,13 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
                     handleRename(node.id, e.currentTarget.value);
-                    node.reset();
+                    // Reset will be handled inside handleRename based on validation
                   } else if (e.key === 'Escape') {
+                    setError(null); // Clear any errors
                     node.reset();
                   }
                 }}
+                data-testid="folder-name-input"
               />
             ) : (
               data.name
