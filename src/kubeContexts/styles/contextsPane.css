@@ -2,18 +2,46 @@
  * Kubernetes contexts tree view component styles
  */
 .contexts-pane {
-  display: flex;
-  flex-direction: column;
   height: 100%;
-  padding: 0;
+  overflow-y: auto;
+  padding: 16px;
   background-color: var(--bg-primary);
-  color: var(--text-primary);
+  border-right: 1px solid var(--border-color);
 }
 
 .contexts-header {
-  padding: 12px;
-  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.context-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.context-actions button {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
   background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.context-actions button:hover {
+  background-color: var(--bg-hover);
+}
+
+.error {
+  color: var(--color-error);
+  padding: 8px;
+  border: 1px solid var(--color-error);
+  border-radius: 4px;
+  margin: 8px 0;
+  font-size: 14px;
 }
 
 .contexts-header h2 {
@@ -26,7 +54,7 @@
   color: var(--text-primary);
 }
 
-/* コンテキストアクションボタン */
+/* Context action buttons */
 .context-actions {
   display: flex;
   gap: 8px;
@@ -104,7 +132,7 @@
   padding: 8px;
 }
 
-/* ツリーノードスタイル */
+/* Tree node styles */
 .tree-node {
   display: flex;
   align-items: center;
@@ -173,7 +201,7 @@
   color: var(--color-error);
 }
 
-/* モーダルスタイル */
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
