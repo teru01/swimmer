@@ -5,9 +5,38 @@ export interface ContextNode {
   type: 'folder' | 'context';
   path?: string; // type='context'の場合のkubeconfigコンテキスト名
   children?: ContextNode[];
+  parent?: ContextNode;
   tags?: string[];
   isExpanded?: boolean;
 }
+
+/**
+ * Find the parent folder ID of a node using parent references
+ * @param nodes Tree of context nodes to search in
+ * @param nodeId ID of the node to find parent for
+ * @returns ID of the parent folder or null if not found
+ */
+export const findParentFolderId = (nodes: ContextNode[], nodeId: string | null): string | null => {
+  if (!nodeId) return null;
+
+  // Find the node first
+  const findNode = (nodes: ContextNode[]): ContextNode | null => {
+    for (const node of nodes) {
+      if (node.id === nodeId) {
+        return node;
+      }
+      if (node.children) {
+        const found = findNode(node.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const node = findNode(nodes);
+  // Use parent reference if available
+  return node?.parent?.id || null;
+};
 
 // コンテキスト名をパースして階層構造を構築する
 export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
@@ -68,6 +97,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
           type: 'folder',
           children: [],
           isExpanded: true,
+          parent: providerNode,
         };
         providerNode.children?.push(projectNode);
       }
@@ -81,25 +111,30 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
           type: 'folder',
           children: [],
           isExpanded: true,
+          parent: projectNode,
         };
         projectNode.children?.push(regionNode);
       }
 
       // クラスターノード（コンテキスト）
-      regionNode.children?.push({
+      const contextNode: ContextNode = {
         id: `context-${context}`,
         name: name,
         type: 'context',
         path: context,
-      });
+        parent: regionNode,
+      };
+      regionNode.children?.push(contextNode);
     } else {
       // その他のコンテキストは直接プロバイダーの下に配置
-      providerNode.children?.push({
+      const contextNode: ContextNode = {
         id: `context-${context}`,
         name: name,
         type: 'context',
         path: context,
-      });
+        parent: providerNode,
+      };
+      providerNode.children?.push(contextNode);
     }
   });
 

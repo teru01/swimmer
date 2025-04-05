@@ -4,7 +4,7 @@ import { commands } from '../../api';
 import * as yaml from 'yaml';
 import { Button, Input, Tag, Dropdown, Menu } from '../../main/ui';
 import '../styles/contextsPane.css';
-import { ContextNode, organizeContextsToTree } from '../lib/contextTree';
+import { ContextNode, organizeContextsToTree, findParentFolderId } from '../lib/contextTree';
 import K8sContextModal from './K8sContextModal';
 import { mockFs, STORAGE_KEY, saveConfig } from '../lib/fs';
 
@@ -73,34 +73,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     loadContexts();
   }, [onContextSelect]);
 
-  // Find the parent folder ID of the selected context
-  const findParentFolderId = useCallback(
-    (nodeId: string | null): string | null => {
-      if (!nodeId) return null;
-
-      const findParent = (nodes: ContextNode[], targetId: string): string | null => {
-        for (const node of nodes) {
-          if (node.children) {
-            // Check if target is a child of current node
-            const isChildOfCurrentNode = node.children.some(child => child.id === targetId);
-            if (isChildOfCurrentNode) {
-              return node.id;
-            }
-            // Recursively search child nodes
-            const parent = findParent(node.children, targetId);
-            if (parent) {
-              return parent;
-            }
-          }
-        }
-        return null;
-      };
-
-      return findParent(contextTree, nodeId);
-    },
-    [contextTree]
-  );
-
   // Handle context selection
   const handleContextSelect = useCallback(
     (contextPath: string) => {
@@ -121,7 +93,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const handleRename = useCallback(
     (nodeId: string, newName: string) => {
       // Get the parent folder of the node being renamed
-      const parentFolderId = findParentFolderId(nodeId);
+      const parentFolderId = findParentFolderId(contextTree, nodeId);
 
       // Validate the new name
       const validationError = validateFolderName(newName, parentFolderId, nodeId);
@@ -158,7 +130,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         return updatedTree;
       });
     },
-    [availableTags, saveConfig, contextTree, findParentFolderId]
+    [availableTags, saveConfig, contextTree]
   );
 
   // Handle tree structure changes (after drag & drop)
@@ -166,21 +138,36 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     // This function is called by the react-arborist library after drag & drop operations
     // It only updates local state and saves to storage
     setContextTree(prev => {
+      // Update parent references after drag & drop
+      const updateParentReferences = (
+        nodes: ContextNode[],
+        parent: ContextNode | undefined = undefined
+      ): ContextNode[] => {
+        return nodes.map(node => {
+          const updatedNode = { ...node, parent };
+          if (updatedNode.children) {
+            updatedNode.children = updateParentReferences(updatedNode.children, updatedNode);
+          }
+          return updatedNode;
+        });
+      };
+
+      const updatedTree = updateParentReferences(prev);
+
       // Save the updated tree data
       saveConfig({
-        contextTree: prev,
+        contextTree: updatedTree,
         lastSelectedContext: selectedContextId || undefined,
         tags: availableTags,
       });
 
-      return prev;
+      return updatedTree;
     });
   }, [selectedContextId, availableTags, saveConfig]);
 
   // Show modal for creating a new context
   const handleNewContextClick = () => {
-    const parentId = selectedContextId ? findParentFolderId(selectedContextId) : null;
-
+    const parentId = selectedContextId ? findParentFolderId(contextTree, selectedContextId) : null;
     setParentFolderId(parentId);
     setShowContextModal(true);
   };
@@ -195,6 +182,24 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     // Generate context path (simplified from actual kubeconfig)
     const contextPath = `ctx-${contextInfo.user}@${new URL(contextInfo.server).hostname}`;
 
+    // 親フォルダを検索
+    const findParentNode = (nodes: ContextNode[], parentId: string | null): ContextNode | null => {
+      if (parentId === null) return null;
+
+      for (const node of nodes) {
+        if (node.id === parentId) {
+          return node;
+        }
+        if (node.children) {
+          const found = findParentNode(node.children, parentId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const parentNode = parentFolderId ? findParentNode(contextTree, parentFolderId) : null;
+
     // Create new context node
     const newContext: ContextNode = {
       id: `context-${contextPath}`,
@@ -202,6 +207,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       type: 'context',
       path: contextPath,
       tags: contextInfo.namespace ? ['namespace:' + contextInfo.namespace] : undefined,
+      parent: parentNode || undefined,
     };
 
     setContextTree(prev => {
@@ -212,6 +218,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         if (otherFolder) {
           return prev.map(node => {
             if (node.id === otherFolder.id) {
+              newContext.parent = otherFolder;
               return {
                 ...node,
                 children: [...(node.children || []), newContext],
@@ -229,6 +236,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
           children: [newContext],
           isExpanded: true,
         };
+        newContext.parent = newOtherFolder;
         return [...prev, newOtherFolder];
       }
 
@@ -236,6 +244,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const addToParent = (nodes: ContextNode[]): ContextNode[] => {
         return nodes.map(node => {
           if (node.id === parentFolderId) {
+            newContext.parent = node;
             return {
               ...node,
               children: [...(node.children || []), newContext],
@@ -262,7 +271,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
   // Create a new folder
   const handleNewFolderClick = () => {
-    const parentId = selectedContextId ? findParentFolderId(selectedContextId) : null;
+    const parentId = selectedContextId ? findParentFolderId(contextTree, selectedContextId) : null;
 
     const newFolderId = `folder-new-${Date.now()}`;
     const newFolder: ContextNode = {
@@ -276,6 +285,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     setContextTree(prev => {
       // If no parent folder, add to root
       if (!parentId) {
+        newFolder.parent = undefined;
         const newTree = [...prev, newFolder];
         saveConfig({ contextTree: newTree, tags: availableTags });
         return newTree;
@@ -285,6 +295,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const addToParent = (nodes: ContextNode[]): ContextNode[] => {
         return nodes.map(n => {
           if (n.id === parentId) {
+            newFolder.parent = n;
             return {
               ...n,
               children: [...(n.children || []), newFolder],
@@ -331,9 +342,27 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       return 'Folder name can only contain letters, numbers, hyphens and underscores';
     }
 
+    // 親フォルダのノードを検索
+    const findParentNode = (nodes: ContextNode[], id: string | null): ContextNode | null => {
+      if (id === null) return null;
+
+      for (const node of nodes) {
+        if (node.id === id) {
+          return node;
+        }
+        if (node.children) {
+          const found = findParentNode(node.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const parentNode = parentId ? findParentNode(contextTree, parentId) : null;
+
     // Check for duplicate folder name at the same level
     const isDuplicate = (nodes: ContextNode[]): boolean => {
-      const sameLevel = parentId ? nodes.find(n => n.id === parentId)?.children || [] : nodes;
+      const sameLevel = parentNode ? parentNode.children || [] : contextTree;
 
       return sameLevel.some(
         n => n.type === 'folder' && n.name === name && (!nodeId || n.id !== nodeId) // Ignore current node when renaming
@@ -520,6 +549,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                     type: 'folder',
                     children: [],
                     isExpanded: true,
+                    parent: data,
                   };
 
                   // Custom processing for tree update
