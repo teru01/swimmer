@@ -1,0 +1,115 @@
+/* src/kubeContexts/styles/contextLayout.css
+ * Layout styles for Kubernetes Contexts pane 
+ */
+
+/* 左ペイン：コンテキスト階層一覧 (フルハイト) */
+.contexts-pane-container {
+  width: 220px;
+  min-width: 180px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
+  background-color: var(--bg-primary);
+  height: 100%; /* フルハイトに */
+}
+
+.contexts-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.context-groups {
+  font-size: 12px;
+}
+
+.context-group {
+  margin-bottom: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.context-group-header {
+  font-weight: 600;
+  padding: 6px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-secondary);
+  border-left: 3px solid var(--border-color);
+  transition: all 0.2s;
+  color: var(--text-primary);
+}
+
+.context-group-header:hover {
+  background-color: var(--bg-tertiary);
+  border-left-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.context-group-header::before {
+  content: '—';
+  margin-right: 5px;
+  color: var(--text-secondary);
+}
+
+.context-group-items {
+  background-color: var(--bg-primary);
+  border-left: 3px solid var(--bg-secondary);
+}
+
+.context-item {
+  padding: 5px 8px 5px 20px;
+  margin: 1px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+  color: var(--text-primary);
+}
+
+.context-item::before {
+  content: '|-';
+  margin-right: 5px;
+  color: var(--text-secondary);
+  font-family: monospace;
+}
+
+.context-item.nested {
+  padding-left: 35px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.context-item.nested::before {
+  content: '  |-';
+  color: var(--text-secondary);
+}
+
+.context-item:hover {
+  background-color: var(--bg-secondary);
+  border-left-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.context-item.selected {
+  background-color: var(--bg-tertiary);
+  color: var(--color-primary);
+  border-left-color: var(--color-primary);
+  font-weight: 500;
+}
+
+.context-item.selected::before {
+  color: var(--color-primary);
+}
+
+.error {
+  color: var(--color-error);
+  padding: 8px;
+  border: 1px solid var(--color-error);
+  border-radius: 4px;
+  margin-top: 8px;
+  font-size: 11px;
+  background-color: rgba(220, 53, 69, 0.1);
+}

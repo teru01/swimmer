@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
-import ClusterTabs from './ClusterTabs';
-import ContextsPane from './ContextsPane';
-import ClusterInfoPane from './ClusterInfoPane';
-import TerminalPane from './TerminalPane';
-import ChatPane from './ChatPane';
+import ClusterTabs from '../cluster/components/ClusterTabs';
+import ContextsPane from '../kubeContexts/components/ContextsPane';
+import ClusterInfoPane from '../cluster/components/ClusterInfoPane';
+import TerminalPane from '../cluster/components/TerminalPane';
+import ChatPane from '../chat/components/ChatPane';
 
 /**
  * Main Layout Component
@@ -32,8 +32,8 @@ function MainLayout() {
   }, []);
 
   return (
-    <div className="main-layout">
-      <div className="content-area">
+    <div className="layout-container">
+      <div className="main-content">
         {/* Left pane: Context hierarchy (full height) */}
         <div className="contexts-pane-container">
           <ContextsPane onContextSelect={handleContextSelect} />

@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Tree, NodeRendererProps } from 'react-arborist';
-import { commands } from '../api';
+import { commands } from '../../api';
 // import { fs } from '@tauri-apps/api/fs';
 import * as yaml from 'yaml';
-import { Button, Input, Tag, Dropdown, Menu } from './ui';
-import '../styles/contexts-tree.css';
-import { ContextNode, organizeContextsToTree } from '../utils/contextTree';
+import { Button, Input, Tag, Dropdown, Menu } from '../../main/ui';
+import '../styles/contextsPane.css';
+import { ContextNode, organizeContextsToTree } from '../contextTree';
 
 interface ContextsPaneProps {
   onContextSelect?: (context: string) => void;

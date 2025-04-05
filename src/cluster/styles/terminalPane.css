@@ -1,0 +1,67 @@
+/* src/cluster/styles/terminalPane.css 
+ * Styles for the terminal interface
+ */
+
+/* 中央下部：ターミナル */
+.terminal-container {
+  flex: 1;
+  min-height: 130px;
+  background-color: #212529;
+  color: #f8f9fa;
+  padding: 8px;
+  overflow-y: auto;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px;
+  border-bottom: 1px solid #444;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #aaa;
+}
+
+.terminal-content {
+  padding: 4px;
+  white-space: pre-wrap;
+}
+
+.terminal-line {
+  line-height: 1.4;
+}
+
+/* ターミナル入力スタイル */
+.terminal-input-form {
+  margin-top: 8px;
+  padding-top: 4px;
+  border-top: 1px solid #444;
+}
+
+.terminal-input-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.terminal-prompt {
+  color: #0f0;
+  margin-right: 5px;
+  font-weight: bold;
+}
+
+.terminal-input {
+  flex: 1;
+  background-color: transparent;
+  border: none;
+  color: #fff;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
+  outline: none;
+  caret-color: #fff;
+}
+
+.terminal-input::placeholder {
+  color: #777;
+}

@@ -1,415 +1,59 @@
-/* 3ペインレイアウト用のスタイル */
+/* layout.css 
+ * グローバルなレイアウトスタイル
+ */
 
-/* 全体のフォントサイズを小さく調整 */
-body {
-  font-size: 13px;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
-    'Helvetica Neue', sans-serif;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+  --color-primary: #0078d4;
+  --color-success: #2ecc71;
+  --color-error: #dc3545;
+  --color-warning: #ffc107;
+  --color-info: #17a2b8;
 }
 
-.main-layout {
+/* 基本レイアウト */
+.layout-container {
   display: flex;
   flex-direction: column;
-  width: 100%;
   height: 100vh;
+  width: 100vw;
   overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
-/* メインコンテンツエリア */
-.content-area {
+/* メインコンテンツ */
+.main-content {
   display: flex;
   flex: 1;
   overflow: hidden;
-  min-height: 0; /* flexboxのバグ対策 */
 }
 
-/* 左ペイン：コンテキスト階層一覧 (フルハイト) */
-.contexts-pane-container {
-  width: 220px;
-  min-width: 180px;
-  flex-shrink: 0;
-  border-right: 1px solid #ddd;
-  overflow-y: auto;
-  background-color: #f8f9fa;
-  height: 100%; /* フルハイトに */
-}
-
-.contexts-pane {
-  padding: 12px;
-}
-
-.contexts-pane h2 {
-  font-size: 14px;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #495057;
-}
-
-.contexts-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.context-groups {
-  font-size: 12px;
-}
-
-.context-group {
-  margin-bottom: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.context-group-header {
-  font-weight: 600;
-  padding: 6px 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  background-color: #eee;
-  border-left: 3px solid #ccc;
-  transition: all 0.2s;
-}
-
-.context-group-header:hover {
-  background-color: #e1e1e1;
-  border-left-color: #aaa;
-}
-
-.context-group-header::before {
-  content: '—';
-  margin-right: 5px;
-  color: #666;
-}
-
-.context-group-items {
-  background-color: #fcfcfc;
-  border-left: 3px solid #eee;
-}
-
-.context-item {
-  padding: 5px 8px 5px 20px;
-  margin: 1px 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: all 0.15s;
-  border-left: 3px solid transparent;
-}
-
-.context-item::before {
-  content: '|-';
-  margin-right: 5px;
-  color: #999;
-  font-family: monospace;
-}
-
-.context-item.nested {
-  padding-left: 35px;
-  font-size: 11px;
-  color: #666;
-}
-
-.context-item.nested::before {
-  content: '  |-';
-  color: #aaa;
-}
-
-.context-item:hover {
-  background-color: #e9ecef;
-  border-left-color: #adb5bd;
-}
-
-.context-item.selected {
-  background-color: #e7f3ff;
-  color: #0366d6;
-  border-left-color: #0366d6;
-  font-weight: 500;
-}
-
-.context-item.selected::before {
-  color: #0366d6;
-}
-
-.error {
-  color: #dc3545;
-  padding: 8px;
-  border: 1px solid #dc3545;
-  border-radius: 4px;
-  margin-top: 8px;
-  font-size: 11px;
-}
-
-/* 中央エリア：クラスタタブ + クラスタ情報 + ターミナル */
-.center-area {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: hidden;
-  min-width: 300px;
-}
-
-/* 中央上部：クラスタタブ */
-.center-tabs {
-  border-bottom: 1px solid #ddd;
-  background-color: #f0f0f0;
-}
-
-/* クラスタタブ */
-.cluster-tabs {
-  display: flex;
-  padding: 3px 3px 0 3px;
-}
-
-.cluster-tab {
-  padding: 6px 12px;
-  cursor: pointer;
-  border: 1px solid #ddd;
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
-  margin-right: 2px;
-  background-color: #f8f9fa;
-  font-size: 12px;
-}
-
-.cluster-tab:hover {
-  background-color: #e9ecef;
-}
-
-.cluster-tab.active {
-  background-color: #fff;
-  border-bottom-color: #fff;
-  position: relative;
-  z-index: 1;
-  font-weight: 600;
-}
-
-/* 中央中部：クラスタ情報 */
-.cluster-info-pane-container {
-  flex: 2;
-  overflow-y: auto;
-  border-bottom: 1px solid #ddd;
-  min-height: 150px;
-}
-
-.cluster-info-pane {
-  padding: 15px;
-}
-
-.cluster-info-pane h2 {
-  font-size: 14px;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #495057;
-}
-
-.cluster-info-content h3 {
-  margin-bottom: 15px;
-  color: #0366d6;
-  font-size: 13px;
-}
-
-.info-section {
-  margin-bottom: 15px;
-  padding: 12px;
-  border-radius: 6px;
-  background-color: #f8f9fa;
-  border: 1px solid #eee;
-}
-
-.info-section h4 {
-  margin-bottom: 8px;
-  color: #495057;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.dummy-data p {
-  margin-bottom: 6px;
-  padding: 4px 0;
-  border-bottom: 1px dashed #e9ecef;
-  font-size: 12px;
-}
-
-.no-context {
-  color: #6c757d;
-  font-style: italic;
-  margin-top: 20px;
-  text-align: center;
-  font-size: 12px;
-}
-
-/* 中央下部：ターミナル */
-.terminal-container {
-  flex: 1;
-  min-height: 130px;
-  background-color: #212529;
-  color: #f8f9fa;
-  padding: 8px;
-  overflow-y: auto;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 11px;
-}
-
-.terminal-header {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px;
-  border-bottom: 1px solid #444;
-  margin-bottom: 8px;
-  font-size: 11px;
-  color: #aaa;
-}
-
-.terminal-content {
-  padding: 4px;
-  white-space: pre-wrap;
-}
-
-.terminal-line {
-  line-height: 1.4;
-}
-
-/* 右ペイン：AIチャット */
-.chat-pane-container {
-  width: 250px;
-  min-width: 200px;
-  flex-shrink: 0;
-  overflow-y: auto;
-  background-color: #f8f9fa;
-  border-left: 1px solid #ddd;
-  height: 100%; /* フルハイトに */
-}
-
-.chat-pane {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 12px;
-}
-
-.chat-pane h2 {
-  font-size: 14px;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #495057;
-}
-
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  margin-bottom: 12px;
-}
-
-.message {
-  margin-bottom: 12px;
-  max-width: 90%;
-  border-radius: 8px;
-  padding: 8px 12px;
-  position: relative;
-  font-size: 11px;
-}
-
-.user-message {
-  background-color: #0366d6;
-  color: white;
-  align-self: flex-end;
-  margin-left: auto;
-}
-
-.assistant-message {
-  background-color: #e9ecef;
-  color: #212529;
-}
-
-.message-content p {
-  margin: 4px 0;
-}
-
-.message-timestamp {
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.7);
-  text-align: right;
-  margin-top: 4px;
-}
-
-.assistant-message .message-timestamp {
-  color: #6c757d;
-}
-
-.chat-input-form {
-  display: flex;
-  flex-direction: column;
-}
-
-.chat-input {
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 8px;
-  margin-bottom: 8px;
-  resize: none;
-  font-size: 11px;
-}
-
-.send-button {
-  background-color: #0366d6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
-  cursor: pointer;
-  align-self: flex-end;
-  font-size: 11px;
-}
-
-.send-button:hover {
-  background-color: #0356b6;
-}
-
-/* ターミナル入力スタイル */
-.terminal-input-form {
-  margin-top: 8px;
-  padding-top: 4px;
-  border-top: 1px solid #444;
-}
-
-.terminal-input-wrapper {
-  display: flex;
-  align-items: center;
-}
-
-.terminal-prompt {
-  color: #0f0;
-  margin-right: 5px;
+/* 共通スタイル */
+.pane-header {
+  padding: 10px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   font-weight: bold;
 }
 
-.terminal-input {
-  flex: 1;
-  background-color: transparent;
-  border: none;
-  color: #fff;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 11px;
-  outline: none;
-  caret-color: #fff;
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--text-primary);
+  animation: spin 1s ease-in-out infinite;
 }
 
-.terminal-input::placeholder {
-  color: #777;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
