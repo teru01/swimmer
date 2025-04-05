@@ -21,3 +21,7 @@ export const findParentFolderId = (nodes: ContextNode[], nodeId: string | null):
   ...
 }
 ```
+
+# test code rule
+
+When you create a test, add a clear comment to the description in English.
