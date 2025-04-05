@@ -10,8 +10,23 @@ import typescriptEslintPlugin from '@typescript-eslint/eslint-plugin';
 // ESLintRCとの互換性のための設定
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Reactプラグインの設定
+reactPlugin.settings = {
+  react: {
+    version: 'detect',
+  },
+};
+
 const compat = new FlatCompat({
   baseDirectory: __dirname,
+  recommendedConfig: {
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
+  },
 });
 
 export default [

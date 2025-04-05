@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 interface ClusterTabsProps {
   clusters: string[];
   activeCluster: string | null;

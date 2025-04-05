@@ -28,7 +28,7 @@ function MainLayout() {
   // Context selection handler
   const handleContextSelect = (context: string) => {
     setSelectedContext(context);
-    console.log('Selected context:', context);
+    console.info('Selected context:', context);
   };
 
   return (

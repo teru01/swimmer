@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Tree, NodeRendererProps } from 'react-arborist';
 import { commands } from '../api';
 // import { fs } from '@tauri-apps/api/fs';
@@ -39,25 +39,46 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const STORAGE_KEY = 'swimmer.contextTree';
 
   // モック用のファイルシステム操作
-  const mockFs = {
-    // ファイル読み込み（ローカルストレージから）
-    readTextFile: async (path: string): Promise<string> => {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) throw new Error('Configuration not found');
-      return stored;
-    },
+  const mockFs = useMemo(
+    () => ({
+      // ファイル読み込み（ローカルストレージから）
+      readTextFile: async (_path: string): Promise<string> => {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) throw new Error('Configuration not found');
+        return stored;
+      },
 
-    // ファイル書き込み（ローカルストレージへ）
-    writeTextFile: async (path: string, content: string): Promise<void> => {
-      localStorage.setItem(STORAGE_KEY, content);
-    },
+      // ファイル書き込み（ローカルストレージへ）
+      writeTextFile: async (_path: string, content: string): Promise<void> => {
+        localStorage.setItem(STORAGE_KEY, content);
+      },
 
-    // ディレクトリ作成（モックなので何もしない）
-    createDir: async (path: string, options?: { recursive: boolean }): Promise<void> => {
-      // 実際には何もしない
-      return;
+      // ディレクトリ作成（モックなので何もしない）
+      createDir: async (_path: string, _options?: { recursive: boolean }): Promise<void> => {
+        // 実際には何もしない
+        return;
+      },
+    }),
+    []
+  );
+
+  // 設定を保存する
+  const saveConfig = useCallback(
+    async (config: {
+      contextTree: ContextNode[];
+      lastSelectedContext?: string;
+      tags: string[];
+    }) => {
+      try {
+        const configYaml = yaml.stringify(config);
+        await mockFs.writeTextFile(STORAGE_KEY, configYaml);
+      } catch (err) {
+        console.error('Error saving config:', err);
+        setError('Failed to save configuration');
+      }
     },
-  };
+    [mockFs]
+  );
 
   // 初期化: 設定を読み込む
   useEffect(() => {
@@ -77,9 +98,9 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
           lastSelectedContext = config.lastSelectedContext;
           tags = config.tags || [];
           setAvailableTags(tags);
-        } catch (err) {
+        } catch {
           // 設定ファイルがない場合は、kubeconfigから直接読み込む
-          console.log('Config not found, importing from kubeconfig');
+          console.info('Config not found, importing from kubeconfig');
           const kubeContexts = await commands.getKubeContexts();
           contextTreeData = organizeContextsToTree(kubeContexts);
           await saveConfig({ contextTree: contextTreeData, tags: [] });
@@ -102,22 +123,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     }
 
     loadContexts();
-  }, []);
-
-  // 設定を保存する
-  const saveConfig = async (config: {
-    contextTree: ContextNode[];
-    lastSelectedContext?: string;
-    tags: string[];
-  }) => {
-    try {
-      const configYaml = yaml.stringify(config);
-      await mockFs.writeTextFile(STORAGE_KEY, configYaml);
-    } catch (err) {
-      console.error('Error saving config:', err);
-      setError('Failed to save configuration');
-    }
-  };
+  }, [mockFs, onContextSelect, saveConfig]);
 
   // コンテキスト名をパースして階層構造を構築する
   const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
@@ -229,7 +235,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         tags: availableTags,
       });
     },
-    [contextTree, availableTags, onContextSelect]
+    [contextTree, availableTags, onContextSelect, saveConfig]
   );
 
   // ノード編集時の処理
@@ -253,7 +259,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         return updatedTree;
       });
     },
-    [availableTags]
+    [availableTags, saveConfig]
   );
 
   // ツリー構造変更時の処理（ドラッグ&ドロップ後）
@@ -270,7 +276,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
       return prev;
     });
-  }, [selectedContextId, availableTags]);
+  }, [selectedContextId, availableTags, saveConfig]);
 
   // 新しいフォルダの作成
   const handleCreateFolder = () => {
@@ -293,7 +299,12 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
     // 作成後に編集モードを開始
     setTimeout(() => {
-      const treeInstance = treeRef.current as any;
+      // any型を避け、明示的なキャストを行う
+      type TreeInstance = {
+        edit: (id: string) => void;
+      };
+
+      const treeInstance = treeRef.current as TreeInstance | null;
       if (treeInstance?.edit) {
         treeInstance.edit(newFolderId);
       }
@@ -396,7 +407,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
               <Input
                 autoFocus
                 defaultValue={data.name}
-                onBlur={e => node.reset()}
+                onBlur={_e => node.reset()}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
                     handleRename(node.id, e.currentTarget.value);

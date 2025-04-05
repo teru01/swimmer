@@ -31,12 +31,12 @@ export const commands = {
   getKubeContexts: async (): Promise<string[]> => {
     // VITE_USE_REAL_API=true の場合や本番環境では実際のAPIを呼び出す
     if (!useMocks) {
-      console.log('Using real Tauri API for getKubeContexts');
+      console.info('Using real Tauri API for getKubeContexts');
       return invoke('get_kube_contexts');
     }
 
     // 開発環境ではモックデータを返す
-    console.log('Using mock data for getKubeContexts (DEV mode)');
+    console.info('Using mock data for getKubeContexts (DEV mode)');
     return Promise.resolve([
       // GKE contexts
       'gke_project-a_asia-northeast1_cluster-1',
