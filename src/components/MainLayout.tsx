@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import ClusterTabs from './ClusterTabs';
 import ContextsPane from './ContextsPane';
 import ClusterInfoPane from './ClusterInfoPane';
@@ -26,10 +26,10 @@ function MainLayout() {
   };
 
   // Context selection handler
-  const handleContextSelect = (context: string) => {
+  const handleContextSelect = useCallback((context: string) => {
     setSelectedContext(context);
     console.info('Selected context:', context);
-  };
+  }, []);
 
   return (
     <div className="main-layout">
