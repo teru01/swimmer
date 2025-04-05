@@ -28,9 +28,16 @@ export const mockFs = {
 export const saveConfig = async (config: {
   contextTree: ContextNode[];
   lastSelectedContext?: string;
+  lastSelectedContextPath?: string;
   tags: string[];
 }) => {
   try {
+    // 新しい設定形式に移行
+    // lastSelectedContextがあって、lastSelectedContextPathがない場合はlastSelectedContext値を使用
+    if (config.lastSelectedContext && !config.lastSelectedContextPath) {
+      config.lastSelectedContextPath = config.lastSelectedContext;
+    }
+
     const configYaml = yaml.stringify(config);
     await mockFs.writeTextFile(STORAGE_KEY, configYaml);
   } catch (err) {

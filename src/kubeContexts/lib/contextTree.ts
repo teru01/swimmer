@@ -1,11 +1,17 @@
+// ノードタイプを定義するenum
+export enum NodeType {
+  Folder = 'folder',
+  Context = 'context',
+}
+
 // コンテキストノードのデータ型
 export interface ContextNode {
   id: string;
   name: string;
-  type: 'folder' | 'context';
-  path?: string; // type='context'の場合のkubeconfigコンテキスト名
+  type: NodeType;
+  path?: string; // type=NodeType.Contextの場合のkubeconfigコンテキスト名
   children?: ContextNode[];
-  parent?: ContextNode;
+  parent?: ContextNode; // 親ノードへの参照
   tags?: string[];
   isExpanded?: boolean;
 }
@@ -76,7 +82,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
       const providerNode: ContextNode = {
         id: `folder-${provider}`,
         name: provider,
-        type: 'folder',
+        type: NodeType.Folder,
         children: [],
         isExpanded: true,
       };
@@ -94,7 +100,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
         projectNode = {
           id: `folder-${provider}-${project}`,
           name: project,
-          type: 'folder',
+          type: NodeType.Folder,
           children: [],
           isExpanded: true,
           parent: providerNode,
@@ -108,7 +114,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
         regionNode = {
           id: `folder-${provider}-${project}-${region}`,
           name: region,
-          type: 'folder',
+          type: NodeType.Folder,
           children: [],
           isExpanded: true,
           parent: projectNode,
@@ -120,7 +126,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
       const contextNode: ContextNode = {
         id: `context-${context}`,
         name: name,
-        type: 'context',
+        type: NodeType.Context,
         path: context,
         parent: regionNode,
       };
@@ -130,7 +136,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
       const contextNode: ContextNode = {
         id: `context-${context}`,
         name: name,
-        type: 'context',
+        type: NodeType.Context,
         path: context,
         parent: providerNode,
       };
@@ -176,7 +182,7 @@ export const validateFolderName = (
     const sameLevel = parentNode ? parentNode.children || [] : contextTree;
 
     return sameLevel.some(
-      n => n.type === 'folder' && n.name === name && (!nodeId || n.id !== nodeId) // Ignore current node when renaming
+      n => n.type === NodeType.Folder && n.name === name && (!nodeId || n.id !== nodeId) // Ignore current node when renaming
     );
   };
 

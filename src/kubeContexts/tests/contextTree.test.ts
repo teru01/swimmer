@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ContextNode, findParentFolderId } from '../lib/contextTree';
+import { ContextNode, findParentFolderId, NodeType } from '../lib/contextTree';
 
 describe('findParentFolderId', () => {
   // Create a test tree structure
@@ -8,7 +8,7 @@ describe('findParentFolderId', () => {
     const rootFolder: ContextNode = {
       id: 'folder-root',
       name: 'Root',
-      type: 'folder',
+      type: NodeType.Folder,
       children: [],
     };
 
@@ -16,7 +16,7 @@ describe('findParentFolderId', () => {
     const gkeFolder: ContextNode = {
       id: 'folder-gke',
       name: 'GKE',
-      type: 'folder',
+      type: NodeType.Folder,
       children: [],
       parent: rootFolder,
     };
@@ -25,7 +25,7 @@ describe('findParentFolderId', () => {
     const projectFolder: ContextNode = {
       id: 'folder-project1',
       name: 'project-1',
-      type: 'folder',
+      type: NodeType.Folder,
       children: [],
       parent: gkeFolder,
     };
@@ -34,14 +34,14 @@ describe('findParentFolderId', () => {
     const usRegionFolder: ContextNode = {
       id: 'folder-region1',
       name: 'us-central1',
-      type: 'folder',
+      type: NodeType.Folder,
       children: [],
       parent: projectFolder,
     };
     const jpRegionFolder: ContextNode = {
       id: 'folder-region2',
       name: 'jp-central1',
-      type: 'folder',
+      type: NodeType.Folder,
       children: [],
       parent: projectFolder,
     };
@@ -50,14 +50,14 @@ describe('findParentFolderId', () => {
     const cluster1ContextNode: ContextNode = {
       id: 'context-cluster1',
       name: 'cluster-1',
-      type: 'context',
+      type: NodeType.Context,
       path: 'gke_project1_us-central1_cluster1',
       parent: usRegionFolder,
     };
     const cluster2ContextNode: ContextNode = {
       id: 'context-cluster2',
       name: 'cluster-2',
-      type: 'context',
+      type: NodeType.Context,
       path: 'gke_project1_jp-central1_cluster2',
       parent: usRegionFolder,
     };
@@ -104,14 +104,14 @@ describe('findParentFolderId', () => {
     const otherFolder: ContextNode = {
       id: 'folder-other',
       name: 'Other',
-      type: 'folder',
+      type: NodeType.Folder,
       children: [],
     };
 
     const localContext: ContextNode = {
       id: 'context-local',
       name: 'local',
-      type: 'context',
+      type: NodeType.Context,
       path: 'local-context',
       parent: otherFolder,
     };

@@ -9,6 +9,7 @@ import {
   organizeContextsToTree,
   findParentFolderId,
   validateFolderName,
+  NodeType,
 } from '../lib/contextTree';
 import K8sContextModal from './K8sContextModal';
 import { mockFs, STORAGE_KEY, saveConfig } from '../lib/fs';
@@ -22,7 +23,7 @@ interface ContextsPaneProps {
  */
 function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const [contextTree, setContextTree] = useState<ContextNode[]>([]);
-  const [selectedContextId, setSelectedContextId] = useState<string | null>(null);
+  const [selectedContext, setSelectedContext] = useState<ContextNode | null>(null);
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -41,14 +42,14 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
         // 1. Load tree structure from config file
         let contextTreeData: ContextNode[] = [];
-        let lastSelectedContext: string | null = null;
+        let lastSelectedContextPath: string | null = null;
         let tags: string[] = [];
 
         try {
           const configYaml = await mockFs.readTextFile(STORAGE_KEY);
           const config = yaml.parse(configYaml);
           contextTreeData = config.contextTree || [];
-          lastSelectedContext = config.lastSelectedContext;
+          lastSelectedContextPath = config.lastSelectedContextPath;
           tags = config.tags || [];
           setAvailableTags(tags);
         } catch {
@@ -61,9 +62,26 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
         setContextTree(contextTreeData);
 
-        if (lastSelectedContext) {
-          setSelectedContextId(lastSelectedContext);
-          onContextSelect?.(lastSelectedContext);
+        // コンテキストパスからノードを見つける
+        if (lastSelectedContextPath) {
+          const findContextNode = (nodes: ContextNode[]): ContextNode | null => {
+            for (const node of nodes) {
+              if (node.type === NodeType.Context && node.path === lastSelectedContextPath) {
+                return node;
+              }
+              if (node.children) {
+                const found = findContextNode(node.children);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+
+          const contextNode = findContextNode(contextTreeData);
+          if (contextNode) {
+            setSelectedContext(contextNode);
+            onContextSelect?.(contextNode.path!);
+          }
         }
 
         setLoading(false);
@@ -80,14 +98,20 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
   // Handle context selection
   const handleContextSelect = useCallback(
-    (contextPath: string) => {
-      setSelectedContextId(contextPath);
-      onContextSelect?.(contextPath);
+    (contextNode: ContextNode) => {
+      if (contextNode.type !== NodeType.Context || !contextNode.path) {
+        console.warn('Selected node is not a context or missing path:', contextNode);
+        return;
+      }
+
+      setSelectedContext(contextNode);
+      onContextSelect?.(contextNode.path);
+      console.info('Selected context in contextsPane:', contextNode.path);
 
       // Save selection
       saveConfig({
         contextTree,
-        lastSelectedContext: contextPath,
+        lastSelectedContextPath: contextNode.path,
         tags: availableTags,
       });
     },
@@ -131,11 +155,15 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         };
 
         const updatedTree = updateNodeName(prev);
-        saveConfig({ contextTree: updatedTree, tags: availableTags });
+        saveConfig({
+          contextTree: updatedTree,
+          lastSelectedContextPath: selectedContext?.path || undefined,
+          tags: availableTags,
+        });
         return updatedTree;
       });
     },
-    [availableTags, contextTree]
+    [availableTags, contextTree, selectedContext?.path]
   );
 
   // Handle tree structure changes (after drag & drop)
@@ -162,17 +190,27 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       // Save the updated tree data
       saveConfig({
         contextTree: updatedTree,
-        lastSelectedContext: selectedContextId || undefined,
+        lastSelectedContextPath: selectedContext?.path || undefined,
         tags: availableTags,
       });
 
       return updatedTree;
     });
-  }, [selectedContextId, availableTags]);
+  }, [selectedContext?.path, availableTags]);
+
+  // 選択されたコンテキストノードの親IDを見つける
+  const findParentOfSelectedContext = useCallback((): string | null => {
+    if (!selectedContext) return null;
+
+    // 直接親参照から親IDを取得
+    return selectedContext.parent?.id || null;
+  }, [selectedContext]);
 
   // Show modal for creating a new context
   const handleNewContextClick = () => {
-    const parentId = selectedContextId ? findParentFolderId(contextTree, selectedContextId) : null;
+    const parentId = findParentOfSelectedContext();
+    console.info('Found parent for new context:', parentId);
+
     setParentFolderId(parentId);
     setShowContextModal(true);
   };
@@ -209,7 +247,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     const newContext: ContextNode = {
       id: `context-${contextPath}`,
       name: contextInfo.name,
-      type: 'context',
+      type: NodeType.Context,
       path: contextPath,
       tags: contextInfo.namespace ? ['namespace:' + contextInfo.namespace] : undefined,
       parent: parentNode || undefined,
@@ -237,7 +275,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         const newOtherFolder: ContextNode = {
           id: `folder-Other-${Date.now()}`,
           name: 'Other',
-          type: 'folder',
+          type: NodeType.Folder,
           children: [newContext],
           isExpanded: true,
         };
@@ -267,7 +305,11 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       };
 
       const updatedTree = addToParent(prev);
-      saveConfig({ contextTree: updatedTree, tags: availableTags });
+      saveConfig({
+        contextTree: updatedTree,
+        lastSelectedContextPath: selectedContext?.path || undefined,
+        tags: availableTags,
+      });
       return updatedTree;
     });
 
@@ -276,13 +318,16 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
   // Create a new folder
   const handleNewFolderClick = () => {
-    const parentId = findParentFolderId(contextTree, selectedContextId);
+    console.info('selectedContext', selectedContext?.name);
+
+    const parentId = findParentOfSelectedContext();
+    console.info('parentId for new folder:', parentId);
 
     const newFolderId = `folder-${crypto.randomUUID()}`;
     const newFolder: ContextNode = {
       id: newFolderId,
       name: 'NewFolder',
-      type: 'folder',
+      type: NodeType.Folder,
       children: [],
       isExpanded: true,
     };
@@ -292,7 +337,11 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       if (!parentId) {
         newFolder.parent = undefined;
         const newTree = [...prev, newFolder];
-        saveConfig({ contextTree: newTree, tags: availableTags });
+        saveConfig({
+          contextTree: newTree,
+          lastSelectedContextPath: selectedContext?.path || undefined,
+          tags: availableTags,
+        });
         return newTree;
       }
 
@@ -318,7 +367,11 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       };
 
       const updatedTree = addToParent(prev);
-      saveConfig({ contextTree: updatedTree, tags: availableTags });
+      saveConfig({
+        contextTree: updatedTree,
+        lastSelectedContextPath: selectedContext?.path || undefined,
+        tags: availableTags,
+      });
       return updatedTree;
     });
 
@@ -366,6 +419,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const updatedTree = updateNodeTags(prev);
       saveConfig({
         contextTree: updatedTree,
+        lastSelectedContextPath: selectedContext?.path || undefined,
         tags: availableTags.includes(tag) ? availableTags : [...availableTags, tag],
       });
       return updatedTree;
@@ -391,7 +445,11 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       };
 
       const updatedTree = updateNodeTags(prev);
-      saveConfig({ contextTree: updatedTree, tags: availableTags });
+      saveConfig({
+        contextTree: updatedTree,
+        lastSelectedContextPath: selectedContext?.path || undefined,
+        tags: availableTags,
+      });
       return updatedTree;
     });
   };
@@ -399,9 +457,9 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   // Custom node renderer
   const NodeRenderer = ({ node, style, dragHandle }: NodeRendererProps<ContextNode>) => {
     const data = node.data;
-    const isFolder = data.type === 'folder';
-    const isContext = data.type === 'context';
-    const isSelected = isContext && data.path === selectedContextId;
+    const isFolder = data.type === NodeType.Folder;
+    const isContext = data.type === NodeType.Context;
+    const isSelected = isContext && selectedContext && data.id === selectedContext.id;
 
     return (
       <div
@@ -421,8 +479,8 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
           <span
             className="node-name"
             onClick={() => {
-              if (isContext && data.path) {
-                handleContextSelect(data.path);
+              if (isContext) {
+                handleContextSelect(data);
               } else if (isFolder) {
                 node.toggle();
               }
@@ -506,7 +564,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                   const newChild: ContextNode = {
                     id: `folder-new-${Date.now()}`,
                     name: 'New Folder',
-                    type: 'folder',
+                    type: NodeType.Folder,
                     children: [],
                     isExpanded: true,
                     parent: data,
@@ -533,7 +591,11 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                     };
 
                     const updatedTree = addChildToFolder(prev);
-                    saveConfig({ contextTree: updatedTree, tags: availableTags });
+                    saveConfig({
+                      contextTree: updatedTree,
+                      lastSelectedContextPath: selectedContext?.path || undefined,
+                      tags: availableTags,
+                    });
                     return updatedTree;
                   });
                 }}
@@ -564,7 +626,11 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                     };
 
                     const updatedTree = removeNode(prev);
-                    saveConfig({ contextTree: updatedTree, tags: availableTags });
+                    saveConfig({
+                      contextTree: updatedTree,
+                      lastSelectedContextPath: selectedContext?.path || undefined,
+                      tags: availableTags,
+                    });
                     return updatedTree;
                   });
                 }
@@ -585,7 +651,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
       const filterNode = (node: ContextNode): ContextNode | null => {
         // Tag filtering
-        if (filterTag && node.type === 'context') {
+        if (filterTag && node.type === NodeType.Context) {
           if (!node.tags?.includes(filterTag)) {
             return null;
           }
@@ -593,7 +659,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
         // Text search filtering
         if (searchText && !node.name.toLowerCase().includes(searchText.toLowerCase())) {
-          if (node.type === 'folder' && node.children) {
+          if (node.type === NodeType.Folder && node.children) {
             // For folders, search child nodes too
             const filteredChildren = node.children.map(filterNode).filter(Boolean) as ContextNode[];
 
@@ -612,7 +678,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         }
 
         // Process child nodes for folders
-        if (node.type === 'folder' && node.children) {
+        if (node.type === NodeType.Folder && node.children) {
           const filteredChildren = node.children.map(filterNode).filter(Boolean) as ContextNode[];
 
           return {
@@ -650,7 +716,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       setContextTree(newTree);
       await saveConfig({
         contextTree: newTree,
-        lastSelectedContext: selectedContextId || undefined,
+        lastSelectedContextPath: selectedContext?.path || undefined,
         tags: availableTags,
       });
       setLoading(false);
