@@ -2,14 +2,15 @@
  * Styles for the terminal interface
  */
 
-/* 中央下部：ターミナル */
-.terminal-container {
+/* Terminal pane */
+.terminal-pane {
   flex: 1;
   min-height: 130px;
+  display: flex;
+  flex-direction: column;
   background-color: #212529;
   color: #f8f9fa;
-  padding: 8px;
-  overflow-y: auto;
+  overflow: hidden;
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   font-size: 11px;
 }
@@ -17,27 +18,31 @@
 .terminal-header {
   display: flex;
   justify-content: space-between;
-  padding: 4px;
+  padding: 4px 8px;
   border-bottom: 1px solid #444;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   font-size: 11px;
   color: #aaa;
+  flex-shrink: 0;
 }
 
 .terminal-content {
-  padding: 4px;
+  flex: 1;
+  padding: 8px;
   white-space: pre-wrap;
+  overflow-y: auto;
 }
 
 .terminal-line {
   line-height: 1.4;
 }
 
-/* ターミナル入力スタイル */
+/* Terminal input styles */
 .terminal-input-form {
-  margin-top: 8px;
-  padding-top: 4px;
+  margin-top: 0;
+  padding: 8px;
   border-top: 1px solid #444;
+  flex-shrink: 0;
 }
 
 .terminal-input-wrapper {

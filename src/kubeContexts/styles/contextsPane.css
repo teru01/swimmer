@@ -2,23 +2,41 @@
  * Kubernetes contexts tree view component styles
  */
 .contexts-pane {
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  overflow-y: auto;
-  padding: 16px;
+  width: 100%;
+  overflow: hidden;
   background-color: var(--bg-primary);
   border-right: 1px solid var(--border-color);
 }
 
 .contexts-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  flex-direction: column;
+  padding: 16px 16px 12px;
+  flex-shrink: 0;
+}
+
+.k8s-contexts-title {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.contexts-header h2 {
+  font-size: 11px;
+  margin: 0 0 8px 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
 }
 
 .context-actions {
   display: flex;
   gap: 8px;
+  margin-bottom: 12px;
 }
 
 .context-actions button {
@@ -44,16 +62,6 @@
   font-size: 14px;
 }
 
-.contexts-header h2 {
-  font-size: 14px;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-color);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-primary);
-}
-
 /* Context action buttons */
 .context-actions {
   display: flex;
@@ -65,9 +73,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  width: 28px;
+  height: 28px;
   font-size: 12px;
-  padding: 4px 8px;
+  padding: 0;
   border-radius: 4px;
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
@@ -84,16 +93,17 @@
 
 .contexts-toolbar {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  flex-direction: column;
+  margin-bottom: 12px;
 }
 
 .contexts-toolbar input {
-  flex: 1;
+  width: 100%;
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
+  height: 28px;
+  font-size: 12px;
 }
 
 .tag-filters {
@@ -128,8 +138,10 @@
 
 .context-tree-container {
   flex: 1;
-  overflow: auto;
-  padding: 8px;
+  overflow: hidden;
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Tree node styles */
@@ -162,12 +174,13 @@
 
 .folder-icon,
 .context-icon {
-  margin-right: 4px;
+  margin: 0;
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 16px;
+  width: 16px;
+  height: 16px;
 }
 
 .context-tag {

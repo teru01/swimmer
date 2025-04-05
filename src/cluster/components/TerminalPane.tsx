@@ -58,7 +58,7 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
   };
 
   return (
-    <div className="terminal-container">
+    <div className="terminal-pane">
       <div className="terminal-header">
         <span>Terminal</span>
         <span>{selectedContext ? `Context: ${selectedContext}` : 'No context selected'}</span>

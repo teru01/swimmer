@@ -670,15 +670,8 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   return (
     <div className="contexts-pane">
       <div className="contexts-header">
-        <h2>Kubernetes Contexts</h2>
-
-        <div className="context-actions">
-          <Button className="icon-button" onClick={handleNewContextClick} title="New Context">
-            <span className="context-icon">⚙️</span> Add
-          </Button>
-          <Button className="icon-button" onClick={handleNewFolderClick} title="New Folder">
-            <span className="folder-icon">📁</span> Add
-          </Button>
+        <div className="k8s-contexts-title">
+          <h2>KUBERNETES CONTEXTS</h2>
         </div>
 
         <div className="contexts-toolbar">
@@ -686,7 +679,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
             placeholder="Search contexts..."
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
-            prefix={<span>🔍</span>}
             suffix={
               searchText && (
                 <Button size="small" onClick={clearSearch}>
@@ -695,20 +687,15 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
               )
             }
           />
+        </div>
 
-          <Dropdown
-            overlay={
-              <div>
-                <Menu.Item onClick={() => setIsEditing(!isEditing)}>
-                  {isEditing ? 'Done Editing' : 'Edit Tree'}
-                </Menu.Item>
-                <Menu.Item onClick={handleNewFolderClick}>New Folder</Menu.Item>
-                <Menu.Item onClick={handleReimport}>Reimport from Kubeconfig</Menu.Item>
-              </div>
-            }
-          >
-            <Button>Actions</Button>
-          </Dropdown>
+        <div className="context-actions">
+          <Button className="icon-button" onClick={handleNewContextClick} title="New Context">
+            <span className="context-icon">⚙️</span>
+          </Button>
+          <Button className="icon-button" onClick={handleNewFolderClick} title="New Folder">
+            <span className="folder-icon">📁</span>
+          </Button>
         </div>
 
         {/* Tag filters display */}

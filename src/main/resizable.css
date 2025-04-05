@@ -1,0 +1,93 @@
+/* 
+ * Styles for resizable panels
+ */
+
+.resize-handle {
+  width: 4px;
+  background-color: var(--border-color);
+  transition: background-color 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  width: 1px;
+  height: 20px;
+  background-color: var(--text-secondary);
+  opacity: 0.3;
+}
+
+.resize-handle:hover,
+.resize-handle[data-resize-handle-active='true'] {
+  background-color: var(--color-primary);
+  opacity: 0.5;
+  width: 4px;
+}
+
+.resize-handle:hover::after,
+.resize-handle[data-resize-handle-active='true']::after {
+  opacity: 0;
+}
+
+.resize-handle.horizontal {
+  height: 4px;
+  width: 100%;
+}
+
+.resize-handle.horizontal::after {
+  width: 20px;
+  height: 1px;
+}
+
+.resize-handle.horizontal:hover,
+.resize-handle.horizontal[data-resize-handle-active='true'] {
+  height: 4px;
+  width: 100%;
+}
+
+/* Make sure panels fill their container */
+[data-panel] {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Ensure container elements fill their panels */
+.contexts-pane-container,
+.center-area,
+.chat-pane-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+/* Make center-area correctly stack its content */
+.center-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.center-tabs {
+  flex-shrink: 0;
+}
+
+.cluster-info-pane-container {
+  height: 100%;
+  overflow: auto;
+}
+
+/* Ensure terminal pane fills available space */
+[data-panel] > .terminal-pane {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
