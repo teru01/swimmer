@@ -1,0 +1,120 @@
+/* src/styles/contexts-tree.css */
+.contexts-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+}
+
+.contexts-header {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.contexts-header h2 {
+  font-size: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #495057;
+}
+
+.contexts-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.contexts-toolbar input {
+  flex: 1;
+}
+
+.tag-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.filter-tag {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-tag.active {
+  background-color: #0366d6;
+  color: white;
+}
+
+.context-tree-container {
+  flex: 1;
+  overflow: auto;
+}
+
+/* ツリーノードスタイル */
+.tree-node {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tree-node:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.tree-node.selected {
+  background-color: #e7f3ff;
+  color: #0366d6;
+  font-weight: 500;
+}
+
+.node-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.folder-icon, .context-icon {
+  margin-right: 4px;
+  color: #555;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+}
+
+.context-tag {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 10px;
+  margin-left: 6px;
+  background: #eee;
+  color: #555;
+}
+
+.node-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.tree-node:hover .node-actions {
+  opacity: 1;
+}
+
+.loading, .error-message {
+  padding: 16px;
+  text-align: center;
+}
+
+.error-message {
+  color: #dc3545;
+} 
