@@ -11,6 +11,91 @@ interface ContextsPaneProps {
   onContextSelect?: (context: string) => void;
 }
 
+// K8sコンテキスト作成用のモーダルコンポーネント
+interface K8sContextModalProps {
+  parentFolderId: string | null;
+  onClose: () => void;
+  onSave: (context: { name: string; server: string; user: string; namespace?: string }) => void;
+}
+
+function K8sContextModal({
+  parentFolderId: _parentFolderId,
+  onClose,
+  onSave,
+}: K8sContextModalProps) {
+  const [name, setName] = useState('');
+  const [server, setServer] = useState('');
+  const [user, setUser] = useState('');
+  const [namespace, setNamespace] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      name,
+      server,
+      user,
+      namespace: namespace || undefined,
+    });
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <h2>新しいKubernetesコンテキスト</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="name">コンテキスト名</label>
+            <Input
+              id="name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="my-context"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="server">APIサーバーURL</label>
+            <Input
+              id="server"
+              value={server}
+              onChange={e => setServer(e.target.value)}
+              placeholder="https://kubernetes.example.com"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="user">ユーザー名</label>
+            <Input
+              id="user"
+              value={user}
+              onChange={e => setUser(e.target.value)}
+              placeholder="kubernetes-admin"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="namespace">名前空間 (オプション)</label>
+            <Input
+              id="namespace"
+              value={namespace}
+              onChange={e => setNamespace(e.target.value)}
+              placeholder="default"
+            />
+          </div>
+          <div className="modal-actions">
+            <Button type="button" onClick={onClose}>
+              キャンセル
+            </Button>
+            <Button type="submit" className="primary-button">
+              保存
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Kubernetes contexts tree view component with hierarchical structure
  */
@@ -23,6 +108,8 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const [error, setError] = useState<string | null>(null);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
+  const [showContextModal, setShowContextModal] = useState(false);
+  const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const treeRef = useRef(null);
 
   // 設定用のローカルストレージキー
@@ -115,6 +202,34 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     loadContexts();
   }, [mockFs, onContextSelect, saveConfig]);
 
+  // 選択されているコンテキストが属するフォルダIDを見つける
+  const findParentFolderId = useCallback(
+    (nodeId: string | null): string | null => {
+      if (!nodeId) return null;
+
+      const findParent = (nodes: ContextNode[], targetId: string): string | null => {
+        for (const node of nodes) {
+          if (node.children) {
+            // このノードの子供に対象があるか
+            const isChildOfCurrentNode = node.children.some(child => child.id === targetId);
+            if (isChildOfCurrentNode) {
+              return node.id;
+            }
+            // 再帰的に子ノードを探索
+            const parent = findParent(node.children, targetId);
+            if (parent) {
+              return parent;
+            }
+          }
+        }
+        return null;
+      };
+
+      return findParent(contextTree, nodeId);
+    },
+    [contextTree]
+  );
+
   // コンテキスト選択時の処理
   const handleContextSelect = useCallback(
     (contextPath: string) => {
@@ -171,9 +286,92 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     });
   }, [selectedContextId, availableTags, saveConfig]);
 
+  // 新しいコンテキストを作成するモーダルを表示
+  const handleNewContextClick = () => {
+    const parentId = selectedContextId ? findParentFolderId(selectedContextId) : null;
+
+    setParentFolderId(parentId);
+    setShowContextModal(true);
+  };
+
+  // 新しいコンテキストを保存
+  const handleSaveContext = (contextInfo: {
+    name: string;
+    server: string;
+    user: string;
+    namespace?: string;
+  }) => {
+    // コンテキストパスを生成 (実際のkubeconfigでは複雑だが、シンプルにする)
+    const contextPath = `ctx-${contextInfo.user}@${new URL(contextInfo.server).hostname}`;
+
+    // 新しいコンテキストノード
+    const newContext: ContextNode = {
+      id: `context-${contextPath}`,
+      name: contextInfo.name,
+      type: 'context',
+      path: contextPath,
+      tags: contextInfo.namespace ? ['namespace:' + contextInfo.namespace] : undefined,
+    };
+
+    setContextTree(prev => {
+      // 親フォルダがない場合はルートに追加
+      if (!parentFolderId) {
+        // 検索して最初に見つかるOtherフォルダに追加するか、新しいOtherフォルダを作成
+        const otherFolder = prev.find(node => node.name === 'Other');
+        if (otherFolder) {
+          return prev.map(node => {
+            if (node.id === otherFolder.id) {
+              return {
+                ...node,
+                children: [...(node.children || []), newContext],
+              };
+            }
+            return node;
+          });
+        }
+
+        // Otherフォルダがなければ作成
+        const newOtherFolder: ContextNode = {
+          id: `folder-Other-${Date.now()}`,
+          name: 'Other',
+          type: 'folder',
+          children: [newContext],
+          isExpanded: true,
+        };
+        return [...prev, newOtherFolder];
+      }
+
+      // 親フォルダに追加
+      const addToParent = (nodes: ContextNode[]): ContextNode[] => {
+        return nodes.map(node => {
+          if (node.id === parentFolderId) {
+            return {
+              ...node,
+              children: [...(node.children || []), newContext],
+              isExpanded: true, // フォルダを展開
+            };
+          }
+          if (node.children) {
+            return {
+              ...node,
+              children: addToParent(node.children),
+            };
+          }
+          return node;
+        });
+      };
+
+      const updatedTree = addToParent(prev);
+      saveConfig({ contextTree: updatedTree, tags: availableTags });
+      return updatedTree;
+    });
+
+    setShowContextModal(false);
+  };
+
   // 新しいフォルダの作成
-  const handleCreateFolder = () => {
-    if (!treeRef.current) return;
+  const handleNewFolderClick = () => {
+    const parentId = selectedContextId ? findParentFolderId(selectedContextId) : null;
 
     const newFolderId = `folder-new-${Date.now()}`;
     const newFolder: ContextNode = {
@@ -185,9 +383,36 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     };
 
     setContextTree(prev => {
-      const newTree = [...prev, newFolder];
-      saveConfig({ contextTree: newTree, tags: availableTags });
-      return newTree;
+      // 親フォルダがない場合はルートに追加
+      if (!parentId) {
+        const newTree = [...prev, newFolder];
+        saveConfig({ contextTree: newTree, tags: availableTags });
+        return newTree;
+      }
+
+      // 親フォルダに追加
+      const addToParent = (nodes: ContextNode[]): ContextNode[] => {
+        return nodes.map(n => {
+          if (n.id === parentId) {
+            return {
+              ...n,
+              children: [...(n.children || []), newFolder],
+              isExpanded: true, // 親フォルダを展開
+            };
+          }
+          if (n.children) {
+            return {
+              ...n,
+              children: addToParent(n.children),
+            };
+          }
+          return n;
+        });
+      };
+
+      const updatedTree = addToParent(prev);
+      saveConfig({ contextTree: updatedTree, tags: availableTags });
+      return updatedTree;
     });
 
     // 作成後に編集モードを開始
@@ -532,6 +757,19 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       <div className="contexts-header">
         <h2>Kubernetes Contexts</h2>
 
+        <div className="context-actions">
+          <Button
+            className="icon-button"
+            onClick={handleNewContextClick}
+            title="新しいコンテキスト"
+          >
+            <span className="context-icon">⚙️</span> 追加
+          </Button>
+          <Button className="icon-button" onClick={handleNewFolderClick} title="新しいフォルダ">
+            <span className="folder-icon">📁</span> 追加
+          </Button>
+        </div>
+
         <div className="contexts-toolbar">
           <Input
             placeholder="Search contexts..."
@@ -553,7 +791,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                 <Menu.Item onClick={() => setIsEditing(!isEditing)}>
                   {isEditing ? 'Done Editing' : 'Edit Tree'}
                 </Menu.Item>
-                <Menu.Item onClick={handleCreateFolder}>New Folder</Menu.Item>
+                <Menu.Item onClick={handleNewFolderClick}>New Folder</Menu.Item>
                 <Menu.Item onClick={handleReimport}>Reimport from Kubeconfig</Menu.Item>
               </div>
             }
@@ -614,6 +852,15 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
             {NodeRenderer}
           </Tree>
         </div>
+      )}
+
+      {/* 新しいコンテキスト作成モーダル */}
+      {showContextModal && (
+        <K8sContextModal
+          parentFolderId={parentFolderId}
+          onClose={() => setShowContextModal(false)}
+          onSave={handleSaveContext}
+        />
       )}
     </div>
   );
