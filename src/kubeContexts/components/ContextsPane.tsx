@@ -154,10 +154,20 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     [availableTags, contextTree, selectedContext]
   );
 
-  // Handle tree structure changes (after drag & drop)
-  const handleTreeChange = useCallback(() => {
-    // This function is called by the react-arborist library after drag & drop operations
-    // It only updates local state and saves to storage
+  const handleTreeChange = ({
+    dragIds,
+    dragNodes,
+    parentId,
+    parentNode,
+    index,
+  }: {
+    dragIds: string[];
+    dragNodes: NodeApi<ContextNode>[];
+    parentId: string | null;
+    parentNode: NodeApi<ContextNode> | null;
+    index: number;
+  }) => {
+    console.info('handleTreeChange', { dragIds, parentId, parentNode, index });
     setContextTree(prev => {
       // Update parent references after drag & drop
       const updateParentReferences = (
@@ -184,7 +194,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
       return updatedTree;
     });
-  }, [selectedContext, availableTags]);
+  };
 
   // Show modal for creating a new context
   const handleNewContextClick = () => {
