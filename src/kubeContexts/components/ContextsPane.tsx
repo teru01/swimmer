@@ -156,9 +156,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
   const handleTreeChange = ({
     dragIds,
-    dragNodes,
     parentId,
-    parentNode,
     index,
   }: {
     dragIds: string[];
@@ -167,32 +165,70 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     parentNode: NodeApi<ContextNode> | null;
     index: number;
   }) => {
-    console.info('handleTreeChange', { dragIds, parentId, parentNode, index });
+    console.info('handleTreeChange', { dragIds, parentId, index });
+
     setContextTree(prev => {
-      // Update parent references after drag & drop
-      const updateParentReferences = (
-        nodes: ContextNode[],
-        parent: ContextNode | undefined = undefined
-      ): ContextNode[] => {
-        return nodes.map(node => {
-          const updatedNode = { ...node, parent };
-          if (updatedNode.children) {
-            updatedNode.children = updateParentReferences(updatedNode.children, updatedNode);
+      const findAndRemove = (nodes: ContextNode[]): [ContextNode[], ContextNode[]] => {
+        const remaining: ContextNode[] = [];
+        const removed: ContextNode[] = [];
+
+        for (const node of nodes) {
+          if (dragIds.includes(node.id)) {
+            removed.push(node);
+            continue;
           }
-          return updatedNode;
+
+          if (node.children) {
+            const [newChildren, removedChildren] = findAndRemove(node.children);
+            node.children = newChildren;
+            removed.push(...removedChildren);
+          }
+
+          remaining.push({ ...node });
+        }
+
+        return [remaining, removed];
+      };
+
+      const insertIntoParent = (
+        nodes: ContextNode[],
+        dragNodeContexts: ContextNode[]
+      ): ContextNode[] => {
+        if (!parentId) {
+          const newRoots = [...nodes];
+          newRoots.splice(index, 0, ...dragNodeContexts);
+          return newRoots;
+        }
+        return nodes.map(n => {
+          if (n.id === parentId) {
+            const newChildren = [...(n.children || [])];
+            newChildren.splice(index, 0, ...dragNodeContexts);
+            return {
+              ...n,
+              children: newChildren,
+              isExpanded: true,
+            };
+          }
+          if (n.children) {
+            return {
+              ...n,
+              children: insertIntoParent(n.children, dragNodeContexts),
+            };
+          }
+          return n;
         });
       };
 
-      const updatedTree = updateParentReferences(prev);
+      const [withoutDragged, dragNodeContexts] = findAndRemove(prev);
+      const newTree = insertIntoParent(withoutDragged, dragNodeContexts);
 
-      // Save the updated tree data
       saveConfig({
-        contextTree: updatedTree,
+        contextTree: newTree,
         lastSelectedContext: selectedContext || undefined,
         tags: availableTags,
       });
 
-      return updatedTree;
+      return newTree;
     });
   };
 
