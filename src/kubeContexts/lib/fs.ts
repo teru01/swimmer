@@ -28,14 +28,14 @@ export const mockFs = {
 export const saveConfig = async (config: {
   contextTree: ContextNode[];
   lastSelectedContext?: string;
-  lastSelectedContextPath?: string;
+  lastSelectedContextName?: string;
   tags: string[];
 }) => {
   try {
     // 新しい設定形式に移行
-    // lastSelectedContextがあって、lastSelectedContextPathがない場合はlastSelectedContext値を使用
-    if (config.lastSelectedContext && !config.lastSelectedContextPath) {
-      config.lastSelectedContextPath = config.lastSelectedContext;
+    // lastSelectedContextがあって、lastSelectedContextNameがない場合はlastSelectedContext値を使用
+    if (config.lastSelectedContext && !config.lastSelectedContextName) {
+      config.lastSelectedContextName = config.lastSelectedContext;
     }
 
     const configYaml = yaml.stringify(config);

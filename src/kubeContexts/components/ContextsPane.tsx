@@ -42,14 +42,14 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
         // 1. Load tree structure from config file
         let contextTreeData: ContextNode[] = [];
-        let lastSelectedContextPath: string | null = null;
+        let lastSelectedContextName: string | null = null;
         let tags: string[] = [];
 
         try {
           const configYaml = await mockFs.readTextFile(STORAGE_KEY);
           const config = yaml.parse(configYaml);
           contextTreeData = config.contextTree || [];
-          lastSelectedContextPath = config.lastSelectedContextPath;
+          lastSelectedContextName = config.lastSelectedContextName;
           tags = config.tags || [];
           setAvailableTags(tags);
         } catch {
@@ -63,10 +63,10 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         setContextTree(contextTreeData);
 
         // コンテキストパスからノードを見つける
-        if (lastSelectedContextPath) {
+        if (lastSelectedContextName) {
           const findContextNode = (nodes: ContextNode[]): ContextNode | null => {
             for (const node of nodes) {
-              if (node.type === NodeType.Context && node.path === lastSelectedContextPath) {
+              if (node.type === NodeType.Context && node.contextName === lastSelectedContextName) {
                 return node;
               }
               if (node.children) {
@@ -80,7 +80,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
           const contextNode = findContextNode(contextTreeData);
           if (contextNode) {
             setSelectedContext(contextNode);
-            onContextSelect?.(contextNode.path!);
+            onContextSelect?.(contextNode.contextName!);
           }
         }
 
@@ -99,19 +99,19 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   // Handle context selection
   const handleContextSelect = useCallback(
     (contextNode: ContextNode) => {
-      if (contextNode.type !== NodeType.Context || !contextNode.path) {
+      if (contextNode.type !== NodeType.Context || !contextNode.contextName) {
         console.warn('Selected node is not a context or missing path:', contextNode);
         return;
       }
 
       setSelectedContext(contextNode);
-      onContextSelect?.(contextNode.path);
-      console.info('Selected context in contextsPane:', contextNode.path);
+      onContextSelect?.(contextNode.contextName);
+      console.info('Selected context in contextsPane:', contextNode.contextName);
 
       // Save selection
       saveConfig({
         contextTree,
-        lastSelectedContextPath: contextNode.path,
+        lastSelectedContextName: contextNode.contextName,
         tags: availableTags,
       });
     },
@@ -157,13 +157,13 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         const updatedTree = updateNodeName(prev);
         saveConfig({
           contextTree: updatedTree,
-          lastSelectedContextPath: selectedContext?.path || undefined,
+          lastSelectedContextName: selectedContext?.contextName || undefined,
           tags: availableTags,
         });
         return updatedTree;
       });
     },
-    [availableTags, contextTree, selectedContext?.path]
+    [availableTags, contextTree, selectedContext?.contextName]
   );
 
   // Handle tree structure changes (after drag & drop)
@@ -190,13 +190,13 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       // Save the updated tree data
       saveConfig({
         contextTree: updatedTree,
-        lastSelectedContextPath: selectedContext?.path || undefined,
+        lastSelectedContextName: selectedContext?.contextName || undefined,
         tags: availableTags,
       });
 
       return updatedTree;
     });
-  }, [selectedContext?.path, availableTags]);
+  }, [selectedContext?.contextName, availableTags]);
 
   // 選択されたコンテキストノードの親IDを見つける
   const findParentOfSelectedContext = useCallback((): string | null => {
@@ -223,7 +223,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     namespace?: string;
   }) => {
     // Generate context path (simplified from actual kubeconfig)
-    const contextPath = `ctx-${contextInfo.user}@${new URL(contextInfo.server).hostname}`;
+    const contextName = `ctx-${contextInfo.user}@${new URL(contextInfo.server).hostname}`;
 
     // 親フォルダを検索
     const findParentNode = (nodes: ContextNode[], parentId: string | null): ContextNode | null => {
@@ -245,10 +245,10 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
     // Create new context node
     const newContext: ContextNode = {
-      id: `context-${contextPath}`,
+      id: `context-${contextName}`,
       name: contextInfo.name,
       type: NodeType.Context,
-      path: contextPath,
+      contextName: contextName,
       tags: contextInfo.namespace ? ['namespace:' + contextInfo.namespace] : undefined,
       parent: parentNode || undefined,
     };
@@ -307,7 +307,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const updatedTree = addToParent(prev);
       saveConfig({
         contextTree: updatedTree,
-        lastSelectedContextPath: selectedContext?.path || undefined,
+        lastSelectedContextName: selectedContext?.contextName || undefined,
         tags: availableTags,
       });
       return updatedTree;
@@ -339,7 +339,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         const newTree = [...prev, newFolder];
         saveConfig({
           contextTree: newTree,
-          lastSelectedContextPath: selectedContext?.path || undefined,
+          lastSelectedContextName: selectedContext?.contextName || undefined,
           tags: availableTags,
         });
         return newTree;
@@ -369,7 +369,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const updatedTree = addToParent(prev);
       saveConfig({
         contextTree: updatedTree,
-        lastSelectedContextPath: selectedContext?.path || undefined,
+        lastSelectedContextName: selectedContext?.contextName || undefined,
         tags: availableTags,
       });
       return updatedTree;
@@ -419,7 +419,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const updatedTree = updateNodeTags(prev);
       saveConfig({
         contextTree: updatedTree,
-        lastSelectedContextPath: selectedContext?.path || undefined,
+        lastSelectedContextName: selectedContext?.contextName || undefined,
         tags: availableTags.includes(tag) ? availableTags : [...availableTags, tag],
       });
       return updatedTree;
@@ -447,7 +447,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const updatedTree = updateNodeTags(prev);
       saveConfig({
         contextTree: updatedTree,
-        lastSelectedContextPath: selectedContext?.path || undefined,
+        lastSelectedContextName: selectedContext?.contextName || undefined,
         tags: availableTags,
       });
       return updatedTree;
@@ -593,7 +593,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                     const updatedTree = addChildToFolder(prev);
                     saveConfig({
                       contextTree: updatedTree,
-                      lastSelectedContextPath: selectedContext?.path || undefined,
+                      lastSelectedContextName: selectedContext?.contextName || undefined,
                       tags: availableTags,
                     });
                     return updatedTree;
@@ -628,7 +628,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                     const updatedTree = removeNode(prev);
                     saveConfig({
                       contextTree: updatedTree,
-                      lastSelectedContextPath: selectedContext?.path || undefined,
+                      lastSelectedContextName: selectedContext?.contextName || undefined,
                       tags: availableTags,
                     });
                     return updatedTree;
@@ -716,7 +716,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       setContextTree(newTree);
       await saveConfig({
         contextTree: newTree,
-        lastSelectedContextPath: selectedContext?.path || undefined,
+        lastSelectedContextName: selectedContext?.contextName || undefined,
         tags: availableTags,
       });
       setLoading(false);

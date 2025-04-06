@@ -51,14 +51,14 @@ describe('findParentFolderId', () => {
       id: 'context-cluster1',
       name: 'cluster-1',
       type: NodeType.Context,
-      path: 'gke_project1_us-central1_cluster1',
+      contextName: 'gke_project1_us-central1_cluster1',
       parent: usRegionFolder,
     };
     const cluster2ContextNode: ContextNode = {
       id: 'context-cluster2',
       name: 'cluster-2',
       type: NodeType.Context,
-      path: 'gke_project1_jp-central1_cluster2',
+      contextName: 'gke_project1_jp-central1_cluster2',
       parent: usRegionFolder,
     };
 
@@ -112,7 +112,7 @@ describe('findParentFolderId', () => {
       id: 'context-local',
       name: 'local',
       type: NodeType.Context,
-      path: 'local-context',
+      contextName: 'local-context',
       parent: otherFolder,
     };
 

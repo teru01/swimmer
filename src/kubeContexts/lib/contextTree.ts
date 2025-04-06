@@ -9,9 +9,9 @@ export interface ContextNode {
   id: string;
   name: string;
   type: NodeType;
-  path?: string; // type=NodeType.Contextの場合のkubeconfigコンテキスト名
+  contextName?: string; // only if type=NodeType.Context
   children?: ContextNode[];
-  parent?: ContextNode; // 親ノードへの参照
+  parent?: ContextNode;
   tags?: string[];
   isExpanded?: boolean;
 }
@@ -127,7 +127,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
         id: `context-${context}`,
         name: name,
         type: NodeType.Context,
-        path: context,
+        contextName: context,
         parent: regionNode,
       };
       regionNode.children?.push(contextNode);
@@ -137,7 +137,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
         id: `context-${context}`,
         name: name,
         type: NodeType.Context,
-        path: context,
+        contextName: context,
         parent: providerNode,
       };
       providerNode.children?.push(contextNode);
