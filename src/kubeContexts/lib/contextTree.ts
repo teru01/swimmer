@@ -4,7 +4,6 @@ export enum NodeType {
   Context = 'context',
 }
 
-// コンテキストノードのデータ型
 export interface ContextNode {
   id: string;
   name: string;
@@ -15,6 +14,25 @@ export interface ContextNode {
   tags?: string[];
   isExpanded?: boolean;
 }
+
+/**
+ * Find a node by its ID
+ * @param nodes Tree of context nodes to search in
+ * @param id ID of the node to find
+ * @returns Node if found, otherwise null
+ */
+export const findNodeById = (nodes: ContextNode[], id: string): ContextNode | null => {
+  for (const node of nodes) {
+    if (node.id === id) {
+      return node;
+    }
+    if (node.children) {
+      const found = findNodeById(node.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+};
 
 /**
  * Find the parent folder ID of a node using parent references

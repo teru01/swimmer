@@ -1,5 +1,5 @@
 import { useState } from 'react';
-
+import { ContextNode } from '../../kubeContexts/lib/contextTree';
 type Message = {
   id: number;
   text: string;
@@ -7,10 +7,14 @@ type Message = {
   timestamp: Date;
 };
 
+interface ChatPaneProps {
+  selectedContext: ContextNode | null;
+}
+
 /**
  * Right Pane: AI chat interface component
  */
-function ChatPane({ selectedContext }: { selectedContext: string | null }) {
+function ChatPane({ selectedContext }: ChatPaneProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -41,7 +45,7 @@ function ChatPane({ selectedContext }: { selectedContext: string | null }) {
     setTimeout(() => {
       const botMessage: Message = {
         id: messages.length + 2,
-        text: `Regarding "${inputText}". I'm looking up information related to ${selectedContext || 'the current context'}...\n\nThis is a mock response. In production, an AI model would provide a real answer here.`,
+        text: `Regarding "${inputText}". I'm looking up information related to ${selectedContext?.name || 'the current context'}...\n\nThis is a mock response. In production, an AI model would provide a real answer here.`,
         sender: 'assistant',
         timestamp: new Date(),
       };

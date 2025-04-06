@@ -1,14 +1,20 @@
+import { ContextNode } from '../../kubeContexts/lib/contextTree';
+
+interface ClusterInfoPaneProps {
+  selectedContext: ContextNode | null;
+}
+
 /**
  * Center Pane: Component to display cluster information
  */
-function ClusterInfoPane({ selectedContext }: { selectedContext: string | null }) {
+function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
   return (
     <div className="cluster-info-pane">
       <h2>Cluster Information</h2>
 
       {selectedContext ? (
         <div className="cluster-info-content">
-          <h3>Context: {selectedContext}</h3>
+          <h3>Context: {selectedContext.name}</h3>
 
           <div className="info-section">
             <h4>Nodes</h4>

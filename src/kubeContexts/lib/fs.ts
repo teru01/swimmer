@@ -32,8 +32,6 @@ export const saveConfig = async (config: {
   tags: string[];
 }) => {
   try {
-    // 新しい設定形式に移行
-    // lastSelectedContextがあって、lastSelectedContextNameがない場合はlastSelectedContext値を使用
     if (config.lastSelectedContext && !config.lastSelectedContextName) {
       config.lastSelectedContextName = config.lastSelectedContext;
     }

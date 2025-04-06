@@ -6,6 +6,7 @@ import TerminalPane from '../cluster/components/TerminalPane';
 import ChatPane from '../chat/components/ChatPane';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import './resizable.css';
+import { ContextNode } from '../kubeContexts/lib/contextTree';
 
 /**
  * Main Layout Component
@@ -16,7 +17,7 @@ import './resizable.css';
 function MainLayout() {
   // Currently selected cluster and context
   const [selectedCluster, setSelectedCluster] = useState<string | null>('cluster-0');
-  const [selectedContext, setSelectedContext] = useState<string | null>(null);
+  const [selectedContext, setSelectedContext] = useState<ContextNode | null>(null);
 
   // Mock cluster list
   const clusters = ['cluster-0', 'cluster-1', 'cluster-2', 'cluster-3'];
@@ -28,9 +29,9 @@ function MainLayout() {
   };
 
   // Context selection handler
-  const handleContextSelect = useCallback((context: string) => {
-    setSelectedContext(context);
-    console.info('Selected context:', context);
+  const handleContextSelect = useCallback((contextNode: ContextNode) => {
+    setSelectedContext(contextNode);
+    console.info('Selected context:', contextNode);
   }, []);
 
   return (

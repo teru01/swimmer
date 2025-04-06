@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-
+import { ContextNode } from '../../kubeContexts/lib/contextTree';
 interface TerminalPaneProps {
-  selectedContext: string | null;
+  selectedContext: ContextNode | null;
 }
 
 /**

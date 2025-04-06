@@ -10,12 +10,14 @@ import {
   findParentFolderId,
   validateFolderName,
   NodeType,
+  findNodeById,
 } from '../lib/contextTree';
 import K8sContextModal from './K8sContextModal';
 import { mockFs, STORAGE_KEY, saveConfig } from '../lib/fs';
+import { ContextConfigSchema } from '../lib/configSchema';
 
 interface ContextsPaneProps {
-  onContextSelect?: (context: string) => void;
+  onContextSelect?: (contextNode: ContextNode) => void;
 }
 
 /**
@@ -42,15 +44,17 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
         // 1. Load tree structure from config file
         let contextTreeData: ContextNode[] = [];
-        let lastSelectedContextName: string | null = null;
+        let lastSelectedContextId: string | undefined;
         let tags: string[] = [];
 
         try {
           const configYaml = await mockFs.readTextFile(STORAGE_KEY);
           const config = yaml.parse(configYaml);
-          contextTreeData = config.contextTree || [];
-          lastSelectedContextName = config.lastSelectedContextName;
-          tags = config.tags || [];
+
+          const parsedConfig = ContextConfigSchema.parse(config);
+          contextTreeData = parsedConfig.contextTree || [];
+          lastSelectedContextId = parsedConfig.lastSelectedContextId;
+          tags = parsedConfig.availableTags || [];
           setAvailableTags(tags);
         } catch {
           // If config file doesn't exist, load directly from kubeconfig
@@ -63,24 +67,11 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         setContextTree(contextTreeData);
 
         // コンテキストパスからノードを見つける
-        if (lastSelectedContextName) {
-          const findContextNode = (nodes: ContextNode[]): ContextNode | null => {
-            for (const node of nodes) {
-              if (node.type === NodeType.Context && node.contextName === lastSelectedContextName) {
-                return node;
-              }
-              if (node.children) {
-                const found = findContextNode(node.children);
-                if (found) return found;
-              }
-            }
-            return null;
-          };
-
-          const contextNode = findContextNode(contextTreeData);
+        if (lastSelectedContextId) {
+          const contextNode = findNodeById(contextTreeData, lastSelectedContextId);
           if (contextNode) {
             setSelectedContext(contextNode);
-            onContextSelect?.(contextNode.contextName!);
+            onContextSelect?.(contextNode);
           }
         }
 
@@ -105,7 +96,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       }
 
       setSelectedContext(contextNode);
-      onContextSelect?.(contextNode.contextName);
+      onContextSelect?.(contextNode);
       console.info('Selected context in contextsPane:', contextNode.contextName);
 
       // Save selection
