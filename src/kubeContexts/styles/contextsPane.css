@@ -165,11 +165,30 @@
   font-weight: 500;
 }
 
+.tree-node.folder.selected {
+  background-color: var(--bg-tertiary);
+  color: var(--color-primary);
+  border-left: 2px solid var(--color-primary);
+}
+
+.tree-node.context.selected {
+  background-color: var(--bg-tertiary);
+  color: var(--color-primary);
+}
+
 .node-content {
   display: flex;
   align-items: center;
   gap: 4px;
   flex: 1;
+  pointer-events: none; /* 子要素のクリックイベントをツリーノード全体に伝播 */
+}
+
+.node-content input,
+.node-content .context-tag,
+.folder-icon,
+.context-icon {
+  pointer-events: auto; /* 特定の要素はクリック可能にする */
 }
 
 .folder-icon,

@@ -88,19 +88,13 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   // Handle context selection
   const handleContextSelect = useCallback(
     (contextNode: ContextNode) => {
-      if (contextNode.type !== NodeType.Context || !contextNode.contextName) {
-        console.warn('Selected node is not a context or missing path:', contextNode);
-        return;
-      }
-
       setSelectedContext(contextNode);
       onContextSelect?.(contextNode);
-      console.info('Selected context in contextsPane:', contextNode.contextName);
 
       // Save selection
       saveConfig({
         contextTree,
-        lastSelectedContextName: contextNode.contextName,
+        lastSelectedContext: contextNode,
         tags: availableTags,
       });
     },
@@ -151,13 +145,13 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         const updatedTree = updateNodeName(prev);
         saveConfig({
           contextTree: updatedTree,
-          lastSelectedContextName: selectedContext?.contextName || undefined,
+          lastSelectedContext: selectedContext || undefined,
           tags: availableTags,
         });
         return updatedTree;
       });
     },
-    [availableTags, contextTree, selectedContext?.contextName]
+    [availableTags, contextTree, selectedContext]
   );
 
   // Handle tree structure changes (after drag & drop)
@@ -184,13 +178,13 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       // Save the updated tree data
       saveConfig({
         contextTree: updatedTree,
-        lastSelectedContextName: selectedContext?.contextName || undefined,
+        lastSelectedContext: selectedContext || undefined,
         tags: availableTags,
       });
 
       return updatedTree;
     });
-  }, [selectedContext?.contextName, availableTags]);
+  }, [selectedContext, availableTags]);
 
   // Show modal for creating a new context
   const handleNewContextClick = () => {
@@ -297,7 +291,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         const newTree = [...prev, newFolder];
         saveConfig({
           contextTree: newTree,
-          lastSelectedContextName: selectedContext?.contextName || undefined,
+          lastSelectedContext: selectedContext || undefined,
           tags: availableTags,
         });
         return newTree;
@@ -326,7 +320,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const updatedTree = addToParent(prev);
       saveConfig({
         contextTree: updatedTree,
-        lastSelectedContextName: selectedContext?.contextName || undefined,
+        lastSelectedContext: selectedContext || undefined,
         tags: availableTags,
       });
       return updatedTree;
@@ -376,7 +370,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const updatedTree = updateNodeTags(prev);
       saveConfig({
         contextTree: updatedTree,
-        lastSelectedContextName: selectedContext?.contextName || undefined,
+        lastSelectedContext: selectedContext || undefined,
         tags: availableTags.includes(tag) ? availableTags : [...availableTags, tag],
       });
       return updatedTree;
@@ -404,7 +398,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const updatedTree = updateNodeTags(prev);
       saveConfig({
         contextTree: updatedTree,
-        lastSelectedContextName: selectedContext?.contextName || undefined,
+        lastSelectedContext: selectedContext || undefined,
         tags: availableTags,
       });
       return updatedTree;
@@ -416,33 +410,31 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     const data = node.data;
     const isFolder = data.type === NodeType.Folder;
     const isContext = data.type === NodeType.Context;
-    const isSelected = isContext && selectedContext && data.id === selectedContext.id;
+    const isSelected = selectedContext && data.id === selectedContext.id;
+
+    // タグの削除処理をハンドリングする関数
+    const handleTagClose = (tagToRemove: string) => {
+      handleRemoveTag(node.id, tagToRemove);
+    };
 
     return (
       <div
         className={`tree-node ${isFolder ? 'folder' : 'context'} ${isSelected ? 'selected' : ''}`}
         style={style}
         ref={dragHandle}
+        onClick={() => {
+          handleContextSelect(data);
+          if (isFolder) {
+            node.toggle();
+          }
+        }}
       >
         <div className="node-content">
-          {isFolder && (
-            <span className="folder-icon" onClick={() => node.toggle()}>
-              {node.isOpen ? '▼' : '▶'}
-            </span>
-          )}
+          {isFolder && <span className="folder-icon">{node.isOpen ? '▼' : '▶'}</span>}
 
           {isContext && <span className="context-icon">⚙️</span>}
 
-          <span
-            className="node-name"
-            onClick={() => {
-              if (isContext) {
-                handleContextSelect(data);
-              } else if (isFolder) {
-                node.toggle();
-              }
-            }}
-          >
+          <span className="node-name">
             {node.isEditing ? (
               <Input
                 autoFocus
@@ -458,6 +450,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                   }
                 }}
                 data-testid="folder-name-input"
+                onClick={e => e.stopPropagation()} // 編集時のクリックはバブリングさせない
               />
             ) : (
               data.name
@@ -471,7 +464,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                 key={tag}
                 className="context-tag"
                 closable={isEditing}
-                onClose={() => handleRemoveTag(node.id, tag)}
+                onClose={() => handleTagClose(tag)}
               >
                 {tag}
               </Tag>
@@ -480,7 +473,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
         {/* Actions in edit mode */}
         {isEditing && (
-          <div className="node-actions">
+          <div className="node-actions" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
             <Button size="small" onClick={() => node.edit()}>
               Rename
             </Button>
@@ -550,7 +543,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                     const updatedTree = addChildToFolder(prev);
                     saveConfig({
                       contextTree: updatedTree,
-                      lastSelectedContextName: selectedContext?.contextName || undefined,
+                      lastSelectedContext: selectedContext || undefined,
                       tags: availableTags,
                     });
                     return updatedTree;
@@ -585,7 +578,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                     const updatedTree = removeNode(prev);
                     saveConfig({
                       contextTree: updatedTree,
-                      lastSelectedContextName: selectedContext?.contextName || undefined,
+                      lastSelectedContext: selectedContext || undefined,
                       tags: availableTags,
                     });
                     return updatedTree;
@@ -673,7 +666,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       setContextTree(newTree);
       await saveConfig({
         contextTree: newTree,
-        lastSelectedContextName: selectedContext?.contextName || undefined,
+        lastSelectedContext: selectedContext || undefined,
         tags: availableTags,
       });
       setLoading(false);

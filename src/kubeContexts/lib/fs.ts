@@ -26,15 +26,10 @@ export const mockFs = {
 // Save configuration
 export const saveConfig = async (config: {
   contextTree: ContextNode[];
-  lastSelectedContext?: string;
-  lastSelectedContextName?: string;
+  lastSelectedContext?: ContextNode;
   tags: string[];
 }) => {
   try {
-    if (config.lastSelectedContext && !config.lastSelectedContextName) {
-      config.lastSelectedContextName = config.lastSelectedContext;
-    }
-
     const configYaml = yaml.stringify(config);
     await mockFs.writeTextFile(STORAGE_KEY, configYaml);
   } catch (err) {
