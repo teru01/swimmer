@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Tree, NodeRendererProps } from 'react-arborist';
+import { Tree, NodeRendererProps, NodeApi } from 'react-arborist';
 import { commands } from '../../api';
 import * as yaml from 'yaml';
 import { Button, Input, Tag, Dropdown, Menu } from '../../main/ui';
@@ -482,7 +482,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                   }
                 }}
                 data-testid="folder-name-input"
-                onClick={e => e.stopPropagation()} // 編集時のクリックはバブリングさせない
+                onMouseDown={e => e.stopPropagation()} // 編集時のクリックはバブリングさせない
               />
             ) : (
               data.name
@@ -665,9 +665,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
             paddingTop={10}
             paddingBottom={10}
             selectionFollowsFocus={true}
-            disableDrag={!isEditing}
-            disableDrop={!isEditing}
-            disableEdit={!isEditing}
             onMove={handleTreeChange}
           >
             {NodeRenderer}
