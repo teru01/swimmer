@@ -7,6 +7,7 @@ export const ContextNodeSchema: z.ZodType<ContextNode> = z.lazy(() =>
     name: z.string(),
     type: z.nativeEnum(NodeType),
     contextName: z.string().optional(),
+    parentId: z.string().optional(),
     tags: z.array(z.string()).optional(),
     isExpanded: z.boolean().optional(),
     children: z.array(ContextNodeSchema).optional(),
@@ -15,7 +16,7 @@ export const ContextNodeSchema: z.ZodType<ContextNode> = z.lazy(() =>
 
 export const ContextConfigSchema = z.object({
   contextTree: z.array(ContextNodeSchema),
-  lastSelectedContextId: z.string().optional(),
+  lastSelectedContext: ContextNodeSchema.optional(),
   availableTags: z.array(z.string()).optional(),
 });
 

@@ -43,7 +43,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
         // 1. Load tree structure from config file
         let contextTreeData: ContextNode[] = [];
-        let lastSelectedContextId: string | undefined;
+        let lastSelectedContext: ContextNode | undefined;
         let tags: string[] = [];
 
         try {
@@ -52,7 +52,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
           const parsedConfig = ContextConfigSchema.parse(config);
           contextTreeData = parsedConfig.contextTree || [];
-          lastSelectedContextId = parsedConfig.lastSelectedContextId;
+          lastSelectedContext = parsedConfig.lastSelectedContext;
           tags = parsedConfig.availableTags || [];
           setAvailableTags(tags);
         } catch {
@@ -65,8 +65,8 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
         setContextTree(contextTreeData);
 
-        if (lastSelectedContextId) {
-          const contextNode = findNodeById(contextTreeData, lastSelectedContextId);
+        if (lastSelectedContext) {
+          const contextNode = findNodeById(contextTreeData, lastSelectedContext.id);
           if (contextNode) {
             setSelectedContext(contextNode);
             onContextSelect?.(contextNode);
@@ -286,8 +286,8 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     };
 
     setContextTree(prev => {
-      // If no parent folder, add to root
-      if (!parentId) {
+      // If no parent folder or context is not selected, add to root
+      if (!parentId || !selectedContext) {
         const newTree = [...prev, newFolder];
         saveConfig({
           contextTree: newTree,
@@ -297,7 +297,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         return newTree;
       }
 
-      // Add to parent folder
+      let updatedTree: ContextNode[] = [];
       const addToParent = (nodes: ContextNode[]): ContextNode[] => {
         return nodes.map(n => {
           if (n.id === parentId) {
@@ -317,7 +317,29 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
           return n;
         });
       };
-      const updatedTree = addToParent(prev);
+      const addToChildren = (nodes: ContextNode[]): ContextNode[] => {
+        return nodes.map(n => {
+          if (n.id === selectedContext.id) {
+            newFolder.parentId = n.id;
+            return { ...n, children: [...(n.children || []), newFolder] };
+          }
+          if (n.children) {
+            return { ...n, children: addToChildren(n.children) };
+          }
+          return n;
+        });
+      };
+      switch (selectedContext.type) {
+        case NodeType.Folder:
+          updatedTree = addToChildren(prev);
+          break;
+        case NodeType.Context:
+          updatedTree = addToParent(prev);
+          break;
+        default:
+          updatedTree = [...prev, newFolder];
+          break;
+      }
       saveConfig({
         contextTree: updatedTree,
         lastSelectedContext: selectedContext || undefined,
@@ -470,126 +492,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
               </Tag>
             ))}
         </div>
-
-        {/* Actions in edit mode */}
-        {isEditing && (
-          <div className="node-actions" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-            <Button size="small" onClick={() => node.edit()}>
-              Rename
-            </Button>
-
-            <Dropdown
-              overlay={
-                <div>
-                  {availableTags.map(tag => (
-                    <Menu.Item key={tag} onClick={() => handleAddTag(node.id, tag)}>
-                      {tag}
-                    </Menu.Item>
-                  ))}
-                  <Menu.Divider />
-                  <div>
-                    <Input
-                      placeholder="New tag..."
-                      size="small"
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          const value = e.currentTarget.value.trim();
-                          if (value) handleAddTag(node.id, value);
-                          e.currentTarget.value = '';
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-              }
-            >
-              <Button size="small">Add Tag</Button>
-            </Dropdown>
-
-            {isFolder && (
-              <Button
-                size="small"
-                onClick={() => {
-                  // Add new subfolder to folder
-                  const newChild: ContextNode = {
-                    id: `folder-new-${Date.now()}`,
-                    name: 'New Folder',
-                    type: NodeType.Folder,
-                    children: [],
-                    isExpanded: true,
-                    parentId: data.id,
-                  };
-
-                  // Custom processing for tree update
-                  setContextTree(prev => {
-                    const addChildToFolder = (nodes: ContextNode[]): ContextNode[] => {
-                      return nodes.map(n => {
-                        if (n.id === node.id) {
-                          return {
-                            ...n,
-                            children: [...(n.children || []), newChild],
-                          };
-                        }
-                        if (n.children) {
-                          return {
-                            ...n,
-                            children: addChildToFolder(n.children),
-                          };
-                        }
-                        return n;
-                      });
-                    };
-
-                    const updatedTree = addChildToFolder(prev);
-                    saveConfig({
-                      contextTree: updatedTree,
-                      lastSelectedContext: selectedContext || undefined,
-                      tags: availableTags,
-                    });
-                    return updatedTree;
-                  });
-                }}
-              >
-                Add Folder
-              </Button>
-            )}
-
-            <Button
-              size="small"
-              danger
-              onClick={() => {
-                if (window.confirm(`Delete ${data.name}?`)) {
-                  // Custom processing for tree update
-                  setContextTree(prev => {
-                    const removeNode = (nodes: ContextNode[]): ContextNode[] => {
-                      return nodes
-                        .filter(n => n.id !== node.id)
-                        .map(n => {
-                          if (n.children) {
-                            return {
-                              ...n,
-                              children: removeNode(n.children),
-                            };
-                          }
-                          return n;
-                        });
-                    };
-
-                    const updatedTree = removeNode(prev);
-                    saveConfig({
-                      contextTree: updatedTree,
-                      lastSelectedContext: selectedContext || undefined,
-                      tags: availableTags,
-                    });
-                    return updatedTree;
-                  });
-                }
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        )}
       </div>
     );
   };

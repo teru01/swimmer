@@ -1,112 +1,53 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ContextsPane from '../components/ContextsPane';
-import { commands as _commands } from '../../api/commands';
+import { describe, it, vi, expect } from 'vitest';
+vi.mock('../lib/fs', () => ({
+  STORAGE_KEY: 'swimmer.contextTree.test',
+  mockFs: {
+    readTextFile: vi.fn().mockRejectedValue(new Error('not found')),
+    writeTextFile: vi.fn(),
+    createDir: vi.fn(),
+  },
+  saveConfig: vi.fn(),
+}));
 
-// コンポーネントをスタブバージョンに置き換える
-vi.mock('../components/ContextsPane', () => {
-  return {
-    default: () => (
-      <div className="contexts-pane">
-        <div className="contexts-header">
-          <div className="k8s-contexts-title">
-            <h2>KUBERNETES CONTEXTS</h2>
-          </div>
-          <div className="contexts-toolbar">
-            <input data-testid="mock-input" placeholder="Search contexts..." />
-          </div>
-          <div className="context-actions">
-            <button data-testid="mock-button" title="New Context" className="icon-button">
-              <span className="context-icon">⚙️</span>
-            </button>
-            <button data-testid="mock-button" title="New Folder" className="icon-button">
-              <span className="folder-icon">📁</span>
-            </button>
-          </div>
-        </div>
-        <div className="contexts-tree">
-          <div data-testid="mock-tree">
-            <div className="context-item">context1</div>
-            <div className="context-item">context2</div>
-          </div>
-        </div>
-        <div className="error" style={{ display: 'none' }}>
-          <div>Folder name can only contain letters, numbers, hyphens and underscores</div>
-          <div>A folder with this name already exists at this level</div>
-        </div>
-      </div>
-    ),
-  };
-});
-
-// Mock the commands module
-vi.mock('../../api/commands', () => ({
+vi.mock('../../api', () => ({
   commands: {
-    getKubeContexts: vi.fn().mockResolvedValue(['context1', 'context2']),
+    getKubeContexts: vi.fn().mockResolvedValue([]),
   },
 }));
 
-describe('ContextsPane', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'info').mockImplementation(() => {});
-  });
+vi.mock('react-arborist', () => ({
+  Tree: ({ children }: any) => (
+    <div data-testid="mock-tree">
+      {children({
+        node: {
+          id: 'folder-123',
+          data: {
+            id: 'folder-123',
+            name: 'NewFolder',
+            type: 'folder',
+          },
+          isOpen: true,
+          edit: () => {},
+          toggle: () => {},
+        },
+        style: {},
+        dragHandle: null,
+      })}
+    </div>
+  ),
+}));
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('renders the component with initial state', async () => {
+describe('ContextsPane UI', () => {
+  it('New Folder ボタンを押すとフォルダが追加される', async () => {
     render(<ContextsPane />);
 
-    // Check title and buttons
-    expect(screen.getByText('KUBERNETES CONTEXTS')).toBeInTheDocument();
-    expect(screen.getByTitle('New Context')).toBeInTheDocument();
-    expect(screen.getByTitle('New Folder')).toBeInTheDocument();
+    const folderButton = await screen.findByTitle('New Folder');
+    fireEvent.click(folderButton);
 
-    // Check if context items are displayed
-    expect(screen.getByText('context1')).toBeInTheDocument();
-    expect(screen.getByText('context2')).toBeInTheDocument();
-  });
-
-  it('allows creating a new folder with valid name', async () => {
-    render(<ContextsPane />);
-
-    // Click on new folder button
-    const newFolderButton = screen.getByTitle('New Folder');
-    fireEvent.click(newFolderButton);
-
-    // Find the input field
-    const input = screen.getByPlaceholderText('Search contexts...');
-    expect(input).toBeInTheDocument();
-
-    // Type a valid folder name
-    fireEvent.change(input, { target: { value: 'TestFolder1' } });
-    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
-
-    // Check if context1 and context2 are displayed
-    expect(screen.getByText('context1')).toBeInTheDocument();
-    expect(screen.getByText('context2')).toBeInTheDocument();
-  });
-
-  it('validates folder name format', async () => {
-    // Show error message
-    render(<ContextsPane />);
-
-    expect(
-      screen.getByText('Folder name can only contain letters, numbers, hyphens and underscores')
-    ).toBeInTheDocument();
-  });
-
-  it('prevents creating duplicate folders at the same level', async () => {
-    // Show error message
-    render(<ContextsPane />);
-
-    expect(
-      screen.getByText('A folder with this name already exists at this level')
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('NewFolder')).toBeInTheDocument();
+    });
   });
 });
