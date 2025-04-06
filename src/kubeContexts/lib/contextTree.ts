@@ -10,7 +10,7 @@ export interface ContextNode {
   type: NodeType;
   contextName?: string; // only if type=NodeType.Context
   children?: ContextNode[];
-  parent?: ContextNode;
+  parentId?: string;
   tags?: string[];
   isExpanded?: boolean;
 }
@@ -32,34 +32,6 @@ export const findNodeById = (nodes: ContextNode[], id: string): ContextNode | nu
     }
   }
   return null;
-};
-
-/**
- * Find the parent folder ID of a node using parent references
- * @param nodes Tree of context nodes to search in
- * @param nodeId ID of the node to find parent for
- * @returns ID of the parent folder or null if not found
- */
-export const findParentFolderId = (nodes: ContextNode[], nodeId: string | null): string | null => {
-  if (!nodeId) return null;
-
-  // Find the node first
-  const findNode = (nodes: ContextNode[]): ContextNode | null => {
-    for (const node of nodes) {
-      if (node.id === nodeId) {
-        return node;
-      }
-      if (node.children) {
-        const found = findNode(node.children);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  const node = findNode(nodes);
-  // Use parent reference if available
-  return node?.parent?.id || null;
 };
 
 // コンテキスト名をパースして階層構造を構築する
@@ -121,7 +93,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
           type: NodeType.Folder,
           children: [],
           isExpanded: true,
-          parent: providerNode,
+          parentId: providerNode.id,
         };
         providerNode.children?.push(projectNode);
       }
@@ -135,7 +107,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
           type: NodeType.Folder,
           children: [],
           isExpanded: true,
-          parent: projectNode,
+          parentId: projectNode.id,
         };
         projectNode.children?.push(regionNode);
       }
@@ -146,9 +118,9 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
         name: name,
         type: NodeType.Context,
         contextName: context,
-        parent: regionNode,
+        parentId: regionNode?.id,
       };
-      regionNode.children?.push(contextNode);
+      regionNode?.children?.push(contextNode);
     } else {
       // その他のコンテキストは直接プロバイダーの下に配置
       const contextNode: ContextNode = {
@@ -156,7 +128,7 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
         name: name,
         type: NodeType.Context,
         contextName: context,
-        parent: providerNode,
+        parentId: providerNode.id,
       };
       providerNode.children?.push(contextNode);
     }
@@ -165,48 +137,28 @@ export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
   return tree;
 };
 
-// Validate folder name
-export const validateFolderName = (
+export const validateNodeName = (
   contextTree: ContextNode[],
   name: string,
-  parentId: string | null,
-  nodeId?: string
+  node: ContextNode
 ): string | null => {
-  // Check for valid format using regex
   if (!name.match(/^[a-zA-Z0-9\-_]+$/)) {
     return 'Folder name can only contain letters, numbers, hyphens and underscores';
   }
-
-  // 親フォルダのノードを検索
-  const findParentNode = (nodes: ContextNode[], id: string | null): ContextNode | null => {
-    if (id === null) return null;
-
-    for (const node of nodes) {
-      if (node.id === id) {
-        return node;
-      }
-      if (node.children) {
-        const found = findParentNode(node.children, id);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  const parentNode = parentId ? findParentNode(contextTree, parentId) : null;
+  const siblings = getSiblings(contextTree, node);
 
   // Check for duplicate folder name at the same level
-  const isDuplicate = (nodes: ContextNode[]): boolean => {
-    const sameLevel = parentNode ? parentNode.children || [] : contextTree;
-
-    return sameLevel.some(
-      n => n.type === NodeType.Folder && n.name === name && (!nodeId || n.id !== nodeId) // Ignore current node when renaming
-    );
+  const isDuplicate = (siblings: ContextNode[]): boolean => {
+    return siblings.some(n => n.id !== node.id && n.type === node.type && n.name === name);
   };
 
-  if (isDuplicate(contextTree)) {
-    return 'A folder with this name already exists at this level';
+  if (isDuplicate(siblings)) {
+    return 'Name must be unique at this level';
   }
 
-  return null; // No validation error
+  return null;
+};
+
+const getSiblings = (contextTree: ContextNode[], node: ContextNode): ContextNode[] => {
+  return node.parentId ? findNodeById(contextTree, node.parentId)?.children || [] : contextTree;
 };

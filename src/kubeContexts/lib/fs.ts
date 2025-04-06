@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { ContextNode } from './contextTree';
 import * as yaml from 'yaml';
 

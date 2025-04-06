@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest';
 import ContextsPane from '../components/ContextsPane';
-import { commands } from '../../api/commands';
+import { commands as _commands } from '../../api/commands';
 
 // コンポーネントをスタブバージョンに置き換える
 vi.mock('../components/ContextsPane', () => {
