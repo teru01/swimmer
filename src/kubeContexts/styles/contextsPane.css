@@ -153,6 +153,8 @@
   cursor: pointer;
   border-radius: 4px;
   color: var(--text-primary);
+  user-select: none; /* テキスト選択を防止 */
+  transition: background-color 0.2s;
 }
 
 .tree-node:hover {
@@ -176,12 +178,100 @@
   color: var(--color-primary);
 }
 
+/* ドラッグ中のノードスタイル */
+.tree-node[aria-grabbed='true'] {
+  opacity: 0.7;
+  background-color: var(--color-primary-low);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px dashed var(--color-primary);
+  position: relative;
+  z-index: 2;
+}
+
+/* フォルダーホバー時のドロップインジケーター */
+.tree-node.folder:hover {
+  border: 1px dashed var(--color-primary);
+  background-color: var(--color-primary-low);
+}
+
+/* ドロップターゲットのスタイル */
+.arborist-drop-target::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--color-primary);
+  z-index: 2;
+}
+
+/* ドロップターゲットが上側の場合 */
+.arborist-drop-target.drop-target-top::before {
+  top: 0;
+}
+
+/* ドロップターゲットが下側の場合 */
+.arborist-drop-target.drop-target-bottom::before {
+  bottom: 0;
+}
+
+/* ドロップターゲットがフォルダー内部の場合 */
+.arborist-drop-target.drop-target-inside {
+  background-color: var(--color-primary-low);
+  border: 1px dashed var(--color-primary);
+}
+
+/* ドラッグハンドルスタイル強化 */
+.drag-handle {
+  cursor: grab !important; /* 重要な優先度を持つカーソルスタイル */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px; /* 幅が縮小されないように */
+  border-radius: 3px;
+  color: var(--text-secondary);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: auto !important; /* ドラッグハンドルが常にクリック可能 */
+  position: relative;
+  margin-left: 4px;
+  z-index: 10; /* 他の要素よりも前面に */
+}
+
+.tree-node:hover .drag-handle {
+  opacity: 1;
+  background-color: var(--bg-hover);
+}
+
+.drag-handle:hover {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--color-primary);
+  opacity: 1 !important;
+}
+
+.drag-handle:active {
+  cursor: grabbing !important; /* ドラッグ中のカーソルスタイル */
+  opacity: 1 !important;
+}
+
+.drag-icon {
+  font-size: 14px;
+  font-weight: bold;
+  pointer-events: none; /* アイコン自体はイベントを受け取らない */
+  user-select: none;
+}
+
 .node-content {
   display: flex;
   align-items: center;
   gap: 4px;
   flex: 1;
   pointer-events: none; /* 子要素のクリックイベントをツリーノード全体に伝播 */
+  overflow: hidden; /* 長いテキストを切り詰める */
+  text-overflow: ellipsis; /* 長いテキストを省略記号で表示 */
+  white-space: nowrap; /* テキストを折り返さない */
 }
 
 .node-content input,
@@ -200,6 +290,7 @@
   justify-content: center;
   width: 16px;
   height: 16px;
+  flex-shrink: 0; /* アイコンが縮小されないように */
 }
 
 .context-tag {
@@ -209,17 +300,41 @@
   margin-left: 6px;
   background: var(--bg-tertiary);
   color: var(--text-secondary);
+  flex-shrink: 0; /* タグが縮小されないように */
 }
 
 .node-actions {
   display: flex;
   gap: 4px;
+  align-items: center;
+  pointer-events: auto; /* クリックを可能にする */
+  margin-left: 4px; /* コンテンツとの間隔 */
+  flex-shrink: 0; /* アクションが縮小されないように */
+}
+
+/* VSCodeスタイル: ノードにホバーしたときのみドラッグハンドルを表示 */
+.node-actions {
+  visibility: visible; /* 常に表示するが透明に */
   opacity: 0;
   transition: opacity 0.2s;
 }
 
 .tree-node:hover .node-actions {
+  visibility: visible;
   opacity: 1;
+}
+
+/* react-arboristのドラッグ操作関連のスタイル */
+[data-rbd-draggable-context-id] {
+  user-select: none !important;
+}
+
+[data-rbd-drag-handle-context-id] {
+  cursor: grab !important;
+}
+
+[data-rbd-drag-handle-context-id]:active {
+  cursor: grabbing !important;
 }
 
 .loading,

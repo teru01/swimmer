@@ -33,6 +33,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const [searchText, setSearchText] = useState('');
   const [showContextModal, setShowContextModal] = useState(false);
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const treeRef = useRef(null);
 
   // Initialize: Load configuration
@@ -84,6 +85,35 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
     loadContexts();
   }, [onContextSelect]);
+
+  // ドラッグ操作の検知
+  useEffect(() => {
+    // ドラッグ操作の開始を検知
+    const handleDragStart = () => {
+      setIsDragging(true);
+    };
+
+    // ドラッグ操作の終了を検知
+    const handleDragEnd = () => {
+      setIsDragging(false);
+    };
+
+    // グローバルイベントリスナーの登録
+    document.addEventListener('mousedown', e => {
+      // ドラッグハンドルをクリックした場合にドラッグ開始とみなす
+      if ((e.target as HTMLElement).closest('.drag-handle')) {
+        handleDragStart();
+      }
+    });
+
+    document.addEventListener('mouseup', handleDragEnd);
+
+    // クリーンアップ
+    return () => {
+      document.removeEventListener('mousedown', handleDragStart);
+      document.removeEventListener('mouseup', handleDragEnd);
+    };
+  }, []);
 
   // Handle context selection
   const handleContextSelect = useCallback(
@@ -167,6 +197,9 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   }) => {
     console.info('handleTreeChange', { dragIds, parentId, index });
 
+    // ドラッグ操作が完了したらフラグをリセット
+    setIsDragging(false);
+
     setContextTree(prev => {
       const findAndRemove = (nodes: ContextNode[]): [ContextNode[], ContextNode[]] => {
         const remaining: ContextNode[] = [];
@@ -240,84 +273,69 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   };
 
   // Save a new context
-  // const handleSaveContext = (contextInfo: { name: string; server: string; user: string }) => {
-  //   const contextName = `ctx-${contextInfo.user}@${new URL(contextInfo.server).hostname}`;
+  const handleSaveContext = (contextInfo: { name: string; server: string; user: string }) => {
+    // setContextTree(prev => {
+    //   // If no parent folder, add to root
+    //   if (!parentFolderId) {
+    //     // Find first "Other" folder or create a new one
+    //     const otherFolder = prev.find(node => node.name === 'Other');
+    //     if (otherFolder) {
+    //       return prev.map(node => {
+    //         if (node.id === otherFolder.id) {
+    //           newContext.parent = otherFolder;
+    //           return {
+    //             ...node,
+    //             children: [...(node.children || []), newContext],
+    //           };
+    //         }
+    //         return node;
+    //       });
+    //     }
 
-  //   const parentNode = selectedContext?.parentId
-  //     ? findNodeById(contextTree, selectedContext.parentId)
-  //     : null;
-  //   // Create new context node
-  //   const newContext: ContextNode = {
-  //     id: `context-${crypto.randomUUID()}`,
-  //     name: contextInfo.name,
-  //     type: NodeType.Context,
-  //     contextName: contextName,
-  //     tags: contextInfo.namespace ? ['namespace:' + contextInfo.namespace] : undefined,
-  //     parentId: parentNode?.id || undefined,
-  //   };
+    //     // Create "Other" folder if it doesn't exist
+    //     const newOtherFolder: ContextNode = {
+    //       id: `folder-Other-${Date.now()}`,
+    //       name: 'Other',
+    //       type: NodeType.Folder,
+    //       children: [newContext],
+    //       isExpanded: true,
+    //     };
+    //     newContext.parent = newOtherFolder;
+    //     return [...prev, newOtherFolder];
+    //   }
 
-  //   setContextTree(prev => {
-  //     // If no parent folder, add to root
-  //     if (!parentFolderId) {
-  //       // Find first "Other" folder or create a new one
-  //       const otherFolder = prev.find(node => node.name === 'Other');
-  //       if (otherFolder) {
-  //         return prev.map(node => {
-  //           if (node.id === otherFolder.id) {
-  //             newContext.parent = otherFolder;
-  //             return {
-  //               ...node,
-  //               children: [...(node.children || []), newContext],
-  //             };
-  //           }
-  //           return node;
-  //         });
-  //       }
+    //   // Add to parent folder
+    //   const addToParent = (nodes: ContextNode[]): ContextNode[] => {
+    //     return nodes.map(node => {
+    //       if (node.id === parentFolderId) {
+    //         newContext.parent = node;
+    //         return {
+    //           ...node,
+    //           children: [...(node.children || []), newContext],
+    //           isExpanded: true, // Expand the folder
+    //         };
+    //       }
+    //       if (node.children) {
+    //         return {
+    //           ...node,
+    //           children: addToParent(node.children),
+    //         };
+    //       }
+    //       return node;
+    //     });
+    //   };
 
-  //       // Create "Other" folder if it doesn't exist
-  //       const newOtherFolder: ContextNode = {
-  //         id: `folder-Other-${Date.now()}`,
-  //         name: 'Other',
-  //         type: NodeType.Folder,
-  //         children: [newContext],
-  //         isExpanded: true,
-  //       };
-  //       newContext.parent = newOtherFolder;
-  //       return [...prev, newOtherFolder];
-  //     }
+    //   const updatedTree = addToParent(prev);
+    //   saveConfig({
+    //     contextTree: updatedTree,
+    //     lastSelectedContextName: selectedContext?.contextName || undefined,
+    //     tags: availableTags,
+    //   });
+    //   return updatedTree;
+    // });
 
-  //     // Add to parent folder
-  //     const addToParent = (nodes: ContextNode[]): ContextNode[] => {
-  //       return nodes.map(node => {
-  //         if (node.id === parentFolderId) {
-  //           newContext.parent = node;
-  //           return {
-  //             ...node,
-  //             children: [...(node.children || []), newContext],
-  //             isExpanded: true, // Expand the folder
-  //           };
-  //         }
-  //         if (node.children) {
-  //           return {
-  //             ...node,
-  //             children: addToParent(node.children),
-  //           };
-  //         }
-  //         return node;
-  //       });
-  //     };
-
-  //     const updatedTree = addToParent(prev);
-  //     saveConfig({
-  //       contextTree: updatedTree,
-  //       lastSelectedContextName: selectedContext?.contextName || undefined,
-  //       tags: availableTags,
-  //     });
-  //     return updatedTree;
-  //   });
-
-  //   setShowContextModal(false);
-  // };
+    setShowContextModal(false);
+  };
 
   // Create a new folder
   const handleNewFolderClick = () => {
@@ -485,6 +503,16 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       handleRemoveTag(node.id, tagToRemove);
     };
 
+    /**
+     * ドラッグ中にフォルダーノードにホバーした際に自動で開く処理
+     */
+    const handleMouseEnter = () => {
+      // ドラッグ中かつフォルダーノードの場合に自動で開く
+      if (isFolder && !node.isOpen && isDragging) {
+        node.toggle();
+      }
+    };
+
     return (
       <div
         className={`tree-node ${isFolder ? 'folder' : 'context'} ${isSelected ? 'selected' : ''}`}
@@ -496,6 +524,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
             node.toggle();
           }
         }}
+        onMouseEnter={handleMouseEnter}
       >
         <div className="node-content">
           {isFolder && <span className="folder-icon">{node.isOpen ? '▼' : '▶'}</span>}
@@ -537,6 +566,12 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                 {tag}
               </Tag>
             ))}
+        </div>
+        {/* ドラッグハンドル */}
+        <div className="node-actions">
+          <div className="drag-handle" ref={dragHandle} onMouseDown={e => e.stopPropagation()}>
+            <span className="drag-icon">⋮⋮</span>
+          </div>
         </div>
       </div>
     );
@@ -713,9 +748,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         <K8sContextModal
           parentFolderId={parentFolderId}
           onClose={() => setShowContextModal(false)}
-          onSave={() => {
-            /* TODO: Implement saving */
-          }}
+          onSave={handleSaveContext}
         />
       )}
     </div>
