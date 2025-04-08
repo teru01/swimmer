@@ -150,7 +150,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
    * @param newName The new name for the node.
    */
   const handleRename = useCallback(
-    (nodeId: string, newName: string) => {
+    (nodeId: string, newName: string): string | undefined => {
       const node = findNodeById(contextTree, nodeId);
       if (!node) {
         console.error('Node not found:', nodeId);
@@ -193,6 +193,8 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         });
         return updatedTree;
       });
+
+      return newName;
     },
     [availableTags, contextTree, selectedContext]
   );
@@ -464,6 +466,29 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     });
   };
 
+  const handleRemoveFolder = (nodeId: string) => {
+    setContextTree(prev => {
+      const removeNode = (nodes: ContextNode[], nodeId: string) => {
+        const remaining: ContextNode[] = [];
+        nodes.forEach(node => {
+          if (node.id != nodeId) {
+            node.children = removeNode(node.children || [], nodeId);
+            remaining.push(node);
+          }
+        });
+        return remaining;
+      };
+
+      const updatedTree = removeNode(prev, nodeId);
+      saveConfig({
+        contextTree: updatedTree,
+        lastSelectedContext: selectedContext || undefined,
+        tags: availableTags,
+      });
+      return updatedTree;
+    });
+  };
+
   /**
    * Custom renderer for each node in the tree.
    * Handles display of folder/context icons, name, tags, and drag handle.
@@ -518,8 +543,12 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                 onBlur={_e => node.reset()}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    handleRename(node.id, e.currentTarget.value);
+                    const newName = handleRename(node.id, e.currentTarget.value);
+                    if (newName) {
+                      node.reset();
+                    }
                   } else if (e.key === 'Escape') {
+                    handleRemoveFolder(node.id);
                     setError(null);
                     node.reset();
                   }
@@ -695,7 +724,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       {error && (
         <div className="error-message">
           <p>{error}</p>
-          <Button onClick={handleReimport}>Retry</Button>
         </div>
       )}
 

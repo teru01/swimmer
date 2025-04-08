@@ -188,12 +188,6 @@
   z-index: 2;
 }
 
-/* フォルダーホバー時のドロップインジケーター */
-.tree-node.folder:hover {
-  border: 1px dashed var(--color-primary);
-  background-color: var(--color-primary-low);
-}
-
 /* ドロップターゲットのスタイル */
 .arborist-drop-target::before {
   content: '';
