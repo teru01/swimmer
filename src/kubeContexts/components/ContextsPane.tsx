@@ -20,7 +20,9 @@ interface ContextsPaneProps {
 }
 
 /**
- * Kubernetes contexts tree view component with hierarchical structure
+ * Kubernetes contexts tree view component with hierarchical structure.
+ * Displays Kubernetes contexts organized in a tree, allows selection,
+ * renaming, adding tags, and drag-and-drop reordering.
  */
 function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const [contextTree, setContextTree] = useState<ContextNode[]>([]);
@@ -38,11 +40,15 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
   // Initialize: Load configuration
   useEffect(() => {
+    /**
+     * Loads Kubernetes contexts from configuration or kubeconfig.
+     * Attempts to read from a config file first, falls back to importing
+     * directly from the kubeconfig if the file doesn't exist.
+     */
     async function loadContexts() {
       try {
         setLoading(true);
 
-        // 1. Load tree structure from config file
         let contextTreeData: ContextNode[] = [];
         let lastSelectedContext: ContextNode | undefined;
         let tags: string[] = [];
@@ -57,7 +63,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
           tags = parsedConfig.availableTags || [];
           setAvailableTags(tags);
         } catch {
-          // If config file doesn't exist, load directly from kubeconfig
           console.info('Config not found, importing from kubeconfig');
           const kubeContexts = await commands.getKubeContexts();
           contextTreeData = organizeContextsToTree(kubeContexts);
@@ -88,19 +93,22 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
   // ドラッグ操作の検知
   useEffect(() => {
-    // ドラッグ操作の開始を検知
+    /**
+     * Detects the start of a drag operation.
+     */
     const handleDragStart = () => {
       setIsDragging(true);
     };
 
-    // ドラッグ操作の終了を検知
+    /**
+     * Detects the end of a drag operation.
+     */
     const handleDragEnd = () => {
       setIsDragging(false);
     };
 
     // グローバルイベントリスナーの登録
     document.addEventListener('mousedown', e => {
-      // ドラッグハンドルをクリックした場合にドラッグ開始とみなす
       if ((e.target as HTMLElement).closest('.drag-handle')) {
         handleDragStart();
       }
@@ -115,13 +123,16 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     };
   }, []);
 
-  // Handle context selection
+  /**
+   * Handles the selection of a context node.
+   * Updates the selected context state and saves the selection.
+   * @param contextNode The context node that was selected.
+   */
   const handleContextSelect = useCallback(
     (contextNode: ContextNode) => {
       setSelectedContext(contextNode);
       onContextSelect?.(contextNode);
 
-      // Save selection
       saveConfig({
         contextTree,
         lastSelectedContext: contextNode,
@@ -131,22 +142,25 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     [contextTree, availableTags, onContextSelect]
   );
 
-  // Handle node rename with validation
+  /**
+   * Handles renaming a node with validation.
+   * Ensures the new name is valid and unique at its level.
+   * If validation fails, sets an error and keeps the node in edit mode.
+   * @param nodeId The ID of the node being renamed.
+   * @param newName The new name for the node.
+   */
   const handleRename = useCallback(
     (nodeId: string, newName: string) => {
-      // Get the parent folder of the node being renamed
       const node = findNodeById(contextTree, nodeId);
       if (!node) {
         console.error('Node not found:', nodeId);
         return;
       }
 
-      // Validate the new name
       const validationError = validateNodeName(contextTree, newName, node);
       if (validationError) {
         setError(validationError);
-        // Keep the node in ed
-        // it mode by forcing a re-edit after a short delay
+        // Keep the node in edit mode by forcing a re-edit after a short delay
         setTimeout(() => {
           const treeInstance = treeRef.current as { edit: (id: string) => void } | null;
           if (treeInstance?.edit) {
@@ -156,7 +170,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         return;
       }
 
-      // Clear any previous error
       setError(null);
 
       setContextTree(prev => {
@@ -184,6 +197,11 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     [availableTags, contextTree, selectedContext]
   );
 
+  /**
+   * Handles changes to the tree structure after drag and drop operations.
+   * Updates the tree state and saves the new structure.
+   * @param params Information about the move operation.
+   */
   const handleTreeChange = ({
     dragIds,
     parentId,
@@ -197,7 +215,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   }) => {
     console.info('handleTreeChange', { dragIds, parentId, index });
 
-    // ドラッグ操作が完了したらフラグをリセット
     setIsDragging(false);
 
     setContextTree(prev => {
@@ -265,79 +282,30 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     });
   };
 
-  // Show modal for creating a new context
+  /**
+   * Shows the modal for creating a new context.
+   */
   const handleNewContextClick = () => {
     const parentId = selectedContext?.parentId || null;
     setParentFolderId(parentId);
     setShowContextModal(true);
   };
 
-  // Save a new context
+  /**
+   * Handles saving a new context created via the modal.
+   * @param contextInfo Information about the new context.
+   */
   const handleSaveContext = (contextInfo: { name: string; server: string; user: string }) => {
-    // setContextTree(prev => {
-    //   // If no parent folder, add to root
-    //   if (!parentFolderId) {
-    //     // Find first "Other" folder or create a new one
-    //     const otherFolder = prev.find(node => node.name === 'Other');
-    //     if (otherFolder) {
-    //       return prev.map(node => {
-    //         if (node.id === otherFolder.id) {
-    //           newContext.parent = otherFolder;
-    //           return {
-    //             ...node,
-    //             children: [...(node.children || []), newContext],
-    //           };
-    //         }
-    //         return node;
-    //       });
-    //     }
-
-    //     // Create "Other" folder if it doesn't exist
-    //     const newOtherFolder: ContextNode = {
-    //       id: `folder-Other-${Date.now()}`,
-    //       name: 'Other',
-    //       type: NodeType.Folder,
-    //       children: [newContext],
-    //       isExpanded: true,
-    //     };
-    //     newContext.parent = newOtherFolder;
-    //     return [...prev, newOtherFolder];
-    //   }
-
-    //   // Add to parent folder
-    //   const addToParent = (nodes: ContextNode[]): ContextNode[] => {
-    //     return nodes.map(node => {
-    //       if (node.id === parentFolderId) {
-    //         newContext.parent = node;
-    //         return {
-    //           ...node,
-    //           children: [...(node.children || []), newContext],
-    //           isExpanded: true, // Expand the folder
-    //         };
-    //       }
-    //       if (node.children) {
-    //         return {
-    //           ...node,
-    //           children: addToParent(node.children),
-    //         };
-    //       }
-    //       return node;
-    //     });
-    //   };
-
-    //   const updatedTree = addToParent(prev);
-    //   saveConfig({
-    //     contextTree: updatedTree,
-    //     lastSelectedContextName: selectedContext?.contextName || undefined,
-    //     tags: availableTags,
-    //   });
-    //   return updatedTree;
-    // });
-
+    console.info('unimplemented: save context', contextInfo);
+    // TODO: Implement actual saving logic, including creating the context node
+    // and adding it to the contextTree.
     setShowContextModal(false);
   };
 
-  // Create a new folder
+  /**
+   * Handles the creation of a new folder.
+   * Adds a new folder node to the tree, either at the root or under the selected parent.
+   */
   const handleNewFolderClick = () => {
     const parentId = selectedContext?.parentId || null;
     const newFolderId = `folder-${crypto.randomUUID()}`;
@@ -350,7 +318,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     };
 
     setContextTree(prev => {
-      // If no parent folder or context is not selected, add to root
       if (!parentId || !selectedContext) {
         const newTree = [...prev, newFolder];
         saveConfig({
@@ -369,7 +336,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
             return {
               ...n,
               children: [...(n.children || []), newFolder],
-              isExpanded: true, // Expand parent folder
+              isExpanded: true,
             };
           }
           if (n.children) {
@@ -414,11 +381,9 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
     // Start edit mode after creation
     setTimeout(() => {
-      // Avoid any type and use explicit casting
       type TreeInstance = {
         edit: (id: string) => void;
       };
-
       const treeInstance = treeRef.current as TreeInstance | null;
       if (treeInstance?.edit) {
         treeInstance.edit(newFolderId);
@@ -426,9 +391,13 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     }, 100);
   };
 
-  // Add tag to context
+  /**
+   * Adds a tag to a specified node.
+   * If the tag is new, it's also added to the list of available tags.
+   * @param nodeId The ID of the node to add the tag to.
+   * @param tag The tag string to add.
+   */
   const handleAddTag = (nodeId: string, tag: string) => {
-    // Add tag if it doesn't exist
     if (!availableTags.includes(tag)) {
       setAvailableTags(prev => {
         const newTags = [...prev, tag];
@@ -463,7 +432,11 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     });
   };
 
-  // Remove tag from context
+  /**
+   * Removes a tag from a specified node.
+   * @param nodeId The ID of the node to remove the tag from.
+   * @param tagToRemove The tag string to remove.
+   */
   const handleRemoveTag = (nodeId: string, tagToRemove: string) => {
     setContextTree(prev => {
       const updateNodeTags = (nodes: ContextNode[]): ContextNode[] => {
@@ -491,23 +464,31 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     });
   };
 
-  // Custom node renderer
+  /**
+   * Custom renderer for each node in the tree.
+   * Handles display of folder/context icons, name, tags, and drag handle.
+   * Also handles node selection and toggling folders open/closed.
+   * @param props Props provided by react-arborist for node rendering.
+   * @returns The rendered node element.
+   */
   const NodeRenderer = ({ node, style, dragHandle }: NodeRendererProps<ContextNode>) => {
     const data = node.data;
     const isFolder = data.type === NodeType.Folder;
     const isContext = data.type === NodeType.Context;
     const isSelected = selectedContext && data.id === selectedContext.id;
 
-    // タグの削除処理をハンドリングする関数
+    /**
+     * Handles the removal of a tag from the current node.
+     * @param tagToRemove The tag string to remove.
+     */
     const handleTagClose = (tagToRemove: string) => {
       handleRemoveTag(node.id, tagToRemove);
     };
 
     /**
-     * ドラッグ中にフォルダーノードにホバーした際に自動で開く処理
+     * Automatically opens a folder node when hovered over during a drag operation.
      */
     const handleMouseEnter = () => {
-      // ドラッグ中かつフォルダーノードの場合に自動で開く
       if (isFolder && !node.isOpen && isDragging) {
         node.toggle();
       }
@@ -528,9 +509,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       >
         <div className="node-content">
           {isFolder && <span className="folder-icon">{node.isOpen ? '▼' : '▶'}</span>}
-
           {isContext && <span className="context-icon">⚙️</span>}
-
           <span className="node-name">
             {node.isEditing ? (
               <Input
@@ -540,34 +519,31 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
                     handleRename(node.id, e.currentTarget.value);
-                    // Reset will be handled inside handleRename based on validation
                   } else if (e.key === 'Escape') {
-                    setError(null); // Clear any errors
+                    setError(null);
                     node.reset();
                   }
                 }}
                 data-testid="folder-name-input"
-                onMouseDown={e => e.stopPropagation()} // 編集時のクリックはバブリングさせない
+                onMouseDown={e => e.stopPropagation()} // Prevent node selection when clicking input
               />
             ) : (
               data.name
             )}
           </span>
-
-          {/* Tags display */}
           {data.tags &&
             data.tags.map(tag => (
               <Tag
                 key={tag}
                 className="context-tag"
-                closable={isEditing}
+                closable={isEditing} // Only allow closing tags in edit mode (if re-enabled)
                 onClose={() => handleTagClose(tag)}
               >
                 {tag}
               </Tag>
             ))}
         </div>
-        {/* ドラッグハンドル */}
+        {/* Drag handle appears on hover */}
         <div className="node-actions">
           <div className="drag-handle" ref={dragHandle} onMouseDown={e => e.stopPropagation()}>
             <span className="drag-icon">⋮⋮</span>
@@ -577,13 +553,17 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     );
   };
 
-  // Filtering function
+  /**
+   * Filters the tree nodes based on the current search text and selected tag filter.
+   * @param nodes The array of nodes to filter.
+   * @returns A filtered array of nodes.
+   */
   const filterNodes = useCallback(
     (nodes: ContextNode[]): ContextNode[] => {
       if (!filterTag && !searchText) return nodes;
 
       const filterNode = (node: ContextNode): ContextNode | null => {
-        // Tag filtering
+        // Tag filtering (only applies to context nodes)
         if (filterTag && node.type === NodeType.Context) {
           if (!node.tags?.includes(filterTag)) {
             return null;
@@ -591,38 +571,30 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         }
 
         // Text search filtering
-        if (searchText && !node.name.toLowerCase().includes(searchText.toLowerCase())) {
+        const nameMatches = node.name.toLowerCase().includes(searchText.toLowerCase());
+        if (searchText && !nameMatches) {
           if (node.type === NodeType.Folder && node.children) {
-            // For folders, search child nodes too
             const filteredChildren = node.children.map(filterNode).filter(Boolean) as ContextNode[];
-
-            if (filteredChildren.length === 0) {
-              return null;
+            if (filteredChildren.length > 0) {
+              // Keep folder if any children match
+              return { ...node, children: filteredChildren, isExpanded: true };
             }
-
-            return {
-              ...node,
-              children: filteredChildren,
-              isExpanded: true, // Auto-expand during search
-            };
+            return null; // Discard folder if no children match
           }
-
-          return null;
+          return null; // Discard context node if name doesn't match
         }
 
-        // Process child nodes for folders
+        // If a folder matches or has children that match, process its children
         if (node.type === NodeType.Folder && node.children) {
           const filteredChildren = node.children.map(filterNode).filter(Boolean) as ContextNode[];
-
           return {
             ...node,
             children: filteredChildren,
-            // Auto-expand folders during search/filter
-            isExpanded: !!searchText || !!filterTag || node.isExpanded,
+            isExpanded: !!searchText || !!filterTag || node.isExpanded, // Auto-expand during search/filter
           };
         }
 
-        return node;
+        return node; // Return node if it matches or is a context node not filtered by tag
       };
 
       return nodes.map(filterNode).filter(Boolean) as ContextNode[];
@@ -630,17 +602,24 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     [filterTag, searchText]
   );
 
-  // Clear tag filter
+  /**
+   * Clears the currently active tag filter.
+   */
   const clearTagFilter = () => {
     setFilterTag(null);
   };
 
-  // Clear search
+  /**
+   * Clears the current search text.
+   */
   const clearSearch = () => {
     setSearchText('');
   };
 
-  // Reimport from kubeconfig
+  /**
+   * Handles re-importing contexts directly from the kubeconfig,
+   * overwriting the current tree structure.
+   */
   const handleReimport = async () => {
     try {
       setLoading(true);
@@ -692,7 +671,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
           </Button>
         </div>
 
-        {/* Tag filters display */}
         {availableTags.length > 0 && (
           <div className="tag-filters">
             {availableTags.map(tag => (
@@ -743,7 +721,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         </div>
       )}
 
-      {/* New context creation modal */}
       {showContextModal && (
         <K8sContextModal
           parentFolderId={parentFolderId}

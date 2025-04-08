@@ -2,7 +2,9 @@ import React, { useState, ChangeEvent } from 'react';
 import { Button, Input } from '../../main/ui';
 import '../styles/modal.css';
 
-// プロバイダータイプの定義
+/**
+ * Enum defining the types of Kubernetes providers supported.
+ */
 enum ProviderType {
   GKE = 'GKE',
   EKS = 'EKS',
@@ -17,63 +19,73 @@ interface K8sContextModalProps {
 }
 
 /**
- * Modal component for creating a new Kubernetes context
+ * Modal component for creating a new Kubernetes context.
+ * Allows selection of provider type (GKE, EKS, AKS, Manual)
+ * and displays corresponding input fields.
+ * @param parentFolderId The ID of the parent folder (if any).
+ * @param onClose Callback function to close the modal.
+ * @param onSave Callback function to save the new context.
  */
 function K8sContextModal({
   parentFolderId: _parentFolderId,
   onClose,
   onSave,
 }: K8sContextModalProps) {
-  // 基本情報
   const [name, setName] = useState('');
   const [namespace, setNamespace] = useState('');
-
-  // プロバイダー選択
   const [providerType, setProviderType] = useState<ProviderType>(ProviderType.GKE);
 
-  // GKE固有フィールド
+  // GKE specific fields
   const [gkeProject, setGkeProject] = useState('');
   const [gkeRegion, setGkeRegion] = useState('');
   const [gkeClusterName, setGkeClusterName] = useState('');
   const [gkeUseInternalIp, setGkeUseInternalIp] = useState(false);
   const [gkeUseDnsEndpoint, setGkeUseDnsEndpoint] = useState(false);
 
-  // EKS固有フィールド
+  // EKS specific fields
   const [eksRegion, setEksRegion] = useState('');
   const [eksClusterName, setEksClusterName] = useState('');
   const [eksProfile, setEksProfile] = useState('');
 
-  // AKS固有フィールド
+  // AKS specific fields
   const [aksResourceGroup, setAksResourceGroup] = useState('');
   const [aksClusterName, setAksClusterName] = useState('');
   const [aksSubscription, setAksSubscription] = useState('');
 
-  // Manual固有フィールド
+  // Manual specific fields
   const [manualServer, setManualServer] = useState('');
   const [manualUser, setManualUser] = useState('');
   const [manualCertData, setManualCertData] = useState('');
   const [manualKeyData, setManualKeyData] = useState('');
 
+  /**
+   * Handles the form submission.
+   * Prevents default form submission, constructs server and user strings
+   * based on the selected provider, and calls the onSave callback.
+   * @param e The form event.
+   */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     let server = '';
     let user = '';
 
-    // プロバイダー別の処理
+    // Construct server/user based on provider
     switch (providerType) {
       case ProviderType.GKE:
-        // GKEの場合はコマンドを構築してサーバーとユーザー情報を設定
         server = `https://${gkeClusterName}.${gkeRegion}.gcp`;
         user = `gke-${gkeProject}`;
+        // TODO: Potentially use gcloud command to get actual server/user
         break;
       case ProviderType.EKS:
         server = `https://${eksClusterName}.${eksRegion}.eks.amazonaws.com`;
         user = `eks-${eksProfile}`;
+        // TODO: Potentially use aws eks command
         break;
       case ProviderType.AKS:
         server = `https://${aksClusterName}.${aksResourceGroup}.azmk8s.io`;
         user = `aks-${aksSubscription}`;
+        // TODO: Potentially use az aks command
         break;
       case ProviderType.Manual:
         server = manualServer;
@@ -89,12 +101,19 @@ function K8sContextModal({
     });
   };
 
-  // プロバイダータイプの変更ハンドラー
+  /**
+   * Handles changes to the provider type selection.
+   * Updates the providerType state.
+   * @param e The change event from the select element.
+   */
   const handleProviderChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setProviderType(e.target.value as ProviderType);
   };
 
-  // プロバイダー別のフォームを描画
+  /**
+   * Renders the specific input form based on the selected provider type.
+   * @returns JSX element containing the provider-specific form fields.
+   */
   const renderProviderForm = () => {
     switch (providerType) {
       case ProviderType.GKE:
