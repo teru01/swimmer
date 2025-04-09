@@ -263,9 +263,12 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const [withoutDragged, dragNodeContexts] = findAndRemove(prev);
       const newTree = insertIntoParent(withoutDragged, dragNodeContexts);
 
+      const dragContextNode = findNodeById(prev, dragIds[0]);
+      setSelectedContext(dragContextNode);
+
       saveConfig({
         contextTree: newTree,
-        lastSelectedContext: selectedContext || undefined,
+        lastSelectedContext: dragContextNode || undefined,
         tags: availableTags,
       });
 
