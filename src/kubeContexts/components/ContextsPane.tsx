@@ -28,7 +28,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const [contextTree, setContextTree] = useState<ContextNode[]>([]);
   const [selectedContext, setSelectedContext] = useState<ContextNode | null>(null);
   const [filterTag, setFilterTag] = useState<string | null>(null);
-  const [isEditing, _setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -36,6 +36,9 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const [showContextModal, setShowContextModal] = useState(false);
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [enableDragDropTree, setEnableDragDropTree] = useState(true);
+  const [focusedNodeName, setFocusedNodeName] = useState('');
+
   const treeRef = useRef(null);
 
   // Initialize: Load configuration
@@ -154,19 +157,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       const node = findNodeById(contextTree, nodeId);
       if (!node) {
         console.error('Node not found:', nodeId);
-        return;
-      }
-
-      const validationError = validateNodeName(contextTree, newName, node);
-      if (validationError) {
-        setError(validationError);
-        // Keep the node in edit mode by forcing a re-edit after a short delay
-        setTimeout(() => {
-          const treeInstance = treeRef.current as { edit: (id: string) => void } | null;
-          if (treeInstance?.edit) {
-            treeInstance.edit(nodeId);
-          }
-        }, 100);
         return;
       }
 
@@ -313,7 +303,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     const newFolderId = `folder-${crypto.randomUUID()}`;
     const newFolder: ContextNode = {
       id: newFolderId,
-      name: 'NewFolder',
+      name: '',
       type: NodeType.Folder,
       children: [],
       isExpanded: true,
@@ -382,6 +372,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     });
 
     // Start edit mode after creation
+    setEnableDragDropTree(false);
     setTimeout(() => {
       type TreeInstance = {
         edit: (id: string) => void;
@@ -390,7 +381,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       if (treeInstance?.edit) {
         treeInstance.edit(newFolderId);
       }
-    }, 100);
+    }, 200);
   };
 
   /**
@@ -519,6 +510,29 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       }
     };
 
+    const handleOnChange = (e: React.ChangeEvent<HTMLInputElement>, node: ContextNode) => {
+      const input = e.target.value;
+      setFocusedNodeName(input);
+      const validationError = validateNodeName(contextTree, input, node);
+      if (validationError) {
+        setError(validationError);
+        // Keep the node in edit mode by forcing a re-edit after a short delay
+        setTimeout(() => {
+          const treeInstance = treeRef.current as { edit: (id: string) => void } | null;
+          if (treeInstance?.edit) {
+            treeInstance.edit(node.id);
+          }
+        }, 10);
+      } else {
+        setError(null);
+      }
+    };
+
+    const resetNode = (node: NodeApi<ContextNode>) => {
+      node.reset();
+      setFocusedNodeName('');
+    };
+
     return (
       <div
         className={`tree-node ${isFolder ? 'folder' : 'context'} ${isSelected ? 'selected' : ''}`}
@@ -538,20 +552,54 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
           <span className="node-name">
             {node.isEditing ? (
               <Input
+                value={focusedNodeName}
                 autoFocus
                 defaultValue={data.name}
-                onBlur={_e => node.reset()}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    const newName = handleRename(node.id, e.currentTarget.value);
-                    if (newName) {
-                      node.reset();
-                    }
-                  } else if (e.key === 'Escape') {
+                onBlur={e => {
+                  if (error) {
                     handleRemoveFolder(node.id);
                     setError(null);
-                    node.reset();
+                    resetNode(node);
+                    setEnableDragDropTree(true);
+                    return;
                   }
+                  const newName = handleRename(node.id, e.target.value.trim());
+                  if (newName) {
+                    resetNode(node);
+                  } else {
+                    handleRemoveFolder(node.id);
+                    setError(null);
+                    resetNode(node);
+                  }
+                  setEnableDragDropTree(true);
+                }}
+                onChange={e => {
+                  const n = findNodeById(contextTree, node.id);
+                  if (!n) {
+                    return;
+                  }
+                  handleOnChange(e, n);
+                }}
+                onKeyDown={e => {
+                  switch (e.key) {
+                    case 'Enter': {
+                      if (error) {
+                        return;
+                      }
+                      const newName = handleRename(node.id, focusedNodeName);
+                      if (newName) {
+                        resetNode(node);
+                      }
+                      break;
+                    }
+                    case 'Escape': {
+                      handleRemoveFolder(node.id);
+                      setError(null);
+                      resetNode(node);
+                      break;
+                    }
+                  }
+                  setEnableDragDropTree(true);
                 }}
                 data-testid="folder-name-input"
                 onMouseDown={e => e.stopPropagation()} // Prevent node selection when clicking input
@@ -732,6 +780,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       ) : (
         <div className="context-tree-container">
           <Tree<ContextNode>
+            key={enableDragDropTree ? 'drag-enabled' : 'drag-disabled'}
             ref={treeRef}
             data={filterNodes(contextTree)}
             openByDefault={false}
@@ -742,6 +791,8 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
             paddingTop={10}
             paddingBottom={10}
             selectionFollowsFocus={true}
+            disableDrag={!enableDragDropTree}
+            disableDrop={!enableDragDropTree}
             onMove={handleTreeChange}
           >
             {NodeRenderer}
