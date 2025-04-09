@@ -34,6 +34,22 @@ export const findNodeById = (nodes: ContextNode[], id: string): ContextNode | nu
   return null;
 };
 
+export const findNodeIndex = (nodes: ContextNode[], id: string): number | null => {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (node.id === id) {
+      return i;
+    }
+    if (node.children) {
+      const found = findNodeIndex(node.children, id);
+      if (found !== null) {
+        return found;
+      }
+    }
+  }
+  return null;
+};
+
 // コンテキスト名をパースして階層構造を構築する
 export const organizeContextsToTree = (contexts: string[]): ContextNode[] => {
   const tree: ContextNode[] = [];

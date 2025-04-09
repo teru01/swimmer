@@ -10,6 +10,7 @@ import {
   validateNodeName,
   NodeType,
   findNodeById,
+  findNodeIndex,
 } from '../lib/contextTree';
 import K8sContextModal from './K8sContextModal';
 import { mockFs, STORAGE_KEY, saveConfig } from '../lib/fs';
@@ -205,6 +206,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     index: number;
   }) => {
     console.info('handleTreeChange', { dragIds, parentId, index });
+    const dragId = dragIds[0]; // temporally only single node can be dragged
 
     setIsDragging(false);
 
@@ -215,7 +217,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
 
         for (const node of nodes) {
           if (dragIds.includes(node.id)) {
-            removed.push(node);
+            removed.push({ ...node, parentId: parentId || undefined });
             continue;
           }
 
@@ -231,19 +233,30 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         return [remaining, removed];
       };
 
+      const prevNode = findNodeById(prev, dragId);
+      let insertIndex = index;
+      console.info('dbg', prevNode?.parentId, parentId);
+      if (prevNode?.parentId == parentId) {
+        const prevIndex = findNodeIndex(prev, dragId);
+        console.info('previndex', prevIndex);
+        if (prevIndex != null && index > prevIndex) {
+          insertIndex = index - 1;
+        }
+      }
+
       const insertIntoParent = (
         nodes: ContextNode[],
         dragNodeContexts: ContextNode[]
       ): ContextNode[] => {
         if (!parentId) {
           const newRoots = [...nodes];
-          newRoots.splice(index, 0, ...dragNodeContexts);
+          newRoots.splice(insertIndex, 0, ...dragNodeContexts);
           return newRoots;
         }
         return nodes.map(n => {
           if (n.id === parentId) {
             const newChildren = [...(n.children || [])];
-            newChildren.splice(index, 0, ...dragNodeContexts);
+            newChildren.splice(insertIndex, 0, ...dragNodeContexts);
             return {
               ...n,
               children: newChildren,
