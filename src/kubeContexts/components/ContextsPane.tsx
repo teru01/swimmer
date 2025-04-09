@@ -36,7 +36,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
   const [showContextModal, setShowContextModal] = useState(false);
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [enableDragDropTree, setEnableDragDropTree] = useState(true);
   const [focusedNodeName, setFocusedNodeName] = useState('');
 
   const treeRef = useRef(null);
@@ -372,7 +371,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     });
 
     // Start edit mode after creation
-    setEnableDragDropTree(false);
     setTimeout(() => {
       type TreeInstance = {
         edit: (id: string) => void;
@@ -381,7 +379,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       if (treeInstance?.edit) {
         treeInstance.edit(newFolderId);
       }
-    }, 200);
+    }, 10);
   };
 
   /**
@@ -560,7 +558,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                     handleRemoveFolder(node.id);
                     setError(null);
                     resetNode(node);
-                    setEnableDragDropTree(true);
                     return;
                   }
                   const newName = handleRename(node.id, e.target.value.trim());
@@ -571,7 +568,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                     setError(null);
                     resetNode(node);
                   }
-                  setEnableDragDropTree(true);
                 }}
                 onChange={e => {
                   const n = findNodeById(contextTree, node.id);
@@ -599,7 +595,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
                       break;
                     }
                   }
-                  setEnableDragDropTree(true);
                 }}
                 data-testid="folder-name-input"
                 onMouseDown={e => e.stopPropagation()} // Prevent node selection when clicking input
@@ -780,7 +775,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
       ) : (
         <div className="context-tree-container">
           <Tree<ContextNode>
-            key={enableDragDropTree ? 'drag-enabled' : 'drag-disabled'}
             ref={treeRef}
             data={filterNodes(contextTree)}
             openByDefault={false}
@@ -791,8 +785,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
             paddingTop={10}
             paddingBottom={10}
             selectionFollowsFocus={true}
-            disableDrag={!enableDragDropTree}
-            disableDrop={!enableDragDropTree}
             onMove={handleTreeChange}
           >
             {NodeRenderer}
