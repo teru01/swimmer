@@ -139,7 +139,11 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         const updateExpanded = (nodes: ContextNode[]): ContextNode[] => {
           return nodes.map(node => {
             if (node.id === contextNode.id) {
-              return { ...node, isExpanded: !node.isExpanded };
+              const treeInstance = treeRef.current as {
+                get: (id: string) => NodeApi | null;
+              } | null;
+              const nodeApiInsatnce = treeInstance?.get(node.id);
+              return { ...node, isExpanded: !nodeApiInsatnce?.isOpen };
             }
             if (node.children) {
               return { ...node, children: updateExpanded(node.children) };
@@ -147,13 +151,12 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
             return node;
           });
         };
+        saveConfig({
+          contextTree,
+          lastSelectedContext: contextNode,
+          tags: availableTags,
+        });
         return updateExpanded(prev);
-      });
-
-      saveConfig({
-        contextTree,
-        lastSelectedContext: contextNode,
-        tags: availableTags,
       });
     },
     [contextTree, availableTags, onContextSelect]
@@ -561,10 +564,12 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
         style={style}
         ref={dragHandle}
         onClick={() => {
-          handleContextSelect(data);
           if (isFolder) {
             node.toggle();
           }
+          setTimeout(() => {
+            handleContextSelect(data);
+          }, 10);
         }}
         onMouseEnter={handleMouseEnter}
       >
@@ -576,7 +581,6 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
               <Input
                 value={focusedNodeName}
                 autoFocus
-                defaultValue={data.name}
                 onBlur={e => {
                   if (error) {
                     handleRemoveFolder(node.id);
