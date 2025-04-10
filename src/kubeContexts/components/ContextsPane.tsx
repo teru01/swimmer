@@ -135,6 +135,20 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     (contextNode: ContextNode) => {
       setSelectedContext(contextNode);
       onContextSelect?.(contextNode);
+      setContextTree(prev => {
+        const updateExpanded = (nodes: ContextNode[]): ContextNode[] => {
+          return nodes.map(node => {
+            if (node.id === contextNode.id) {
+              return { ...node, isExpanded: !node.isExpanded };
+            }
+            if (node.children) {
+              return { ...node, children: updateExpanded(node.children) };
+            }
+            return node;
+          });
+        };
+        return updateExpanded(prev);
+      });
 
       saveConfig({
         contextTree,
@@ -325,7 +339,7 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
     };
 
     setContextTree(prev => {
-      if (!parentId || !selectedContext) {
+      if (!selectedContext || (!parentId && !selectedContext?.isExpanded)) {
         const newTree = [...prev, newFolder];
         saveConfig({
           contextTree: newTree,
@@ -367,16 +381,10 @@ function ContextsPane({ onContextSelect }: ContextsPaneProps) {
           return n;
         });
       };
-      switch (selectedContext.type) {
-        case NodeType.Folder:
-          updatedTree = addToChildren(prev);
-          break;
-        case NodeType.Context:
-          updatedTree = addToParent(prev);
-          break;
-        default:
-          updatedTree = [...prev, newFolder];
-          break;
+      if (selectedContext.type === NodeType.Folder && selectedContext?.isExpanded) {
+        updatedTree = addToChildren(prev);
+      } else {
+        updatedTree = addToParent(prev);
       }
       saveConfig({
         contextTree: updatedTree,
