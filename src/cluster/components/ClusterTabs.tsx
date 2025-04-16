@@ -1,24 +1,38 @@
 import { ContextNode } from '../../lib/contextTree';
 
 interface ClusterTabsProps {
-  clusters: ContextNode[];
+  contextNodes: ContextNode[];
   activeCluster: ContextNode | null;
-  onClusterSelect: (clusterContext: ContextNode) => void;
+  onSelectCluster: (clusterContext: ContextNode) => void;
+  onCloseCluster: (clusterContext: ContextNode) => void;
 }
 
 /**
  * Component to display cluster tabs at the top
  */
-function ClusterTabs({ clusters, activeCluster, onClusterSelect }: ClusterTabsProps) {
+function ClusterTabs({
+  contextNodes: clusterContextNodes,
+  activeCluster,
+  onSelectCluster: onClusterSelect,
+  onCloseCluster: onCloseCluster,
+}: ClusterTabsProps) {
   return (
     <div className="cluster-tabs">
-      {clusters.map(cluster => (
+      {clusterContextNodes.map(cluster => (
         <div
-          key={cluster.name}
+          key={cluster.id}
           className={`cluster-tab ${activeCluster?.id === cluster.id ? 'active' : ''}`}
           onClick={() => onClusterSelect(cluster)}
         >
           {cluster.name}
+          <button
+            onClick={e => {
+              e.stopPropagation();
+              onCloseCluster(cluster);
+            }}
+          >
+            x
+          </button>
         </div>
       ))}
     </div>

@@ -32,6 +32,21 @@ function MainLayout() {
     console.info('Selected context:', contextNode);
   }, []);
 
+  const handleContextNodeClose = (contextNode: ContextNode) => {
+    setOpenClusterContexts(prev => {
+      const deleteNodeIdx = prev.findIndex(c => c.id === contextNode.id);
+      const newContexts = prev.filter(c => c.id !== contextNode.id);
+
+      if (selectedClusterContext?.id === contextNode.id) {
+        const next = newContexts[Math.max(0, deleteNodeIdx - 1)] || null;
+        setSelectedClusterContext(next);
+        setSelectedContext(next);
+      }
+      console.info(newContexts);
+      return newContexts;
+    });
+  };
+
   return (
     <div className="layout-container">
       <div className="main-content">
@@ -54,9 +69,10 @@ function MainLayout() {
               {/* Cluster tabs */}
               <div className="center-tabs">
                 <ClusterTabs
-                  clusters={openClusterContexts}
+                  contextNodes={openClusterContexts}
                   activeCluster={selectedClusterContext}
-                  onClusterSelect={handleContextNodeSelect}
+                  onSelectCluster={handleContextNodeSelect}
+                  onCloseCluster={handleContextNodeClose}
                 />
               </div>
 
