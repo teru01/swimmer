@@ -6,7 +6,7 @@ import TerminalPane from '../cluster/components/TerminalPane';
 import ChatPane from '../chat/components/ChatPane';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import './resizable.css';
-import { ContextNode, NodeType } from '../kubeContexts/lib/contextTree';
+import { ContextNode, NodeType } from '../lib/contextTree';
 
 /**
  * Main Layout Component
@@ -25,6 +25,9 @@ function MainLayout() {
     setSelectedContext(contextNode);
     if (contextNode.type === NodeType.Context) {
       setSelectedClusterContext(contextNode);
+      setOpenClusterContexts(prev => {
+        return [...prev, contextNode];
+      });
     }
     console.info('Selected context:', contextNode);
   }, []);

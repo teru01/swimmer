@@ -11,10 +11,10 @@ import {
   NodeType,
   findNodeById,
   findNodeIndex,
-} from '../lib/contextTree';
+} from '../../lib/contextTree';
 import K8sContextModal from './K8sContextModal';
-import { mockFs, STORAGE_KEY, saveConfig } from '../lib/fs';
-import { ContextConfigSchema } from '../lib/configSchema';
+import { mockFs, STORAGE_KEY, saveConfig } from '../../lib/fs';
+import { ContextConfigSchema } from '../../lib/configSchema';
 
 interface ContextsPaneProps {
   onContextNodeSelect?: (contextNode: ContextNode) => void;

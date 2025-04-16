@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ContextNode } from '../../kubeContexts/lib/contextTree';
+import { ContextNode } from '../../lib/contextTree';
 type Message = {
   id: number;
   text: string;

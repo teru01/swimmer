@@ -1,4 +1,4 @@
-import { ContextNode } from '../../kubeContexts/lib/contextTree';
+import { ContextNode } from '../../lib/contextTree';
 
 interface ClusterInfoPaneProps {
   selectedContext: ContextNode | null;
