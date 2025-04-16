@@ -17,7 +17,7 @@ import { mockFs, STORAGE_KEY, saveConfig } from '../lib/fs';
 import { ContextConfigSchema } from '../lib/configSchema';
 
 interface ContextsPaneProps {
-  onContextSelect?: (contextNode: ContextNode) => void;
+  onContextNodeSelect?: (contextNode: ContextNode) => void;
 }
 
 /**
@@ -25,7 +25,7 @@ interface ContextsPaneProps {
  * Displays Kubernetes contexts organized in a tree, allows selection,
  * renaming, adding tags, and drag-and-drop reordering.
  */
-function ContextsPane({ onContextSelect }: ContextsPaneProps) {
+function ContextsPane({ onContextNodeSelect: onContextSelect }: ContextsPaneProps) {
   const [contextTree, setContextTree] = useState<ContextNode[]>([]);
   const [selectedContext, setSelectedContext] = useState<ContextNode | null>(null);
   const [filterTag, setFilterTag] = useState<string | null>(null);

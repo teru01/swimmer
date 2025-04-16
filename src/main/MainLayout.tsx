@@ -6,7 +6,7 @@ import TerminalPane from '../cluster/components/TerminalPane';
 import ChatPane from '../chat/components/ChatPane';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import './resizable.css';
-import { ContextNode } from '../kubeContexts/lib/contextTree';
+import { ContextNode, NodeType } from '../kubeContexts/lib/contextTree';
 
 /**
  * Main Layout Component
@@ -16,21 +16,16 @@ import { ContextNode } from '../kubeContexts/lib/contextTree';
  */
 function MainLayout() {
   // Currently selected cluster and context
-  const [selectedCluster, setSelectedCluster] = useState<string | null>('cluster-0');
+  const [selectedClusterContext, setSelectedClusterContext] = useState<ContextNode | null>(null);
   const [selectedContext, setSelectedContext] = useState<ContextNode | null>(null);
-
-  // Mock cluster list
-  const clusters = ['cluster-0', 'cluster-1', 'cluster-2', 'cluster-3'];
-
-  // Cluster selection handler
-  const handleClusterSelect = (cluster: string) => {
-    setSelectedCluster(cluster);
-    // In a real app, we would update the context list based on the selected cluster
-  };
+  const [openClusterContexts, setOpenClusterContexts] = useState<ContextNode[]>([]);
 
   // Context selection handler
-  const handleContextSelect = useCallback((contextNode: ContextNode) => {
+  const handleContextNodeSelect = useCallback((contextNode: ContextNode) => {
     setSelectedContext(contextNode);
+    if (contextNode.type === NodeType.Context) {
+      setSelectedClusterContext(contextNode);
+    }
     console.info('Selected context:', contextNode);
   }, []);
 
@@ -41,7 +36,7 @@ function MainLayout() {
           {/* Left pane: Context hierarchy (full height) */}
           <Panel defaultSize={15} minSize={10} maxSize={25}>
             <div className="contexts-pane-container">
-              <ContextsPane onContextSelect={handleContextSelect} />
+              <ContextsPane onContextNodeSelect={handleContextNodeSelect} />
             </div>
           </Panel>
 
@@ -53,9 +48,9 @@ function MainLayout() {
               {/* Cluster tabs */}
               <div className="center-tabs">
                 <ClusterTabs
-                  clusters={clusters}
-                  activeCluster={selectedCluster}
-                  onClusterSelect={handleClusterSelect}
+                  clusters={openClusterContexts}
+                  activeCluster={selectedClusterContext}
+                  onClusterSelect={handleContextNodeSelect}
                 />
               </div>
 

@@ -1,7 +1,9 @@
+import { ContextNode } from '../../kubeContexts/lib/contextTree';
+
 interface ClusterTabsProps {
-  clusters: string[];
-  activeCluster: string | null;
-  onClusterSelect: (cluster: string) => void;
+  clusters: ContextNode[];
+  activeCluster: ContextNode | null;
+  onClusterSelect: (clusterContext: ContextNode) => void;
 }
 
 /**
@@ -12,11 +14,11 @@ function ClusterTabs({ clusters, activeCluster, onClusterSelect }: ClusterTabsPr
     <div className="cluster-tabs">
       {clusters.map(cluster => (
         <div
-          key={cluster}
-          className={`cluster-tab ${activeCluster === cluster ? 'active' : ''}`}
+          key={cluster.name}
+          className={`cluster-tab ${activeCluster?.id === cluster.id ? 'active' : ''}`}
           onClick={() => onClusterSelect(cluster)}
         >
-          {cluster}
+          {cluster.name}
         </div>
       ))}
     </div>
