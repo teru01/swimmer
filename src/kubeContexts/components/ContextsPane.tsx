@@ -17,6 +17,7 @@ import { mockFs, STORAGE_KEY, saveConfig } from '../../lib/fs';
 import { ContextConfigSchema } from '../../lib/configSchema';
 
 interface ContextsPaneProps {
+  selectedContext: ContextNode | null;
   onContextNodeSelect?: (contextNode: ContextNode) => void;
 }
 
@@ -25,9 +26,11 @@ interface ContextsPaneProps {
  * Displays Kubernetes contexts organized in a tree, allows selection,
  * renaming, adding tags, and drag-and-drop reordering.
  */
-function ContextsPane({ onContextNodeSelect: onContextSelect }: ContextsPaneProps) {
+function ContextsPane({
+  selectedContext: selectedContext,
+  onContextNodeSelect: onContextNodeSelect,
+}: ContextsPaneProps) {
   const [contextTree, setContextTree] = useState<ContextNode[]>([]);
-  const [selectedContext, setSelectedContext] = useState<ContextNode | null>(null);
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -77,8 +80,7 @@ function ContextsPane({ onContextNodeSelect: onContextSelect }: ContextsPaneProp
         if (lastSelectedContext) {
           const contextNode = findNodeById(contextTreeData, lastSelectedContext.id);
           if (contextNode) {
-            setSelectedContext(contextNode);
-            onContextSelect?.(contextNode);
+            onContextNodeSelect?.(contextNode);
           }
         }
 
@@ -92,7 +94,7 @@ function ContextsPane({ onContextNodeSelect: onContextSelect }: ContextsPaneProp
     }
 
     loadContexts();
-  }, [onContextSelect]);
+  }, [onContextNodeSelect]);
 
   // ドラッグ操作の検知
   useEffect(() => {
@@ -133,8 +135,7 @@ function ContextsPane({ onContextNodeSelect: onContextSelect }: ContextsPaneProp
    */
   const handleContextSelect = useCallback(
     (contextNode: ContextNode) => {
-      setSelectedContext(contextNode);
-      onContextSelect?.(contextNode);
+      onContextNodeSelect?.(contextNode);
       setContextTree(prev => {
         const updateExpanded = (nodes: ContextNode[]): ContextNode[] => {
           return nodes.map(node => {
@@ -159,7 +160,7 @@ function ContextsPane({ onContextNodeSelect: onContextSelect }: ContextsPaneProp
         return updateExpanded(prev);
       });
     },
-    [contextTree, availableTags, onContextSelect]
+    [contextTree, availableTags, onContextNodeSelect]
   );
 
   /**
@@ -294,7 +295,9 @@ function ContextsPane({ onContextNodeSelect: onContextSelect }: ContextsPaneProp
       const newTree = insertIntoParent(withoutDragged, dragNodeContexts);
 
       const dragContextNode = findNodeById(prev, dragIds[0]);
-      setSelectedContext(dragContextNode);
+      if (dragContextNode) {
+        onContextNodeSelect?.(dragContextNode);
+      }
 
       saveConfig({
         contextTree: newTree,
@@ -568,7 +571,7 @@ function ContextsPane({ onContextNodeSelect: onContextSelect }: ContextsPaneProp
             node.toggle();
           }
           setTimeout(() => {
-            handleContextSelect(data);
+            handleContextSelect?.(data);
           }, 10);
         }}
         onMouseEnter={handleMouseEnter}

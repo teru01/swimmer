@@ -25,9 +25,9 @@ function MainLayout() {
     setSelectedContext(contextNode);
     if (contextNode.type === NodeType.Context) {
       setSelectedClusterContext(contextNode);
-      setOpenClusterContexts(prev => {
-        return [...prev, contextNode];
-      });
+      setOpenClusterContexts(prev =>
+        prev.some(item => item.id === contextNode.id) ? prev : [...prev, contextNode]
+      );
     }
     console.info('Selected context:', contextNode);
   }, []);
@@ -39,7 +39,10 @@ function MainLayout() {
           {/* Left pane: Context hierarchy (full height) */}
           <Panel defaultSize={15} minSize={10} maxSize={25}>
             <div className="contexts-pane-container">
-              <ContextsPane onContextNodeSelect={handleContextNodeSelect} />
+              <ContextsPane
+                selectedContext={selectedContext}
+                onContextNodeSelect={handleContextNodeSelect}
+              />
             </div>
           </Panel>
 
