@@ -14,7 +14,7 @@ const dummyResources: { [key: string]: string[] } = {
 };
 
 // --- Dummy Data & Fetch Functions (Replace with actual API calls) ---
-interface KubeResource {
+export interface KubeResource {
   metadata: {
     name: string;
     namespace?: string; // Namespaced resources have this

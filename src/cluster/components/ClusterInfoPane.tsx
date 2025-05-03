@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ContextNode } from '../../lib/contextTree';
 import ResourceKindSidebar from './ResourceKindSidebar';
-import ResourceList from './ResourceList';
+import ResourceList, { KubeResource } from './ResourceList';
 import ResourceDetailPane from './ResourceDetailPane';
 import './ClusterInfoPane.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
@@ -15,29 +15,28 @@ interface ClusterInfoPaneProps {
  */
 function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
   const [selectedKind, setSelectedKind] = useState<string | null>(null);
-  const [selectedResource, setSelectedResource] = useState<string | null>(null);
+  const [selectedResourceName, setSelectedResourceName] = useState<string | null>(null);
   const [showDetailPane, setShowDetailPane] = useState<boolean>(false);
 
   const handleKindSelect = (kind: string) => {
     setSelectedKind(kind);
-    setSelectedResource(null);
+    setSelectedResourceName(null);
     setShowDetailPane(false);
   };
 
-  const handleResourceSelect = (resource: string) => {
-    setSelectedResource(resource);
+  const handleResourceSelect = (resource: KubeResource) => {
+    setSelectedResourceName(resource.metadata.name);
     setShowDetailPane(true);
   };
 
   const handleCloseDetailPane = () => {
     setShowDetailPane(false);
-    setSelectedResource(null);
+    setSelectedResourceName(null);
   };
 
   const handleDetailPaneResize = (size: number) => {
     if (size < 5 && showDetailPane) {
-      setShowDetailPane(false);
-      setSelectedResource(null);
+      handleCloseDetailPane();
     }
   };
 
@@ -67,7 +66,7 @@ function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
                     onResize={handleDetailPaneResize}
                   >
                     <ResourceDetailPane
-                      selectedResource={selectedResource}
+                      selectedResource={selectedResourceName}
                       onClose={handleCloseDetailPane}
                     />
                   </Panel>
