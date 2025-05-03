@@ -102,9 +102,31 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch namespaces (runs once or when context changes - adjust dependencies if context prop added)
+  // Helper function to check if a resource kind is cluster-scoped (not namespaced)
+  const isClusterScoped = (kind: string | null): boolean => {
+    if (!kind) return true; // Assume cluster-scoped if no kind selected
+    return [
+      'Nodes',
+      'Namespaces',
+      'PersistentVolumes',
+      'StorageClasses',
+      'ClusterRoles',
+      'ClusterRoleBindings',
+      'CRDs',
+    ].includes(kind);
+  };
+
+  // Determine if the current kind is namespaced
+  const isNamespaced = useMemo(() => !isClusterScoped(selectedKind), [selectedKind]);
+
+  // Fetch namespaces only if the kind is namespaced (or maybe always fetch?)
+  // Let's fetch always for simplicity, but filter UI later.
   useEffect(() => {
     const loadNamespaces = async () => {
+      // Reset selection when kind changes to a cluster-scoped one
+      if (!isNamespaced) {
+        setSelectedNamespace('all');
+      }
       try {
         const fetchedNamespaces = await fetchNamespaces();
         setNamespaces(fetchedNamespaces);
@@ -114,7 +136,7 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
       }
     };
     loadNamespaces();
-  }, []); // Add context dependency if needed
+  }, [isNamespaced]);
 
   // Fetch resources when selectedKind changes
   useEffect(() => {
@@ -142,28 +164,19 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
 
   // Filter resources based on selectedNamespace
   const filteredResources = useMemo(() => {
-    if (selectedNamespace === 'all') {
+    if (!isNamespaced || selectedNamespace === 'all') {
       return resources;
     }
     return resources.filter(res => res.metadata.namespace === selectedNamespace);
-  }, [resources, selectedNamespace]);
+  }, [resources, selectedNamespace, isNamespaced]);
 
   // Determine columns based on selectedKind
   const getColumns = (kind: string | null): string[] => {
     if (!kind) return [];
     const base = ['Name', 'Age'];
-    // Add Namespace column if the resource kind is namespaced
-    if (
-      ![
-        'Nodes',
-        'Namespaces',
-        'PersistentVolumes',
-        'StorageClasses',
-        'ClusterRoles',
-        'ClusterRoleBindings',
-      ].includes(kind)
-    ) {
-      base.splice(1, 0, 'Namespace'); // Insert Namespace after Name
+    // Add Namespace column only if the resource kind is namespaced
+    if (isNamespaced) {
+      base.splice(1, 0, 'Namespace');
     }
     // Add kind-specific columns
     if (kind === 'Pods') return [...base, 'Status'];
@@ -201,21 +214,26 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
   return (
     <div className="resource-list-pane">
       <div className="resource-list-controls">
-        {/* Namespace Dropdown */}
-        <select
-          value={selectedNamespace}
-          onChange={e => setSelectedNamespace(e.target.value)}
-          className="namespace-select"
-          disabled={isLoading} // Disable while loading
-        >
-          <option value="all">All Namespaces</option>
-          {namespaces.map(ns => (
-            <option key={ns} value={ns}>
-              {ns}
-            </option>
-          ))}
-        </select>
-        {/* Optional: Add other controls like search/filter input here */}
+        {/* Conditionally render Namespace Dropdown */}
+        {isNamespaced && (
+          <div className="namespace-filter-container">
+            <span className="namespace-label">Namespace:</span>
+            <select
+              value={selectedNamespace}
+              onChange={e => setSelectedNamespace(e.target.value)}
+              className="namespace-select"
+              disabled={isLoading || !isNamespaced} // Also disable if not namespaced (though hidden)
+            >
+              <option value="all">All Namespaces</option>
+              {namespaces.map(ns => (
+                <option key={ns} value={ns}>
+                  {ns}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {/* Placeholder for other controls */}
       </div>
 
       {isLoading && <p>Loading...</p>}
@@ -244,7 +262,10 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
                 <tr>
                   <td colSpan={columns.length} className="no-resources-message">
                     No resources found
-                    {selectedNamespace !== 'all' ? ` in namespace "${selectedNamespace}"` : ''}.
+                    {isNamespaced && selectedNamespace !== 'all'
+                      ? ` in namespace "${selectedNamespace}"`
+                      : ''}
+                    .
                   </td>
                 </tr>
               )}

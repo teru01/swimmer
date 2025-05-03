@@ -102,9 +102,24 @@
 }
 
 .resource-list-controls {
-  padding: 0.8rem 1rem; /* Add padding for controls area */
-  border-bottom: 1px solid #dee2e6; /* Separator line */
-  flex-shrink: 0; /* Prevent controls from shrinking */
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #dee2e6;
+  flex-shrink: 0;
+  display: flex; /* Use flex for alignment */
+  align-items: center; /* Align items vertically */
+}
+
+/* Container for label + select */
+.namespace-filter-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* Add space between label and select */
+}
+
+.namespace-label {
+  font-size: 0.9em;
+  color: #495057; /* Slightly muted color */
+  white-space: nowrap; /* Prevent label wrapping */
 }
 
 .namespace-select {
