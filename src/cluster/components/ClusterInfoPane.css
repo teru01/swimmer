@@ -1,0 +1,110 @@
+/* src/cluster/components/ClusterInfoPane.css */
+.cluster-info-pane-layout {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.resource-kind-sidebar {
+  width: 200px;
+  border-right: 1px solid #ccc;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.resource-kind-sidebar h4 {
+  margin-top: 0;
+}
+
+.resource-kind-sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.resource-kind-sidebar li {
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
+}
+
+.resource-kind-sidebar li:hover {
+  background-color: #eee;
+}
+
+.resource-kind-sidebar li.selected {
+  background-color: #ddd;
+  font-weight: bold;
+}
+
+.main-content-area {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.resource-list-pane {
+  flex-grow: 1;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.resource-list-pane h4 {
+  margin-top: 0;
+}
+
+.resource-list-pane ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.resource-list-pane li {
+  padding: 0.5rem;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+}
+
+.resource-list-pane li:hover {
+  background-color: #f9f9f9;
+}
+
+.resource-detail-pane {
+  height: 300px;
+  border-top: 1px solid #ccc;
+  padding: 1rem;
+  overflow-y: auto;
+  position: relative;
+  background-color: #fdfdfd;
+}
+
+.resource-detail-pane .close-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.resource-detail-pane h4 {
+  margin-top: 0;
+}
+
+.resource-detail-pane pre {
+  background-color: #eee;
+  padding: 0.5rem;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.no-context {
+  padding: 1rem;
+  text-align: center;
+  color: #666;
+}

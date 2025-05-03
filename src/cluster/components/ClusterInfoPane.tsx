@@ -1,49 +1,55 @@
+import React, { useState } from 'react';
 import { ContextNode } from '../../lib/contextTree';
+import ResourceKindSidebar from './ResourceKindSidebar';
+import ResourceList from './ResourceList';
+import ResourceDetailPane from './ResourceDetailPane';
+import './ClusterInfoPane.css';
+// import './ClusterInfoPane.css'; // Assuming you create a CSS file for layout
 
 interface ClusterInfoPaneProps {
   selectedContext: ContextNode | null;
 }
 
 /**
- * Center Pane: Component to display cluster information
+ * Center Pane: Component to display cluster information with sidebar, list, and detail views.
  */
 function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
+  const [selectedKind, setSelectedKind] = useState<string | null>(null);
+  const [selectedResource, setSelectedResource] = useState<string | null>(null);
+  const [showDetailPane, setShowDetailPane] = useState<boolean>(false);
+
+  const handleKindSelect = (kind: string) => {
+    setSelectedKind(kind);
+    setSelectedResource(null); // Reset resource selection when kind changes
+    setShowDetailPane(false); // Close detail pane when kind changes
+  };
+
+  const handleResourceSelect = (resource: string) => {
+    setSelectedResource(resource);
+    setShowDetailPane(true); // Show detail pane when resource is selected
+  };
+
+  const handleCloseDetailPane = () => {
+    setShowDetailPane(false);
+    setSelectedResource(null); // Optionally reset resource selection on close
+  };
+
   return (
-    <div className="cluster-info-pane">
-      <h2>Cluster Information</h2>
-
+    <div className="cluster-info-pane-layout">
       {selectedContext ? (
-        <div className="cluster-info-content">
-          <h3>Context: {selectedContext.name}</h3>
-
-          <div className="info-section">
-            <h4>Nodes</h4>
-            <div className="dummy-data">
-              <p>node1 (Ready) - 4 CPU, 16GB Memory</p>
-              <p>node2 (Ready) - 4 CPU, 16GB Memory</p>
-              <p>node3 (Ready) - 4 CPU, 16GB Memory</p>
-            </div>
+        <>
+          <ResourceKindSidebar selectedKind={selectedKind} onKindSelect={handleKindSelect} />
+          <div className="main-content-area">
+            {/* Container for list and detail */}
+            <ResourceList selectedKind={selectedKind} onResourceSelect={handleResourceSelect} />
+            {showDetailPane && (
+              <ResourceDetailPane
+                selectedResource={selectedResource}
+                onClose={handleCloseDetailPane}
+              />
+            )}
           </div>
-
-          <div className="info-section">
-            <h4>Namespaces</h4>
-            <div className="dummy-data">
-              <p>default</p>
-              <p>kube-system</p>
-              <p>kube-public</p>
-              <p>monitoring</p>
-            </div>
-          </div>
-
-          <div className="info-section">
-            <h4>Deployments</h4>
-            <div className="dummy-data">
-              <p>app1 (3/3 Ready)</p>
-              <p>app2 (1/1 Ready)</p>
-              <p>monitoring (2/2 Ready)</p>
-            </div>
-          </div>
-        </div>
+        </>
       ) : (
         <p className="no-context">Select a context to view cluster information</p>
       )}
