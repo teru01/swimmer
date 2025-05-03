@@ -92,30 +92,75 @@
 }
 
 .resource-list-pane {
-  padding: 1rem;
+  padding: 0; /* Remove padding to allow table container to manage it */
   overflow-y: auto;
-  height: 100%; /* Fill the pane */
-  box-sizing: border-box; /* Include padding in height */
+  overflow: hidden; /* Prevent double scrollbars */
+  height: 100%;
+  box-sizing: border-box;
+  display: flex; /* Use flexbox for layout */
+  flex-direction: column;
 }
 
-.resource-list-pane h4 {
-  margin-top: 0;
+.resource-list-controls {
+  padding: 0.8rem 1rem; /* Add padding for controls area */
+  border-bottom: 1px solid #dee2e6; /* Separator line */
+  flex-shrink: 0; /* Prevent controls from shrinking */
 }
 
-.resource-list-pane ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.namespace-select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: #fff;
+  min-width: 150px; /* Give dropdown some width */
 }
 
-.resource-list-pane li {
-  padding: 0.5rem;
+.resource-table-container {
+  flex-grow: 1; /* Allow table container to fill remaining space */
+  overflow-y: auto; /* Enable scrolling only for the table */
+  padding: 0 1rem 1rem 1rem; /* Add padding around table */
+}
+
+.resource-table {
+  width: 100%;
+  border-collapse: collapse; /* Clean table lines */
+  font-size: 0.9em; /* Slightly smaller font */
+}
+
+.resource-table th,
+.resource-table td {
+  padding: 0.6rem 0.5rem; /* Adjust padding */
+  text-align: left;
+  border-bottom: 1px solid #e9ecef; /* Lighter border */
+  white-space: nowrap; /* Prevent text wrapping initially */
+}
+
+.resource-table th {
+  font-weight: 500;
+  background-color: #f8f9fa; /* Slight background for header */
+  position: sticky; /* Make header sticky */
+  top: 0;
+  z-index: 1;
+}
+
+.resource-table tbody tr {
   cursor: pointer;
-  border-bottom: 1px solid #eee;
+  transition: background-color 0.15s ease;
 }
 
-.resource-list-pane li:hover {
-  background-color: #f9f9f9;
+.resource-table tbody tr:hover {
+  background-color: #f1f3f5; /* Hover effect */
+}
+
+.no-resources-message {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d; /* Gray color */
+}
+
+.error-message {
+  color: #dc3545; /* Red color for errors */
+  padding: 1rem;
 }
 
 .resource-detail-pane {
