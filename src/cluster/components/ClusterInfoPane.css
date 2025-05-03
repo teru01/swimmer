@@ -12,38 +12,76 @@
 }
 
 .resource-kind-sidebar {
-  /* width: 200px; */ /* Removed */
+  /* width: 200px; */ /* Managed by Panel */
   border-right: 1px solid #ccc;
-  padding: 1rem;
+  padding: 0.5rem; /* Reduced padding */
   overflow-y: auto;
-  height: 100%; /* Fill the pane */
-  box-sizing: border-box; /* Include padding in height */
+  height: 100%;
+  box-sizing: border-box;
+  background-color: #f8f9fa; /* Slightly different background */
 }
 
-.resource-kind-sidebar h4 {
-  margin-top: 0;
-}
-
-.resource-kind-sidebar ul {
+/* Remove global ul/li styles affecting the sidebar */
+.resource-kind-sidebar ul,
+.resource-kind-sidebar li {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.resource-kind-sidebar li {
-  padding: 0.5rem;
-  cursor: pointer;
-  border-radius: 4px;
+.resource-group {
   margin-bottom: 0.25rem;
 }
 
-.resource-kind-sidebar li:hover {
-  background-color: #eee;
+.group-header {
+  padding: 0.6rem 0.5rem; /* Adjusted padding */
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: 500; /* Slightly bolder */
+  display: flex;
+  align-items: center;
+  transition: background-color 0.15s ease;
 }
 
-.resource-kind-sidebar li.selected {
-  background-color: #ddd;
-  font-weight: bold;
+.group-header:hover {
+  background-color: #e9ecef;
+}
+
+.group-header.selected {
+  /* Style for selected single item (like Overview) */
+  background-color: #dee2e6;
+  font-weight: 600;
+}
+
+.expand-icon {
+  margin-right: 0.4rem;
+  font-size: 0.7em; /* Smaller icon */
+  display: inline-block;
+  width: 1em; /* Ensure alignment */
+  text-align: center;
+}
+
+.kind-list {
+  margin-left: 1.5rem; /* Indent kind list */
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+}
+
+.kind-list li {
+  padding: 0.4rem 0.5rem; /* Adjusted padding */
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 0.1rem;
+  transition: background-color 0.15s ease;
+}
+
+.kind-list li:hover {
+  background-color: #e9ecef;
+}
+
+.kind-list li.selected {
+  background-color: #ced4da; /* Different selected color for kinds */
+  font-weight: 500;
 }
 
 .main-content-area {
