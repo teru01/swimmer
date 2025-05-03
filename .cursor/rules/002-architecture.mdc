@@ -1,0 +1,37 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Application Architecture
+
+This application is a Tauri-based Kubernetes client.
+
+## Frontend Structure (`src/`)
+
+The frontend is built with React and TypeScript.
+
+- **Entry Point:** [`main.tsx`](mdc:src/main.tsx) initializes the React application and renders the [`App.tsx`](mdc:src/App.tsx) component.
+- **Root Component:** [`App.tsx`](mdc:src/App.tsx) serves as the main wrapper and renders the [`MainLayout.tsx`](mdc:src/main/MainLayout.tsx).
+- **Main Layout:** [`MainLayout.tsx`](mdc:src/main/MainLayout.tsx) defines the primary UI structure using [`react-resizable-panels`](https://github.com/bvaughn/react-resizable-panels). It consists of three main panes:
+    - **Left Pane:** Contains [`ContextsPane`](mdc:src/kubeContexts/components/ContextsPane.tsx) for managing and selecting Kubernetes contexts. Context data management might be in `src/lib/` or `src/kubeContexts/`.
+    - **Center Pane:** Features [`ClusterTabs`](mdc:src/cluster/components/ClusterTabs.tsx) at the top to switch between open clusters. Below the tabs, it's vertically split into:
+        - [`ClusterInfoPane`](mdc:src/cluster/components/ClusterInfoPane.tsx): Displays detailed information about the selected cluster resource (Nodes, Pods, etc.). See rule [100-frontend.mdc](mdc:.cursor/rules/100-frontend.mdc) for its internal structure.
+        - [`TerminalPane`](mdc:src/cluster/components/TerminalPane.tsx): Provides an integrated terminal for interacting with the cluster.
+    - **Right Pane:** Includes the [`ChatPane`](mdc:src/chat/components/ChatPane.tsx) for AI assistant interactions.
+- **State Management:** The main application state, particularly the selected Kubernetes context, appears to be managed within [`MainLayout.tsx`](mdc:src/main/MainLayout.tsx) using `useState` and passed down as props.
+- **Styling:** Global styles are defined in [`App.css`](mdc:src/App.css) and [`styles/layout.css`](mdc:src/styles/layout.css). Component-specific styles exist, like [`ClusterInfoPane.css`](mdc:src/cluster/components/ClusterInfoPane.css), and panel resizing styles are in [`resizable.css`](mdc:src/main/resizable.css).
+
+## Backend Communication
+
+Communication with the Rust backend (Tauri commands) likely happens through functions defined possibly in `src/api/` or invoked directly within components needing backend interaction. Refer to rule [200-backend.mdc](mdc:.cursor/rules/200-backend.mdc) for backend details.
+
+## Key Directories
+
+- `src/main/`: Core layout and application structure.
+- `src/cluster/`: Components related to displaying cluster information and interaction (tabs, info pane, terminal).
+- `src/kubeContexts/`: Components for Kubernetes context selection and management.
+- `src/chat/`: Components for the AI chat interface.
+- `src/lib/`: Likely contains utility functions, type definitions (e.g., `ContextNode`), or core logic.
+- `src/api/`: Potentially contains functions for interacting with the Tauri backend.
+- `src/styles/`: Global CSS styles.
