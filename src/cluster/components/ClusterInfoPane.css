@@ -5,11 +5,19 @@
   overflow: hidden;
 }
 
+/* Container to ensure Allotment has height */
+.cluster-info-pane-container {
+  height: 100%; /* Or parent height */
+  width: 100%;
+}
+
 .resource-kind-sidebar {
-  width: 200px;
+  /* width: 200px; */ /* Removed */
   border-right: 1px solid #ccc;
   padding: 1rem;
   overflow-y: auto;
+  height: 100%; /* Fill the pane */
+  box-sizing: border-box; /* Include padding in height */
 }
 
 .resource-kind-sidebar h4 {
@@ -46,9 +54,10 @@
 }
 
 .resource-list-pane {
-  flex-grow: 1;
   padding: 1rem;
   overflow-y: auto;
+  height: 100%; /* Fill the pane */
+  box-sizing: border-box; /* Include padding in height */
 }
 
 .resource-list-pane h4 {
@@ -72,12 +81,14 @@
 }
 
 .resource-detail-pane {
-  height: 300px;
+  /* height: 300px; */ /* Removed */
   border-top: 1px solid #ccc;
   padding: 1rem;
   overflow-y: auto;
   position: relative;
   background-color: #fdfdfd;
+  height: 100%; /* Fill the pane */
+  box-sizing: border-box; /* Include padding in height */
 }
 
 .resource-detail-pane .close-button {
@@ -104,7 +115,73 @@
 }
 
 .no-context {
-  padding: 1rem;
-  text-align: center;
-  color: #666;
+  height: 100%; /* Fill container if no context */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+/* Styles for react-resizable-panels Handles */
+.resize-handle-vertical,
+.resize-handle-horizontal {
+  background-color: #e0e0e0; /* Light gray background */
+  position: relative;
+  outline: none;
+  /* transition for smoother hover effect */
+  transition: background-color 0.2s ease;
+}
+
+.resize-handle-vertical {
+  width: 6px; /* Width of the vertical handle */
+  cursor: col-resize;
+}
+
+.resize-handle-horizontal {
+  height: 6px; /* Height of the horizontal handle */
+  cursor: row-resize;
+}
+
+/* Add a slightly darker line in the middle for better visibility */
+.resize-handle-vertical::before,
+.resize-handle-horizontal::before {
+  content: '';
+  position: absolute;
+  background-color: #bdbdbd; /* Slightly darker gray */
+  opacity: 0; /* Hidden by default */
+  transition: opacity 0.2s ease;
+}
+
+.resize-handle-vertical::before {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px; /* Width of the inner line */
+  transform: translateX(-50%);
+}
+
+.resize-handle-horizontal::before {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px; /* Height of the inner line */
+  transform: translateY(-50%);
+}
+
+/* Highlight handle on hover or drag */
+.resize-handle-vertical:hover,
+.resize-handle-horizontal:hover,
+.resize-handle-vertical[data-resize-handle-active], /* Use data attribute for active state */
+.resize-handle-horizontal[data-resize-handle-active] {
+  background-color: #bdbdbd; /* Darker gray on hover/active */
+}
+.resize-handle-vertical:hover::before,
+.resize-handle-horizontal:hover::before,
+.resize-handle-vertical[data-resize-handle-active]::before,
+.resize-handle-horizontal[data-resize-handle-active]::before {
+  opacity: 1; /* Show inner line on hover/active */
+}
+
+/* Ensure Panel content stretches */
+/* Panel components often need explicit height/width */
+/* The direct child of Panel should ideally have height/width 100% */
+/* Our existing styles like .resource-kind-sidebar { height: 100%; } should handle this */
