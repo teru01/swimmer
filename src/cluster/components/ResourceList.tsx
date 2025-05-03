@@ -20,10 +20,40 @@ export interface KubeResource {
     namespace?: string; // Namespaced resources have this
     creationTimestamp?: string;
     uid: string; // Use UID for keys
+    labels?: { [key: string]: string };
+    annotations?: { [key: string]: string };
+    ownerReferences?: {
+      apiVersion: string;
+      kind: string;
+      name: string;
+      uid: string;
+      controller?: boolean;
+      blockOwnerDeletion?: boolean;
+    }[];
   };
   // Add other relevant fields based on resource kind, e.g., status, replicas
-  status?: { phase?: string; readyReplicas?: number }; // Example for Pods/Deployments
-  spec?: { replicas?: number }; // Example spec
+  status?: {
+    phase?: string;
+    readyReplicas?: number;
+    podIP?: string;
+    startTime?: string;
+    conditions?: {
+      type: string;
+      status: string;
+      lastProbeTime?: string | null;
+      lastTransitionTime?: string;
+      reason?: string;
+      message?: string;
+    }[];
+  };
+  spec?: {
+    replicas?: number;
+    nodeName?: string;
+    serviceAccountName?: string;
+    containers?: any[];
+    initContainers?: any[];
+    volumes?: any[];
+  };
 }
 
 const dummyNamespaces = ['default', 'kube-system', 'production', 'development'];

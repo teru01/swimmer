@@ -1,10 +1,85 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ContextNode } from '../../lib/contextTree';
 import ResourceKindSidebar from './ResourceKindSidebar';
 import ResourceList, { KubeResource } from './ResourceList';
 import ResourceDetailPane from './ResourceDetailPane';
 import './ClusterInfoPane.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+
+// --- Dummy Fetch Detail ---
+// Simulates fetching full details for a specific resource
+const fetchResourceDetail = async (resource: KubeResource | null): Promise<KubeResource | null> => {
+  if (!resource) return null;
+  console.log(`Fetching details for: ${resource.metadata.name}`);
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay
+
+  // Return a more detailed dummy object based on the input resource
+  // For now, just return the input, assuming ResourceList already provides enough detail
+  // In a real scenario, this would fetch the full YAML/JSON from the API
+  // Example adding more details for a Pod:
+  if (resource.metadata.name.startsWith('pod-')) {
+    // Check if it looks like a pod based on dummy naming
+    return {
+      ...resource,
+      spec: {
+        ...(resource.spec || {}),
+        nodeName: 'gk3-csm-cluster-0-pool-3-ae2f041a-y8fl', // Example node
+        serviceAccountName: 'default',
+        containers: [
+          {
+            name: 'nginx',
+            image: 'nginx:latest',
+            ready: true,
+            restartCount: 0,
+            state: { running: { startedAt: new Date().toISOString() } },
+          },
+          {
+            name: 'sidecar',
+            image: 'sidecar:latest',
+            ready: true,
+            restartCount: 0,
+            state: { running: { startedAt: new Date().toISOString() } },
+          },
+        ],
+        initContainers: [
+          {
+            name: 'init-myservice',
+            image: 'busybox',
+            state: { terminated: { exitCode: 0, reason: 'Completed' } },
+          },
+        ],
+        volumes: [
+          { name: 'config-volume', configMap: { name: 'my-config' } },
+          { name: 'secret-volume', secret: { secretName: 'my-secret' } },
+        ],
+      },
+      status: {
+        ...(resource.status || {}),
+        phase: 'Running',
+        podIP: '10.10.0.12',
+        startTime: '2025-04-23T14:05:21Z', // Example start time
+        conditions: [
+          { type: 'Initialized', status: 'True', lastTransitionTime: new Date().toISOString() },
+          { type: 'Ready', status: 'True', lastTransitionTime: new Date().toISOString() },
+          { type: 'ContainersReady', status: 'True', lastTransitionTime: new Date().toISOString() },
+          { type: 'PodScheduled', status: 'True', lastTransitionTime: new Date().toISOString() },
+        ],
+      },
+      // Add dummy labels/annotations similar to describe output
+      metadata: {
+        ...resource.metadata,
+        labels: { app: 'myapp', env: 'production', ...resource.metadata.labels },
+        annotations: {
+          'kubectl.kubernetes.io/restartedAt': new Date().toISOString(),
+          ...resource.metadata.annotations,
+        },
+      },
+    };
+  }
+
+  return resource; // Return original resource if not a pod (or add other kinds)
+};
+// --- End Dummy Fetch ---
 
 interface ClusterInfoPaneProps {
   selectedContext: ContextNode | null;
@@ -15,23 +90,34 @@ interface ClusterInfoPaneProps {
  */
 function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
   const [selectedKind, setSelectedKind] = useState<string | null>(null);
-  const [selectedResourceName, setSelectedResourceName] = useState<string | null>(null);
+  const [selectedResourceDetail, setSelectedResourceDetail] = useState<KubeResource | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState<boolean>(false);
   const [showDetailPane, setShowDetailPane] = useState<boolean>(false);
 
   const handleKindSelect = (kind: string) => {
     setSelectedKind(kind);
-    setSelectedResourceName(null);
+    setSelectedResourceDetail(null);
     setShowDetailPane(false);
   };
 
-  const handleResourceSelect = (resource: KubeResource) => {
-    setSelectedResourceName(resource.metadata.name);
+  const handleResourceSelect = useCallback(async (resource: KubeResource) => {
     setShowDetailPane(true);
-  };
+    setIsDetailLoading(true);
+    setSelectedResourceDetail(null);
+    try {
+      const details = await fetchResourceDetail(resource);
+      setSelectedResourceDetail(details);
+    } catch (error) {
+      console.error('Failed to fetch resource details:', error);
+      setSelectedResourceDetail(null);
+    } finally {
+      setIsDetailLoading(false);
+    }
+  }, []);
 
   const handleCloseDetailPane = () => {
     setShowDetailPane(false);
-    setSelectedResourceName(null);
+    setSelectedResourceDetail(null);
   };
 
   const handleDetailPaneResize = (size: number) => {
@@ -66,7 +152,8 @@ function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
                     onResize={handleDetailPaneResize}
                   >
                     <ResourceDetailPane
-                      selectedResource={selectedResourceName}
+                      resource={selectedResourceDetail}
+                      isLoading={isDetailLoading}
                       onClose={handleCloseDetailPane}
                     />
                   </Panel>
