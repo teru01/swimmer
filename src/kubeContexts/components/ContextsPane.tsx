@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Tree, NodeRendererProps, NodeApi } from 'react-arborist';
 import { commands } from '../../api';
 import * as yaml from 'yaml';
-import { Button, Input, Tag, Dropdown, Menu } from '../../main/ui';
+import { Button, Input, Tag } from '../../main/ui';
 import '../styles/contextsPane.css';
 import {
   ContextNode,
@@ -32,7 +32,6 @@ function ContextsPane({
 }: ContextsPaneProps) {
   const [contextTree, setContextTree] = useState<ContextNode[]>([]);
   const [filterTag, setFilterTag] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -413,47 +412,6 @@ function ContextsPane({
   };
 
   /**
-   * Adds a tag to a specified node.
-   * If the tag is new, it's also added to the list of available tags.
-   * @param nodeId The ID of the node to add the tag to.
-   * @param tag The tag string to add.
-   */
-  const handleAddTag = (nodeId: string, tag: string) => {
-    if (!availableTags.includes(tag)) {
-      setAvailableTags(prev => {
-        const newTags = [...prev, tag];
-        return newTags;
-      });
-    }
-
-    setContextTree(prev => {
-      const updateNodeTags = (nodes: ContextNode[]): ContextNode[] => {
-        return nodes.map(node => {
-          if (node.id === nodeId) {
-            const tags = node.tags || [];
-            if (!tags.includes(tag)) {
-              return { ...node, tags: [...tags, tag] };
-            }
-            return node;
-          }
-          if (node.children) {
-            return { ...node, children: updateNodeTags(node.children) };
-          }
-          return node;
-        });
-      };
-
-      const updatedTree = updateNodeTags(prev);
-      saveConfig({
-        contextTree: updatedTree,
-        lastSelectedContext: selectedContext || undefined,
-        tags: availableTags.includes(tag) ? availableTags : [...availableTags, tag],
-      });
-      return updatedTree;
-    });
-  };
-
-  /**
    * Removes a tag from a specified node.
    * @param nodeId The ID of the node to remove the tag from.
    * @param tagToRemove The tag string to remove.
@@ -639,7 +597,7 @@ function ContextsPane({
               <Tag
                 key={tag}
                 className="context-tag"
-                closable={isEditing} // Only allow closing tags in edit mode (if re-enabled)
+                closable={false} // Only allow closing tags in edit mode (if re-enabled)
                 onClose={() => handleTagClose(tag)}
               >
                 {tag}
@@ -717,30 +675,6 @@ function ContextsPane({
    */
   const clearSearch = () => {
     setSearchText('');
-  };
-
-  /**
-   * Handles re-importing contexts directly from the kubeconfig,
-   * overwriting the current tree structure.
-   */
-  const handleReimport = async () => {
-    try {
-      setLoading(true);
-      const kubeContexts = await commands.getKubeContexts();
-      const newTree = organizeContextsToTree(kubeContexts);
-      setContextTree(newTree);
-      await saveConfig({
-        contextTree: newTree,
-        lastSelectedContext: selectedContext || undefined,
-        tags: availableTags,
-      });
-      setLoading(false);
-      setError(null);
-    } catch (err) {
-      console.error('Error reimporting contexts:', err);
-      setError(typeof err === 'string' ? err : 'Failed to reimport Kubernetes contexts');
-      setLoading(false);
-    }
   };
 
   return (

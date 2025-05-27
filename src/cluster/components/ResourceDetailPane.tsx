@@ -9,14 +9,6 @@ interface ResourceDetailPaneProps {
   onClose: () => void;
 }
 
-// Dummy detail data (replace with actual data fetching)
-const dummyDetails: { [key: string]: any } = {
-  'node-1': { name: 'node-1', status: 'Ready', cpu: '4', memory: '16Gi' },
-  'pod-a-123': { name: 'pod-a-123', status: 'Running', restarts: 0, node: 'node-1' },
-  'app-deployment': { name: 'app-deployment', replicas: 3, available: 3 },
-  // Add more dummy data as needed
-};
-
 // Helper component to render key-value pairs nicely
 const DetailItem: React.FC<{ label: string; children: React.ReactNode }> = ({
   label,
@@ -59,26 +51,32 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   if (isLoading) {
     return (
       <div className="resource-detail-pane loading">
-        <button onClick={onClose} className="close-button">
-          Close
+        <button onClick={onClose} className="close-button" title="Close details">
+          ✕
         </button>
-        <p>Loading details...</p>
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <span>Loading resource details...</span>
+        </div>
       </div>
     );
   }
 
   if (!resource) {
-    // Render nothing or a placeholder if no resource is selected (or after closing)
-    // Returning null might be best if the parent Panel handles collapsing
     return null;
-    // Or a placeholder:
-    /* return (
-         <div className="resource-detail-pane empty">
-             <button onClick={onClose} className="close-button">Close</button>
-             <p>No resource selected.</p>
-         </div>
-     ); */
   }
+
+  // Determine resource kind from name or add kind field to KubeResource
+  const getResourceKind = (resource: KubeResource): string => {
+    const name = resource.metadata.name;
+    if (name.startsWith('pod-')) return 'Pod';
+    if (name.startsWith('deployment-')) return 'Deployment';
+    if (name.startsWith('service-')) return 'Service';
+    if (name.startsWith('node-')) return 'Node';
+    return 'Unknown';
+  };
+
+  const resourceKind = getResourceKind(resource);
 
   // --- Specific Renderer for Pod ---
   // Add renderers for other kinds as needed
@@ -190,19 +188,45 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
   return (
     <div className="resource-detail-pane">
-      <button onClick={onClose} className="close-button">
-        Close
-      </button>
-      {/* Basic Title - maybe improve later */}
-      <h3>Details: {resource.metadata.name}</h3>
+      <div className="detail-header">
+        <div className="detail-title">
+          <h3>{resource.metadata.name}</h3>
+          <span className="resource-kind-badge">{resourceKind}</span>
+        </div>
+        <button onClick={onClose} className="close-button" title="Close details">
+          ✕
+        </button>
+      </div>
 
-      {/* Render details based on kind */}
-      {/* For now, only implementing Pod */}
-      {resource.metadata.name.startsWith('pod-') ? (
-        renderPodDetails(resource)
-      ) : (
-        <pre>{JSON.stringify(resource, null, 2)}</pre> // Fallback for other kinds
-      )}
+      <div className="detail-content">
+        {resourceKind === 'Pod' ? (
+          renderPodDetails(resource)
+        ) : (
+          <div className="fallback-details">
+            <section className="detail-section">
+              <h4>Basic Information</h4>
+              <DetailItem label="Name">{resource.metadata.name}</DetailItem>
+              <DetailItem label="Namespace">{resource.metadata.namespace}</DetailItem>
+              <DetailItem label="Age">{formatAge(resource.metadata.creationTimestamp)}</DetailItem>
+            </section>
+
+            <section className="detail-section">
+              <h4>Labels</h4>
+              {renderMetadataMap(resource.metadata.labels)}
+            </section>
+
+            <section className="detail-section">
+              <h4>Annotations</h4>
+              {renderMetadataMap(resource.metadata.annotations)}
+            </section>
+
+            <section className="detail-section">
+              <h4>Raw Data</h4>
+              <pre className="json-display">{JSON.stringify(resource, null, 2)}</pre>
+            </section>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

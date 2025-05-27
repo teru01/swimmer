@@ -2,17 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './ClusterInfoPane.css';
 import { formatAge } from '../../lib/utils'; // Import the utility
 
-// Dummy resource data (replace with actual data fetching)
-const dummyResources: { [key: string]: string[] } = {
-  Nodes: ['node-1', 'node-2', 'node-3'],
-  Pods: ['pod-a-123', 'pod-b-456', 'pod-c-789'],
-  Deployments: ['app-deployment', 'db-deployment'],
-  ConfigMaps: ['config-1', 'config-2'],
-  Secrets: ['secret-db-pass', 'secret-api-key'],
-  Services: ['service-frontend', 'service-backend'],
-  'Custom Resources': ['crd-instance-1', 'crd-instance-2'],
-};
-
 // --- Dummy Data & Fetch Functions (Replace with actual API calls) ---
 export interface KubeResource {
   metadata: {
@@ -244,30 +233,51 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
   return (
     <div className="resource-list-pane">
       <div className="resource-list-controls">
-        {/* Conditionally render Namespace Dropdown */}
-        {isNamespaced && (
-          <div className="namespace-filter-container">
-            <span className="namespace-label">Namespace:</span>
-            <select
-              value={selectedNamespace}
-              onChange={e => setSelectedNamespace(e.target.value)}
-              className="namespace-select"
-              disabled={isLoading || !isNamespaced} // Also disable if not namespaced (though hidden)
-            >
-              <option value="all">All Namespaces</option>
-              {namespaces.map(ns => (
-                <option key={ns} value={ns}>
-                  {ns}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        {/* Placeholder for other controls */}
+        <div className="controls-left">
+          {selectedKind && (
+            <div className="resource-kind-indicator">
+              <span className="kind-label">{selectedKind}</span>
+              <span className="resource-count">
+                {filteredResources.length} {filteredResources.length === 1 ? 'item' : 'items'}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="controls-right">
+          {isNamespaced && (
+            <div className="namespace-filter-container">
+              <span className="namespace-label">Namespace:</span>
+              <select
+                value={selectedNamespace}
+                onChange={e => setSelectedNamespace(e.target.value)}
+                className="namespace-select"
+                disabled={isLoading}
+              >
+                <option value="all">All Namespaces</option>
+                {namespaces.map(ns => (
+                  <option key={ns} value={ns}>
+                    {ns}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
-      {isLoading && <p>Loading...</p>}
-      {error && <p className="error-message">{error}</p>}
+      {isLoading && (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <span>Loading {selectedKind}...</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="error-message">
+          <span className="error-icon">⚠️</span>
+          {error}
+        </div>
+      )}
 
       {!isLoading && !error && selectedKind && (
         <div className="resource-table-container">
@@ -291,11 +301,17 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
               ) : (
                 <tr>
                   <td colSpan={columns.length} className="no-resources-message">
-                    No resources found
-                    {isNamespaced && selectedNamespace !== 'all'
-                      ? ` in namespace "${selectedNamespace}"`
-                      : ''}
-                    .
+                    <div className="empty-state">
+                      <span className="empty-icon">📭</span>
+                      <div>
+                        <div className="empty-title">No resources found</div>
+                        <div className="empty-subtitle">
+                          {isNamespaced && selectedNamespace !== 'all'
+                            ? `No ${selectedKind} found in namespace "${selectedNamespace}"`
+                            : `No ${selectedKind} found in this cluster`}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -303,7 +319,18 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
           </table>
         </div>
       )}
-      {!isLoading && !error && !selectedKind && <p>Select a resource kind from the sidebar.</p>}
+
+      {!isLoading && !error && !selectedKind && (
+        <div className="no-selection-state">
+          <span className="no-selection-icon">👈</span>
+          <div>
+            <div className="no-selection-title">Select a resource type</div>
+            <div className="no-selection-subtitle">
+              Choose a resource kind from the sidebar to view its resources
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

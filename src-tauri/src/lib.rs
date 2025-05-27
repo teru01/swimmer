@@ -1,5 +1,11 @@
 use kube::config::Kubeconfig;
 use thiserror::Error;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::io::{Read, Write};
+use portable_pty::{CommandBuilder, PtySize, native_pty_system};
+use tauri::{State, Manager, EventTarget};
+use uuid::Uuid;
 
 #[derive(Debug, Error)]
 enum Error {
@@ -7,6 +13,8 @@ enum Error {
     Kube(#[from] kube::config::KubeconfigError),
     #[error("Internal error: {0}")]
     Internal(String),
+    #[error("Terminal error: {0}")]
+    Terminal(String),
 }
 
 impl serde::Serialize for Error {
@@ -19,6 +27,14 @@ impl serde::Serialize for Error {
 }
 
 type Result<T> = std::result::Result<T, Error>;
+
+// Terminal session management
+struct TerminalSession {
+    writer: Box<dyn portable_pty::MasterPty + Send>,
+    reader: Arc<Mutex<Box<dyn std::io::Read + Send>>>,
+}
+
+type TerminalSessions = Arc<Mutex<HashMap<String, TerminalSession>>>;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -33,11 +49,107 @@ async fn get_kube_contexts() -> Result<Vec<String>> {
     Ok(context_names)
 }
 
+#[tauri::command]
+async fn create_terminal_session(
+    sessions: State<'_, TerminalSessions>,
+    app_handle: tauri::AppHandle,
+) -> Result<String> {
+    let session_id = Uuid::new_v4().to_string();
+    
+    let pty_system = native_pty_system();
+    let pty_pair = pty_system
+        .openpty(PtySize {
+            rows: 24,
+            cols: 80,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .map_err(|e| Error::Terminal(format!("Failed to create PTY: {}", e)))?;
+
+    let cmd = CommandBuilder::new("/bin/zsh");
+    let child = pty_pair
+        .slave
+        .spawn_command(cmd)
+        .map_err(|e| Error::Terminal(format!("Failed to spawn shell: {}", e)))?;
+
+    let reader = pty_pair.master.try_clone_reader()
+        .map_err(|e| Error::Terminal(format!("Failed to clone reader: {}", e)))?;
+
+    let session = TerminalSession {
+        writer: pty_pair.master,
+        reader: Arc::new(Mutex::new(reader)),
+    };
+
+    // Start reading from terminal in background
+    let session_id_clone = session_id.clone();
+    let reader_clone = session.reader.clone();
+    let app_handle_clone = app_handle.clone();
+    
+    tokio::spawn(async move {
+        let mut buffer = [0u8; 1024];
+        loop {
+            if let Ok(mut reader) = reader_clone.try_lock() {
+                match reader.read(&mut buffer) {
+                    Ok(0) => break, // EOF
+                    Ok(n) => {
+                        let output = String::from_utf8_lossy(&buffer[..n]).to_string();
+                        let _ = app_handle_clone.emit_all("terminal-output", serde_json::json!({
+                            "session_id": session_id_clone,
+                            "data": output
+                        }));
+                    }
+                    Err(_) => break,
+                }
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        }
+    });
+
+    sessions.lock().unwrap().insert(session_id.clone(), session);
+    
+    Ok(session_id)
+}
+
+#[tauri::command]
+async fn write_to_terminal(
+    sessions: State<'_, TerminalSessions>,
+    session_id: String,
+    data: String,
+) -> Result<()> {
+    let mut sessions = sessions.lock().unwrap();
+    if let Some(session) = sessions.get_mut(&session_id) {
+        session.writer.write_all(data.as_bytes())
+            .map_err(|e| Error::Terminal(format!("Failed to write to terminal: {}", e)))?;
+    } else {
+        return Err(Error::Terminal("Session not found".to_string()));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn close_terminal_session(
+    sessions: State<'_, TerminalSessions>,
+    session_id: String,
+) -> Result<()> {
+    let mut sessions = sessions.lock().unwrap();
+    sessions.remove(&session_id);
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let terminal_sessions: TerminalSessions = Arc::new(Mutex::new(HashMap::new()));
+    
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, get_kube_contexts])
+        .manage(terminal_sessions)
+        .invoke_handler(tauri::generate_handler![
+            greet, 
+            get_kube_contexts,
+            create_terminal_session,
+            write_to_terminal,
+            close_terminal_session
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

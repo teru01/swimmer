@@ -36,7 +36,7 @@ export const Button: React.FC<ButtonProps> = ({
 };
 
 // 入力フィールドコンポーネント
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix'> {
   size?: 'small' | 'medium' | 'large';
   prefix?: ReactNode;
   suffix?: ReactNode;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ContextNode } from '../../lib/contextTree';
 import ResourceKindSidebar from './ResourceKindSidebar';
 import ResourceList, { KubeResource } from './ResourceList';
