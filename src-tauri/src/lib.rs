@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::io::{Read, Write};
 use portable_pty::{CommandBuilder, PtySize, native_pty_system};
-use tauri::{State, Manager, EventTarget};
+use tauri::State;
 use uuid::Uuid;
 
 #[derive(Debug, Error)]
@@ -93,7 +93,7 @@ async fn create_terminal_session(
                     Ok(0) => break, // EOF
                     Ok(n) => {
                         let output = String::from_utf8_lossy(&buffer[..n]).to_string();
-                        let _ = app_handle_clone.emit_all("terminal-output", serde_json::json!({
+                        let _ = app_handle_clone.emit("terminal-output", serde_json::json!({
                             "session_id": session_id_clone,
                             "data": output
                         }));
@@ -118,7 +118,7 @@ async fn write_to_terminal(
 ) -> Result<()> {
     let mut sessions = sessions.lock().unwrap();
     if let Some(session) = sessions.get_mut(&session_id) {
-        session.writer.write_all(data.as_bytes())
+        session.writer.write(data.as_bytes())
             .map_err(|e| Error::Terminal(format!("Failed to write to terminal: {}", e)))?;
     } else {
         return Err(Error::Terminal("Session not found".to_string()));

@@ -100,15 +100,27 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
   useEffect(() => {
     if (!terminal || !sessionId) return;
 
-    const unlisten = listen('terminal-output', (event: any) => {
-      const { session_id, data } = event.payload;
-      if (session_id === sessionId) {
-        terminal.write(data);
-      }
+    const setupListener = async () => {
+      const unlisten = await listen('terminal-output', (event: any) => {
+        const { session_id, data } = event.payload;
+        if (session_id === sessionId) {
+          terminal.write(data);
+        }
+      });
+
+      return unlisten;
+    };
+
+    let unlistenFn: (() => void) | null = null;
+
+    setupListener().then(fn => {
+      unlistenFn = fn;
     });
 
     return () => {
-      unlisten.then(fn => fn());
+      if (unlistenFn) {
+        unlistenFn();
+      }
     };
   }, [terminal, sessionId]);
 

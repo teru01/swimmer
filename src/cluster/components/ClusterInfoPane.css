@@ -14,11 +14,29 @@
 
 .resource-kind-sidebar {
   border-right: 1px solid var(--border-color);
-  padding: 12px;
+  padding: 0;
   overflow-y: auto;
   height: 100%;
   box-sizing: border-box;
   background-color: var(--bg-secondary);
+}
+
+.sidebar-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.resource-kind-sidebar .content {
+  padding: 12px;
 }
 
 /* Remove global ul/li styles affecting the sidebar */
@@ -34,7 +52,7 @@
 }
 
 .group-header {
-  padding: 10px 12px;
+  padding: 10px 20px;
   cursor: pointer;
   border-radius: 6px;
   font-weight: 500;
@@ -43,6 +61,7 @@
   transition: all 0.2s ease;
   color: var(--text-primary);
   font-size: 13px;
+  margin: 0 12px;
 }
 
 .group-header:hover {
@@ -70,6 +89,14 @@
   transform: rotate(90deg);
 }
 
+.group-icon {
+  margin-right: 8px;
+  font-size: 14px;
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+}
+
 .kind-list {
   margin-left: 20px;
   padding: 4px 0;
@@ -78,7 +105,7 @@
 }
 
 .kind-list li {
-  padding: 8px 12px;
+  padding: 8px 20px;
   cursor: pointer;
   border-radius: 4px;
   margin-bottom: 2px;
@@ -86,6 +113,17 @@
   font-size: 12px;
   color: var(--text-secondary);
   position: relative;
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+}
+
+.kind-icon {
+  margin-right: 8px;
+  font-size: 12px;
+  display: inline-block;
+  width: 14px;
+  text-align: center;
 }
 
 .kind-list li::before {
