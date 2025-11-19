@@ -112,17 +112,18 @@ function ContextsPane({
     };
 
     // グローバルイベントリスナーの登録
-    document.addEventListener('mousedown', e => {
+    const handleMouseDown = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest('.drag-handle')) {
         handleDragStart();
       }
-    });
+    };
 
+    document.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mouseup', handleDragEnd);
 
     // クリーンアップ
     return () => {
-      document.removeEventListener('mousedown', handleDragStart);
+      document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mouseup', handleDragEnd);
     };
   }, []);
@@ -253,7 +254,7 @@ function ContextsPane({
       const prevNode = findNodeById(prev, dragId);
       let insertIndex = index;
       console.info('dbg', prevNode?.parentId, parentId);
-      if (prevNode?.parentId == parentId) {
+      if (prevNode?.parentId === parentId) {
         const prevIndex = findNodeIndex(prev, dragId);
         console.info('previndex', prevIndex);
         if (prevIndex != null && index > prevIndex) {
@@ -448,7 +449,7 @@ function ContextsPane({
       const removeNode = (nodes: ContextNode[], nodeId: string) => {
         const remaining: ContextNode[] = [];
         nodes.forEach(node => {
-          if (node.id != nodeId) {
+          if (node.id !== nodeId) {
             node.children = removeNode(node.children || [], nodeId);
             remaining.push(node);
           }

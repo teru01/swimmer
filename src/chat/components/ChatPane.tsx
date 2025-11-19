@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ContextNode } from '../../lib/contextTree';
-type Message = {
+interface Message {
   id: number;
   text: string;
   sender: 'user' | 'assistant';
   timestamp: Date;
-};
+}
 
 interface ChatPaneProps {
   selectedContext: ContextNode | null;
@@ -42,9 +42,10 @@ function ChatPane({ selectedContext }: ChatPaneProps) {
     setInputText('');
 
     // Mock assistant response (in production would call AI API)
+    const currentMessagesLength = messages.length;
     setTimeout(() => {
       const botMessage: Message = {
-        id: messages.length + 2,
+        id: currentMessagesLength + 2,
         text: `Regarding "${inputText}". I'm looking up information related to ${selectedContext?.name || 'the current context'}...\n\nThis is a mock response. In production, an AI model would provide a real answer here.`,
         sender: 'assistant',
         timestamp: new Date(),

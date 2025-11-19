@@ -175,6 +175,6 @@ export const validateNodeName = (
   return null;
 };
 
-const getSiblings = (contextTree: ContextNode[], node: ContextNode): ContextNode[] => {
+export const getSiblings = (contextTree: ContextNode[], node: ContextNode): ContextNode[] => {
   return node.parentId ? findNodeById(contextTree, node.parentId)?.children || [] : contextTree;
 };
