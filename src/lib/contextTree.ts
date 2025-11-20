@@ -21,9 +21,9 @@ export interface ContextNode {
  * Find a node by its ID
  * @param nodes Tree of context nodes to search in
  * @param id ID of the node to find
- * @returns Node if found, otherwise null
+ * @returns Node if found, otherwise undefined
  */
-export const findNodeById = (nodes: ContextNode[], id: string): ContextNode | null => {
+export const findNodeById = (nodes: ContextNode[], id: string): ContextNode | undefined => {
   for (const node of nodes) {
     if (node.id === id) {
       return node;
@@ -33,10 +33,10 @@ export const findNodeById = (nodes: ContextNode[], id: string): ContextNode | nu
       if (found) return found;
     }
   }
-  return null;
+  return undefined;
 };
 
-export const findNodeIndex = (nodes: ContextNode[], id: string): number | null => {
+export const findNodeIndex = (nodes: ContextNode[], id: string): number | undefined => {
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
     if (node.id === id) {
@@ -44,12 +44,12 @@ export const findNodeIndex = (nodes: ContextNode[], id: string): number | null =
     }
     if (node.children) {
       const found = findNodeIndex(node.children, id);
-      if (found !== null) {
+      if (found !== undefined) {
         return found;
       }
     }
   }
-  return null;
+  return undefined;
 };
 
 // コンテキスト名をパースして階層構造を構築する
@@ -159,7 +159,7 @@ export const validateNodeName = (
   contextTree: ContextNode[],
   name: string,
   node: ContextNode
-): string | null => {
+): string | undefined => {
   if (!name.match(/^[a-zA-Z0-9\-_]+$/)) {
     return 'Folder name can only contain letters, numbers, hyphens and underscores';
   }
@@ -174,7 +174,7 @@ export const validateNodeName = (
     return 'Name must be unique at this level';
   }
 
-  return null;
+  return undefined;
 };
 
 export const getSiblings = (contextTree: ContextNode[], node: ContextNode): ContextNode[] => {

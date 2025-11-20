@@ -15,7 +15,7 @@ const ProviderType = {
 type ProviderType = (typeof ProviderType)[keyof typeof ProviderType];
 
 interface K8sContextModalProps {
-  parentFolderId: string | null;
+  parentFolderId: string | undefined;
   onClose: () => void;
   onSave: (context: { name: string; server: string; user: string; namespace?: string }) => void;
 }

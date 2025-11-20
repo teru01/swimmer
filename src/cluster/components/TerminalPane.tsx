@@ -8,17 +8,17 @@ import { listen } from '@tauri-apps/api/event';
 import { ContextNode } from '../../lib/contextTree';
 
 interface TerminalPaneProps {
-  selectedContext: ContextNode | null;
+  selectedContext: ContextNode | undefined;
 }
 
 /**
  * Terminal pane component with real terminal functionality
  */
 function TerminalPane({ selectedContext }: TerminalPaneProps) {
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const [terminal, setTerminal] = useState<Terminal | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const fitAddon = useRef<FitAddon | null>(null);
+  const terminalRef = useRef<HTMLDivElement>(undefined);
+  const [terminal, setTerminal] = useState<Terminal | undefined>(undefined);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const fitAddon = useRef<FitAddon | undefined>(undefined);
 
   // Initialize terminal
   useEffect(() => {
@@ -111,7 +111,7 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
       return unlisten;
     };
 
-    let unlistenFn: (() => void) | null = null;
+    let unlistenFn: (() => void) | undefined = undefined;
 
     setupListener().then(fn => {
       unlistenFn = fn;

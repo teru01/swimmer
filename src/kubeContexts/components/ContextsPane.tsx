@@ -17,7 +17,7 @@ import { mockFs, STORAGE_KEY, saveConfig } from '../../lib/fs';
 import { ContextConfigSchema } from '../../lib/configSchema';
 
 interface ContextsPaneProps {
-  selectedContext: ContextNode | null;
+  selectedContext: ContextNode | undefined;
   onContextNodeSelect?: (contextNode: ContextNode) => void;
 }
 
@@ -31,17 +31,17 @@ function ContextsPane({
   onContextNodeSelect: onContextNodeSelect,
 }: ContextsPaneProps) {
   const [contextTree, setContextTree] = useState<ContextNode[]>([]);
-  const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [filterTag, setFilterTag] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
   const [showContextModal, setShowContextModal] = useState(false);
-  const [parentFolderId, setParentFolderId] = useState<string | null>(null);
+  const [parentFolderId, setParentFolderId] = useState<string | undefined>(undefined);
   const [isDragging, setIsDragging] = useState(false);
   const [focusedNodeName, setFocusedNodeName] = useState('');
 
-  const treeRef = useRef(null);
+  const treeRef = useRef(undefined);
 
   // Initialize: Load configuration
   useEffect(() => {
@@ -84,7 +84,7 @@ function ContextsPane({
         }
 
         setLoading(false);
-        setError(null);
+        setError(undefined);
       } catch (err) {
         console.error('Error loading contexts:', err);
         setError(typeof err === 'string' ? err : 'Failed to load Kubernetes contexts');
@@ -140,9 +140,11 @@ function ContextsPane({
         const updateExpanded = (nodes: ContextNode[]): ContextNode[] => {
           return nodes.map(node => {
             if (node.id === contextNode.id) {
-              const treeInstance = treeRef.current as {
-                get: (id: string) => NodeApi | null;
-              } | null;
+              const treeInstance = treeRef.current as
+                | {
+                    get: (id: string) => NodeApi | undefined;
+                  }
+                | undefined;
               const nodeApiInsatnce = treeInstance?.get(node.id);
               return { ...node, isExpanded: !nodeApiInsatnce?.isOpen };
             }
@@ -178,7 +180,7 @@ function ContextsPane({
         return;
       }
 
-      setError(null);
+      setError(undefined);
 
       setContextTree(prev => {
         const updateNodeName = (nodes: ContextNode[]): ContextNode[] => {
@@ -219,8 +221,8 @@ function ContextsPane({
   }: {
     dragIds: string[];
     dragNodes: NodeApi<ContextNode>[];
-    parentId: string | null;
-    parentNode: NodeApi<ContextNode> | null;
+    parentId: string | undefined;
+    parentNode: NodeApi<ContextNode> | undefined;
     index: number;
   }) => {
     console.info('handleTreeChange', { dragIds, parentId, index });
@@ -257,7 +259,7 @@ function ContextsPane({
       if (prevNode?.parentId === parentId) {
         const prevIndex = findNodeIndex(prev, dragId);
         console.info('previndex', prevIndex);
-        if (prevIndex != null && index > prevIndex) {
+        if (prevIndex !== undefined && index > prevIndex) {
           insertIndex = index - 1;
         }
       }
@@ -313,7 +315,7 @@ function ContextsPane({
    * Shows the modal for creating a new context.
    */
   const handleNewContextClick = () => {
-    const parentId = selectedContext?.parentId || null;
+    const parentId = selectedContext?.parentId;
     setParentFolderId(parentId);
     setShowContextModal(true);
   };
@@ -334,7 +336,7 @@ function ContextsPane({
    * Adds a new folder node to the tree, either at the root or under the selected parent.
    */
   const handleNewFolderClick = () => {
-    const parentId = selectedContext?.parentId || null;
+    const parentId = selectedContext?.parentId;
     const newFolderId = `folder-${crypto.randomUUID()}`;
     const newFolder: ContextNode = {
       id: newFolderId,
@@ -405,7 +407,7 @@ function ContextsPane({
       type TreeInstance = {
         edit: (id: string) => void;
       };
-      const treeInstance = treeRef.current as TreeInstance | null;
+      const treeInstance = treeRef.current as TreeInstance | undefined;
       if (treeInstance?.edit) {
         treeInstance.edit(newFolderId);
       }
@@ -505,13 +507,13 @@ function ContextsPane({
         setError(validationError);
         // Keep the node in edit mode by forcing a re-edit after a short delay
         setTimeout(() => {
-          const treeInstance = treeRef.current as { edit: (id: string) => void } | null;
+          const treeInstance = treeRef.current as { edit: (id: string) => void } | undefined;
           if (treeInstance?.edit) {
             treeInstance.edit(node.id);
           }
         }, 10);
       } else {
-        setError(null);
+        setError(undefined);
       }
     };
 
@@ -546,7 +548,7 @@ function ContextsPane({
                 onBlur={e => {
                   if (error) {
                     handleRemoveFolder(node.id);
-                    setError(null);
+                    setError(undefined);
                     resetNode(node);
                     return;
                   }
@@ -555,7 +557,7 @@ function ContextsPane({
                     resetNode(node);
                   } else {
                     handleRemoveFolder(node.id);
-                    setError(null);
+                    setError(undefined);
                     resetNode(node);
                   }
                 }}
@@ -580,7 +582,7 @@ function ContextsPane({
                     }
                     case 'Escape': {
                       handleRemoveFolder(node.id);
-                      setError(null);
+                      setError(undefined);
                       resetNode(node);
                       break;
                     }
@@ -624,11 +626,11 @@ function ContextsPane({
     (nodes: ContextNode[]): ContextNode[] => {
       if (!filterTag && !searchText) return nodes;
 
-      const filterNode = (node: ContextNode): ContextNode | null => {
+      const filterNode = (node: ContextNode): ContextNode | undefined => {
         // Tag filtering (only applies to context nodes)
         if (filterTag && node.type === NodeType.Context) {
           if (!node.tags?.includes(filterTag)) {
-            return null;
+            return undefined;
           }
         }
 
@@ -641,9 +643,9 @@ function ContextsPane({
               // Keep folder if any children match
               return { ...node, children: filteredChildren, isExpanded: true };
             }
-            return null; // Discard folder if no children match
+            return undefined; // Discard folder if no children match
           }
-          return null; // Discard context node if name doesn't match
+          return undefined; // Discard context node if name doesn't match
         }
 
         // If a folder matches or has children that match, process its children
@@ -668,7 +670,7 @@ function ContextsPane({
    * Clears the currently active tag filter.
    */
   const clearTagFilter = () => {
-    setFilterTag(null);
+    setFilterTag(undefined);
   };
 
   /**
@@ -715,7 +717,7 @@ function ContextsPane({
               <Tag
                 key={tag}
                 className={`filter-tag ${filterTag === tag ? 'active' : ''}`}
-                onClick={() => setFilterTag(filterTag === tag ? null : tag)}
+                onClick={() => setFilterTag(filterTag === tag ? undefined : tag)}
               >
                 {tag}
               </Tag>

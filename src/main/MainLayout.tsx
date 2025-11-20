@@ -16,8 +16,10 @@ import { ContextNode, NodeType } from '../lib/contextTree';
  */
 function MainLayout() {
   // Currently selected cluster and context
-  const [selectedClusterContext, setSelectedClusterContext] = useState<ContextNode | null>(null);
-  const [selectedContext, setSelectedContext] = useState<ContextNode | null>(null);
+  const [selectedClusterContext, setSelectedClusterContext] = useState<ContextNode | undefined>(
+    undefined
+  );
+  const [selectedContext, setSelectedContext] = useState<ContextNode | undefined>(undefined);
   const [openClusterContexts, setOpenClusterContexts] = useState<ContextNode[]>([]);
 
   // Context selection handler
@@ -38,7 +40,7 @@ function MainLayout() {
       const newContexts = prev.filter(c => c.id !== contextNode.id);
 
       if (selectedClusterContext?.id === contextNode.id) {
-        const next = newContexts[Math.max(0, deleteNodeIdx - 1)] || null;
+        const next = newContexts[Math.max(0, deleteNodeIdx - 1)];
         setSelectedClusterContext(next);
         setSelectedContext(next);
       }

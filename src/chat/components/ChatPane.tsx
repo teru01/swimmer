@@ -8,7 +8,7 @@ interface Message {
 }
 
 interface ChatPaneProps {
-  selectedContext: ContextNode | null;
+  selectedContext: ContextNode | undefined;
 }
 
 /**

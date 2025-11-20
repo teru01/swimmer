@@ -76,7 +76,7 @@ const kindIcons: Record<string, string> = {
 };
 
 interface ResourceKindSidebarProps {
-  selectedKind: string | null;
+  selectedKind: string | undefined;
   onKindSelect: (kind: string) => void;
 }
 

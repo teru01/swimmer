@@ -8,8 +8,10 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 // --- Dummy Fetch Detail ---
 // Simulates fetching full details for a specific resource
-const fetchResourceDetail = async (resource: KubeResource | null): Promise<KubeResource | null> => {
-  if (!resource) return null;
+const fetchResourceDetail = async (
+  resource: KubeResource | undefined
+): Promise<KubeResource | undefined> => {
+  if (!resource) return undefined;
   console.log(`Fetching details for: ${resource.metadata.name}`);
   await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay
 
@@ -82,34 +84,36 @@ const fetchResourceDetail = async (resource: KubeResource | null): Promise<KubeR
 // --- End Dummy Fetch ---
 
 interface ClusterInfoPaneProps {
-  selectedContext: ContextNode | null;
+  selectedContext: ContextNode | undefined;
 }
 
 /**
  * Center Pane: Component to display cluster information with sidebar, list, and detail views.
  */
 function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
-  const [selectedKind, setSelectedKind] = useState<string | null>(null);
-  const [selectedResourceDetail, setSelectedResourceDetail] = useState<KubeResource | null>(null);
+  const [selectedKind, setSelectedKind] = useState<string | undefined>(undefined);
+  const [selectedResourceDetail, setSelectedResourceDetail] = useState<KubeResource | undefined>(
+    undefined
+  );
   const [isDetailLoading, setIsDetailLoading] = useState<boolean>(false);
   const [showDetailPane, setShowDetailPane] = useState<boolean>(false);
 
   const handleKindSelect = (kind: string) => {
     setSelectedKind(kind);
-    setSelectedResourceDetail(null);
+    setSelectedResourceDetail(undefined);
     setShowDetailPane(false);
   };
 
   const handleResourceSelect = useCallback(async (resource: KubeResource) => {
     setShowDetailPane(true);
     setIsDetailLoading(true);
-    setSelectedResourceDetail(null);
+    setSelectedResourceDetail(undefined);
     try {
       const details = await fetchResourceDetail(resource);
       setSelectedResourceDetail(details);
     } catch (error) {
       console.error('Failed to fetch resource details:', error);
-      setSelectedResourceDetail(null);
+      setSelectedResourceDetail(undefined);
     } finally {
       setIsDetailLoading(false);
     }
@@ -117,7 +121,7 @@ function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
 
   const handleCloseDetailPane = () => {
     setShowDetailPane(false);
-    setSelectedResourceDetail(null);
+    setSelectedResourceDetail(undefined);
   };
 
   const handleDetailPaneResize = (size: number) => {

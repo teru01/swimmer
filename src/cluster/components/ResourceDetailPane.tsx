@@ -4,7 +4,7 @@ import { KubeResource } from './ResourceList';
 import { formatAge } from '../../lib/utils';
 
 interface ResourceDetailPaneProps {
-  resource: KubeResource | null;
+  resource: KubeResource | undefined;
   isLoading?: boolean;
   onClose: () => void;
 }
@@ -63,7 +63,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   }
 
   if (!resource) {
-    return null;
+    return undefined;
   }
 
   // Determine resource kind from name or add kind field to KubeResource

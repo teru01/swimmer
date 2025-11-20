@@ -2,7 +2,7 @@ import { ContextNode } from '../../lib/contextTree';
 
 interface ClusterTabsProps {
   contextNodes: ContextNode[];
-  activeCluster: ContextNode | null;
+  activeCluster: ContextNode | undefined;
   onSelectCluster: (clusterContext: ContextNode) => void;
   onCloseCluster: (clusterContext: ContextNode) => void;
 }

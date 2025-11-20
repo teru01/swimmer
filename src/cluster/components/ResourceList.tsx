@@ -29,7 +29,7 @@ export interface KubeResource {
     conditions?: {
       type: string;
       status: string;
-      lastProbeTime?: string | null;
+      lastProbeTime?: string | undefined;
       lastTransitionTime?: string;
       reason?: string;
       message?: string;
@@ -55,7 +55,7 @@ const fetchNamespaces = async (): Promise<string[]> => {
 };
 
 // Simulates fetching resources for a given kind
-const fetchResources = async (kind: string | null): Promise<KubeResource[]> => {
+const fetchResources = async (kind: string | undefined): Promise<KubeResource[]> => {
   console.log(`Fetching resources for kind: ${kind}`);
   if (!kind) return [];
   await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
@@ -105,7 +105,7 @@ const fetchResources = async (kind: string | null): Promise<KubeResource[]> => {
 // --- End of Dummy Data & Fetch Functions ---
 
 interface ResourceListProps {
-  selectedKind: string | null;
+  selectedKind: string | undefined;
   onResourceSelect: (resource: KubeResource) => void; // Pass the whole resource object
 }
 
@@ -119,10 +119,10 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
   const [selectedNamespace, setSelectedNamespace] = useState<string>('all'); // 'all' represents All Namespaces
   const [resources, setResources] = useState<KubeResource[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
 
   // Helper function to check if a resource kind is cluster-scoped (not namespaced)
-  const isClusterScoped = (kind: string | null): boolean => {
+  const isClusterScoped = (kind: string | undefined): boolean => {
     if (!kind) return true; // Assume cluster-scoped if no kind selected
     return [
       'Nodes',
@@ -166,7 +166,7 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
 
     const loadResources = async () => {
       setIsLoading(true);
-      setError(null);
+      setError(undefined);
       try {
         const fetchedResources = await fetchResources(selectedKind);
         setResources(fetchedResources);
@@ -190,7 +190,7 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
   }, [resources, selectedNamespace, isNamespaced]);
 
   // Determine columns based on selectedKind
-  const getColumns = (kind: string | null): string[] => {
+  const getColumns = (kind: string | undefined): string[] => {
     if (!kind) return [];
     const base = ['Name', 'Age'];
     // Add Namespace column only if the resource kind is namespaced
