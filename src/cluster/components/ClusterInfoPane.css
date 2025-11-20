@@ -534,6 +534,7 @@
   position: absolute;
   background-color: transparent;
   transition: background-color 0.2s ease;
+  pointer-events: none;
 }
 
 .resize-handle-vertical::before {
