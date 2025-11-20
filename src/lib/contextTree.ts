@@ -1,8 +1,10 @@
-// ノードタイプを定義するenum
-export enum NodeType {
-  Folder = 'folder',
-  Context = 'context',
-}
+// ノードタイプを定義する
+export const NodeType = {
+  Folder: 'folder',
+  Context: 'context',
+} as const;
+
+export type NodeType = (typeof NodeType)[keyof typeof NodeType];
 
 export interface ContextNode {
   id: string;

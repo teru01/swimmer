@@ -3,14 +3,16 @@ import { Button, Input } from '../../main/ui';
 import '../styles/modal.css';
 
 /**
- * Enum defining the types of Kubernetes providers supported.
+ * Types of Kubernetes providers supported.
  */
-enum ProviderType {
-  GKE = 'GKE',
-  EKS = 'EKS',
-  AKS = 'AKS',
-  Manual = 'Manual',
-}
+const ProviderType = {
+  GKE: 'GKE',
+  EKS: 'EKS',
+  AKS: 'AKS',
+  Manual: 'Manual',
+} as const;
+
+type ProviderType = (typeof ProviderType)[keyof typeof ProviderType];
 
 interface K8sContextModalProps {
   parentFolderId: string | null;
