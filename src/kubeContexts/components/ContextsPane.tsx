@@ -26,10 +26,7 @@ interface ContextsPaneProps {
  * Displays Kubernetes contexts organized in a tree, allows selection,
  * renaming, adding tags, and drag-and-drop reordering.
  */
-function ContextsPane({
-  selectedContext: selectedContext,
-  onContextNodeSelect: onContextNodeSelect,
-}: ContextsPaneProps) {
+function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProps) {
   const [contextTree, setContextTree] = useState<ContextNode[]>([]);
   const [filterTag, setFilterTag] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -43,7 +40,6 @@ function ContextsPane({
 
   const treeRef = useRef(undefined);
 
-  // Initialize: Load configuration
   useEffect(() => {
     /**
      * Loads Kubernetes contexts from configuration or kubeconfig.
