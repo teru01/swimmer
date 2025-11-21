@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Button, Input } from '../../main/ui';
 import '../styles/contextsPane.css';
-import { ContextNode, NodeType } from '../../lib/contextTree';
+import { ContextNode, NodeType, buildTreeFromContexts } from '../../lib/contextTree';
+import { gkeProvider } from '../../lib/providers/gke';
+import { eksProvider } from '../../lib/providers/eks';
+import { othersProvider } from '../../lib/providers/others';
 
 interface ContextsPaneProps {
   selectedContext: ContextNode | undefined;
   onContextNodeSelect?: (contextNode: ContextNode) => void;
 }
 
-// ダミーのGKEコンテキストデータ
+// ダミーのGKE、EKS、その他のコンテキストデータ
 const DUMMY_CONTEXTS = [
   'gke_project-alpha_us-central1_cluster-prod',
   'gke_project-alpha_us-central1_cluster-staging',
@@ -16,88 +19,28 @@ const DUMMY_CONTEXTS = [
   'gke_project-beta_asia-northeast1_cluster-prod',
   'gke_project-beta_asia-northeast1_cluster-staging',
   'gke_project-beta_europe-west1_cluster-test',
+  'arn:aws:eks:us-east-1:123456789012:cluster/production-cluster',
+  'arn:aws:eks:us-east-1:123456789012:cluster/staging-cluster',
+  'arn:aws:eks:us-west-2:123456789012:cluster/dev-cluster',
+  'arn:aws:eks:ap-northeast-1:987654321098:cluster/prod-cluster',
+  'minikube',
+  'docker-desktop',
+  'kind-local-cluster',
 ];
 
-/**
- * GKEコンテキスト名をパースしてツリー構造を構築する
- */
-const buildTreeFromContexts = (contexts: string[]): ContextNode[] => {
-  const tree: ContextNode[] = [];
-  const gkePattern = /^gke_([^_]+)_([^_]+)_(.+)$/;
-
-  // GKE用のマップ
-  const gkeProjectsMap: { [key: string]: ContextNode } = {};
-
-  contexts.forEach(context => {
-    const gkeMatch = context.match(gkePattern);
-    if (!gkeMatch) return;
-
-    const [, project, region, cluster] = gkeMatch;
-
-    // GKEルートノードを取得または作成
-    let gkeRoot = tree.find(n => n.name === 'GKE');
-    if (!gkeRoot) {
-      gkeRoot = {
-        id: 'folder-gke',
-        name: 'GKE',
-        type: NodeType.Folder,
-        children: [],
-        isExpanded: true,
-      };
-      tree.push(gkeRoot);
-    }
-
-    // プロジェクトノードを取得または作成
-    let projectNode = gkeProjectsMap[project];
-    if (!projectNode) {
-      projectNode = {
-        id: `folder-gke-${project}`,
-        name: project,
-        type: NodeType.Folder,
-        children: [],
-        isExpanded: true,
-        parentId: gkeRoot.id,
-      };
-      gkeProjectsMap[project] = projectNode;
-      gkeRoot.children?.push(projectNode);
-    }
-
-    // リージョンノードを取得または作成
-    let regionNode = projectNode.children?.find(c => c.name === region);
-    if (!regionNode) {
-      regionNode = {
-        id: `folder-gke-${project}-${region}`,
-        name: region,
-        type: NodeType.Folder,
-        children: [],
-        isExpanded: true,
-        parentId: projectNode.id,
-      };
-      projectNode.children?.push(regionNode);
-    }
-
-    // クラスターノード（コンテキスト）を追加
-    const contextNode: ContextNode = {
-      id: `context-${context}`,
-      name: cluster,
-      type: NodeType.Context,
-      contextName: context,
-      parentId: regionNode.id,
-    };
-    regionNode.children?.push(contextNode);
-  });
-
-  return tree;
-};
+// 使用するプロバイダーのリスト（Othersは最後に配置）
+const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
 
 /**
  * Kubernetes contexts tree view component with static hierarchical structure.
  */
 function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProps) {
-  const [contextTree] = useState<ContextNode[]>(() => buildTreeFromContexts(DUMMY_CONTEXTS));
+  const [contextTree] = useState<ContextNode[]>(() =>
+    buildTreeFromContexts(DUMMY_CONTEXTS, PROVIDERS)
+  );
   const [searchText, setSearchText] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
-    new Set(getAllFolderIds(buildTreeFromContexts(DUMMY_CONTEXTS)))
+    new Set(getAllOpenFolderIds(buildTreeFromContexts(DUMMY_CONTEXTS, PROVIDERS)))
   );
 
   /**
@@ -107,6 +50,19 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
     const ids: string[] = [];
     for (const node of nodes) {
       if (node.type === NodeType.Folder) {
+        ids.push(node.id);
+        if (node.children) {
+          ids.push(...getAllFolderIds(node.children));
+        }
+      }
+    }
+    return ids;
+  }
+
+  function getAllOpenFolderIds(nodes: ContextNode[]): string[] {
+    const ids: string[] = [];
+    for (const node of nodes) {
+      if (node.type === NodeType.Folder && node.isExpanded) {
         ids.push(node.id);
         if (node.children) {
           ids.push(...getAllFolderIds(node.children));
@@ -199,10 +155,6 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
   return (
     <div className="contexts-pane">
       <div className="contexts-header">
-        <div className="k8s-contexts-title">
-          <h2>KUBERNETES CONTEXTS</h2>
-        </div>
-
         <div className="contexts-toolbar">
           <Input
             placeholder="Search contexts..."
