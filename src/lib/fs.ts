@@ -1,7 +1,9 @@
 import { ContextNode } from './contextTree';
+import { Preferences, PreferencesSchema, defaultPreferences } from './preferences';
 import * as yaml from 'yaml';
 
 export const STORAGE_KEY = 'swimmer.contextTree';
+export const PREFERENCES_STORAGE_KEY = 'swimmer.preferences';
 
 // Mock file system operations
 export const mockFs = {
@@ -35,5 +37,31 @@ export const saveConfig = async (config: {
   } catch (err) {
     console.error('Error saving config:', err);
     throw new Error('Failed to save configuration');
+  }
+};
+
+// Load preferences
+export const loadPreferences = async (): Promise<Preferences> => {
+  try {
+    const stored = localStorage.getItem(PREFERENCES_STORAGE_KEY);
+    if (!stored) {
+      return defaultPreferences;
+    }
+    const parsed = JSON.parse(stored);
+    return PreferencesSchema.parse(parsed);
+  } catch (err) {
+    console.error('Error loading preferences:', err);
+    return defaultPreferences;
+  }
+};
+
+// Save preferences
+export const savePreferences = async (preferences: Preferences): Promise<void> => {
+  try {
+    const json = JSON.stringify(preferences, null, 2);
+    localStorage.setItem(PREFERENCES_STORAGE_KEY, json);
+  } catch (err) {
+    console.error('Error saving preferences:', err);
+    throw new Error('Failed to save preferences');
   }
 };

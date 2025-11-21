@@ -7,6 +7,7 @@ import ChatPane from '../chat/components/ChatPane';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import './resizable.css';
 import { ContextNode, NodeType } from '../lib/contextTree';
+import { usePreferences } from '../contexts/PreferencesContext';
 
 /**
  * Main Layout Component
@@ -15,6 +16,8 @@ import { ContextNode, NodeType } from '../lib/contextTree';
  * - Right: AI chat
  */
 function MainLayout() {
+  const { preferences } = usePreferences();
+
   // Currently selected cluster and context
   const [selectedClusterContext, setSelectedClusterContext] = useState<ContextNode | undefined>(
     undefined
@@ -96,14 +99,18 @@ function MainLayout() {
             </div>
           </Panel>
 
-          <PanelResizeHandle className="resize-handle" />
+          {preferences.ui.showAiChatPane && (
+            <>
+              <PanelResizeHandle className="resize-handle" />
 
-          {/* Right pane: AI chat */}
-          <Panel defaultSize={25} minSize={15}>
-            <div className="chat-pane-container">
-              <ChatPane selectedContext={selectedContext} />
-            </div>
-          </Panel>
+              {/* Right pane: AI chat */}
+              <Panel defaultSize={25} minSize={15}>
+                <div className="chat-pane-container">
+                  <ChatPane selectedContext={selectedContext} />
+                </div>
+              </Panel>
+            </>
+          )}
         </PanelGroup>
       </div>
     </div>

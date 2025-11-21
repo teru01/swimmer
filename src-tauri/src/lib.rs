@@ -174,6 +174,35 @@ pub fn run() {
             write_to_terminal,
             close_terminal_session
         ])
+        .setup(|app| {
+            use tauri::{menu::*, Manager};
+
+            // メニューバーを作成
+            let menu = MenuBuilder::new(app)
+                .items(&[
+                    &SubmenuBuilder::new(app, "swimmer")
+                        .items(&[
+                            &MenuItemBuilder::with_id("preferences", "Preferences...")
+                                .accelerator("CmdOrCtrl+,")
+                                .build(app)?,
+                            &PredefinedMenuItem::separator(app)?,
+                            &PredefinedMenuItem::quit(app, Some("Quit"))?,
+                        ])
+                        .build()?,
+                ])
+                .build()?;
+
+            app.set_menu(menu)?;
+
+            // メニューイベントハンドラ
+            app.on_menu_event(|app, event| {
+                if event.id() == "preferences" {
+                    let _ = app.emit("menu-preferences", ());
+                }
+            });
+
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
