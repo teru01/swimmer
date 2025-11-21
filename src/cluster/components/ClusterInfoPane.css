@@ -52,7 +52,7 @@
 }
 
 .group-header {
-  padding: 10px 20px;
+  padding: 10px 12px;
   cursor: pointer;
   border-radius: 6px;
   font-weight: 500;
@@ -61,7 +61,7 @@
   transition: all 0.2s ease;
   color: var(--text-primary);
   font-size: 13px;
-  margin: 0 12px;
+  margin: 0 4px;
 }
 
 .group-header:hover {
@@ -105,7 +105,7 @@
 }
 
 .kind-list li {
-  padding: 8px 20px;
+  padding: 8px 12px;
   cursor: pointer;
   border-radius: 4px;
   margin-bottom: 2px;
@@ -115,7 +115,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  margin-right: 12px;
+  margin-right: 4px;
 }
 
 .kind-icon {

@@ -105,9 +105,6 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
 
   return (
     <div className="resource-kind-sidebar">
-      <div className="sidebar-header">
-        <h3>Resources</h3>
-      </div>
       <div className="content">
         {resourceGroups.map(({ groupName, kinds, isSingle, icon }) => {
           const isExpanded = expandedGroups.has(groupName);
@@ -120,7 +117,6 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
                   className={`group-header ${selectedKind === kind ? 'selected' : ''}`}
                   onClick={() => onKindSelect(kind)}
                 >
-                  <span className="group-icon">{icon}</span>
                   {groupName}
                 </div>
               </div>
@@ -134,7 +130,6 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
                 onClick={() => toggleGroup(groupName)}
               >
                 <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
-                <span className="group-icon">{icon}</span>
                 {groupName}
               </div>
               {isExpanded && (
@@ -145,7 +140,6 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
                       className={selectedKind === kind ? 'selected' : ''}
                       onClick={() => onKindSelect(kind)}
                     >
-                      <span className="kind-icon">{kindIcons[kind] || '📄'}</span>
                       {kind}
                     </li>
                   ))}

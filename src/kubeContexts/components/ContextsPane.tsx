@@ -39,6 +39,7 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
       }
     }
     loadContexts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
