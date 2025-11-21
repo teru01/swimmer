@@ -95,25 +95,29 @@ async fn create_terminal_session(
     let app_handle_clone = app_handle.clone();
 
     let _read_task = tokio::spawn(async move {
-        let mut buffer = [0u8; 1024];
+        let mut buffer = [0u8; 4096];
         loop {
-            if let Ok(mut reader) = reader_clone.try_lock() {
-                match reader.read(&mut buffer) {
-                    Ok(0) => break, // EOF
-                    Ok(n) => {
-                        let output = String::from_utf8_lossy(&buffer[..n]).to_string();
-                        let _ = app_handle_clone.emit(
-                            "terminal-output",
-                            serde_json::json!({
-                                "session_id": session_id_clone,
-                                "data": output
-                            }),
-                        );
-                    }
+            let read_result = {
+                match reader_clone.lock() {
+                    Ok(mut reader) => reader.read(&mut buffer),
                     Err(_) => break,
                 }
+            };
+
+            match read_result {
+                Ok(0) => break, // EOF
+                Ok(n) => {
+                    let output = String::from_utf8_lossy(&buffer[..n]).to_string();
+                    let _ = app_handle_clone.emit(
+                        "terminal-output",
+                        serde_json::json!({
+                            "session_id": session_id_clone,
+                            "data": output
+                        }),
+                    );
+                }
+                Err(_) => break,
             }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         }
     });
 
@@ -144,6 +148,11 @@ async fn write_to_terminal(
                 }
             }
         }
+        // Flush to ensure data is sent immediately
+        session
+            .writer
+            .flush()
+            .map_err(|e| Error::Terminal(format!("Failed to flush terminal: {}", e)))?;
     } else {
         return Err(Error::Terminal("Session not found".to_string()));
     }
@@ -179,17 +188,15 @@ pub fn run() {
 
             // メニューバーを作成
             let menu = MenuBuilder::new(app)
-                .items(&[
-                    &SubmenuBuilder::new(app, "swimmer")
-                        .items(&[
-                            &MenuItemBuilder::with_id("preferences", "Preferences...")
-                                .accelerator("CmdOrCtrl+,")
-                                .build(app)?,
-                            &PredefinedMenuItem::separator(app)?,
-                            &PredefinedMenuItem::quit(app, Some("Quit"))?,
-                        ])
-                        .build()?,
-                ])
+                .items(&[&SubmenuBuilder::new(app, "swimmer")
+                    .items(&[
+                        &MenuItemBuilder::with_id("preferences", "Preferences...")
+                            .accelerator("CmdOrCtrl+,")
+                            .build(app)?,
+                        &PredefinedMenuItem::separator(app)?,
+                        &PredefinedMenuItem::quit(app, Some("Quit"))?,
+                    ])
+                    .build()?])
                 .build()?;
 
             app.set_menu(menu)?;

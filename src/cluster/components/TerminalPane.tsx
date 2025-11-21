@@ -15,9 +15,7 @@ interface TerminalPaneProps {
  * Terminal pane component with real terminal functionality
  */
 function TerminalPane({ selectedContext }: TerminalPaneProps) {
-  const terminalRef = useRef<HTMLDivElement>(undefined);
-  const [terminal, setTerminal] = useState<Terminal | undefined>(undefined);
-  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const terminalRef = useRef<HTMLDivElement>(null);
   const fitAddon = useRef<FitAddon | undefined>(undefined);
 
   // Initialize terminal
@@ -63,133 +61,74 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
     fit.fit();
 
     fitAddon.current = fit;
-    setTerminal(term);
+
+    let currentSessionId: string | undefined = undefined;
+    let unlistenFn: (() => void) | undefined = undefined;
 
     // Handle terminal input
-    term.onData(data => {
-      if (sessionId) {
-        invoke('write_to_terminal', { sessionId, data }).catch(console.error);
+    const inputDisposable = term.onData(data => {
+      if (currentSessionId) {
+        invoke('write_to_terminal', { sessionId: currentSessionId, data }).catch(console.error);
       }
     });
 
-    // Create terminal session
-    invoke('create_terminal_session')
-      .then(id => {
-        const sessionId = id as string;
-        setSessionId(sessionId);
-        term.writeln('Terminal session started');
-        term.writeln(`Context: ${selectedContext?.name || 'No context selected'}`);
-        term.write('$ ');
-      })
-      .catch((error: any) => {
-        console.error('Failed to create terminal session:', error);
-        term.writeln('Failed to create terminal session');
-        // Fallback to mock terminal
-        initMockTerminal(term);
-      });
-
-    return () => {
-      term.dispose();
-      if (sessionId) {
-        invoke('close_terminal_session', { sessionId }).catch(console.error);
-      }
-    };
-  }, []);
-
-  // Listen for terminal output
-  useEffect(() => {
-    if (!terminal || !sessionId) return;
-
-    const setupListener = async () => {
-      const unlisten = await listen('terminal-output', (event: any) => {
-        const { session_id, data } = event.payload;
-        if (session_id === sessionId) {
-          terminal.write(data);
+    // Setup output listener
+    const setupListener = async (sessionId: string) => {
+      const unlisten = await listen<{ session_id: string; data: string }>(
+        'terminal-output',
+        event => {
+          const { session_id, data } = event.payload;
+          if (session_id === sessionId) {
+            term.write(data);
+          }
         }
-      });
-
+      );
       return unlisten;
     };
 
-    let unlistenFn: (() => void) | undefined = undefined;
+    // Create terminal session
+    invoke('create_terminal_session')
+      .then(async id => {
+        currentSessionId = id as string;
+        term.writeln('Terminal session started');
+        term.writeln(`Context: ${selectedContext?.name || 'No context selected'}`);
 
-    setupListener().then(fn => {
-      unlistenFn = fn;
-    });
+        // Setup listener after session is created
+        unlistenFn = await setupListener(currentSessionId);
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to create terminal session:', error);
+        term.writeln('Failed to create terminal session');
+      });
 
     return () => {
+      inputDisposable.dispose();
+      term.dispose();
       if (unlistenFn) {
         unlistenFn();
       }
+      if (currentSessionId) {
+        invoke('close_terminal_session', { sessionId: currentSessionId }).catch(console.error);
+      }
     };
-  }, [terminal, sessionId]);
+  }, [selectedContext]);
 
-  // Handle window resize
+  // Handle terminal pane resize
   useEffect(() => {
-    const handleResize = () => {
+    if (!terminalRef.current || !fitAddon.current) return;
+
+    const resizeObserver = new ResizeObserver(() => {
       if (fitAddon.current) {
         fitAddon.current.fit();
       }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Mock terminal for fallback
-  const initMockTerminal = (term: Terminal) => {
-    let currentLine = '';
-
-    term.onData(data => {
-      if (data === '\r') {
-        // Enter pressed
-        term.write('\r\n');
-        handleMockCommand(term, currentLine.trim());
-        currentLine = '';
-        term.write('$ ');
-      } else if (data === '\u007F') {
-        // Backspace
-        if (currentLine.length > 0) {
-          currentLine = currentLine.slice(0, -1);
-          term.write('\b \b');
-        }
-      } else if (data >= ' ') {
-        // Printable character
-        currentLine += data;
-        term.write(data);
-      }
     });
-  };
 
-  const handleMockCommand = (term: Terminal, command: string) => {
-    if (!command) return;
+    resizeObserver.observe(terminalRef.current);
 
-    if (command.includes('kubectl')) {
-      term.writeln(`Context: ${selectedContext?.name || 'No context selected'}`);
-
-      if (command.includes('get pods')) {
-        term.writeln('NAME                     READY   STATUS    RESTARTS   AGE');
-        term.writeln('app-deployment-1-xyzabc   1/1     Running   0          3d2h');
-        term.writeln('app-deployment-2-abcdef   1/1     Running   0          2d5h');
-      } else if (command.includes('get nodes')) {
-        term.writeln('NAME          STATUS   ROLES    AGE     VERSION');
-        term.writeln('node-1        Ready    master   90d     v1.25.0');
-        term.writeln('node-2        Ready    <none>   90d     v1.25.0');
-      } else {
-        term.writeln('Command executed successfully');
-      }
-    } else if (command === 'clear') {
-      term.clear();
-    } else if (command === 'help') {
-      term.writeln('Available commands:');
-      term.writeln('  kubectl get pods    - List pods');
-      term.writeln('  kubectl get nodes   - List nodes');
-      term.writeln('  clear              - Clear terminal');
-      term.writeln('  help               - Show this help');
-    } else {
-      term.writeln(`Command not found: ${command}`);
-    }
-  };
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   return (
     <div className="terminal-pane">
