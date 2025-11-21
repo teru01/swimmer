@@ -6,6 +6,7 @@ import '@xterm/xterm/css/xterm.css';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { ContextNode } from '../../lib/contextTree';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 interface TerminalPaneProps {
   selectedContext: ContextNode | undefined;
@@ -17,6 +18,7 @@ interface TerminalPaneProps {
 function TerminalPane({ selectedContext }: TerminalPaneProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const fitAddon = useRef<FitAddon | undefined>(undefined);
+  const { preferences } = usePreferences();
 
   // Initialize terminal
   useEffect(() => {
@@ -87,10 +89,9 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
     };
 
     // Create terminal session
-    invoke('create_terminal_session')
+    invoke('create_terminal_session', { shellPath: preferences.terminal.shellPath })
       .then(async id => {
         currentSessionId = id as string;
-        term.writeln('Terminal session started');
         term.writeln(`Context: ${selectedContext?.name || 'No context selected'}`);
 
         // Setup listener after session is created
@@ -99,6 +100,7 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
       .catch((error: unknown) => {
         console.error('Failed to create terminal session:', error);
         term.writeln('Failed to create terminal session');
+        term.writeln(String(error));
       });
 
     return () => {
@@ -111,7 +113,7 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
         invoke('close_terminal_session', { sessionId: currentSessionId }).catch(console.error);
       }
     };
-  }, [selectedContext]);
+  }, [selectedContext, preferences.terminal.shellPath]);
 
   // Handle terminal pane resize
   useEffect(() => {

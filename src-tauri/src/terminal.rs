@@ -19,7 +19,16 @@ pub type TerminalSessions = Arc<Mutex<HashMap<String, TerminalSession>>>;
 pub async fn create_terminal_session(
     sessions: State<'_, TerminalSessions>,
     app_handle: tauri::AppHandle,
+    shell_path: String,
 ) -> Result<String, Error> {
+    // Validate shell path exists
+    if !std::path::Path::new(&shell_path).exists() {
+        return Err(Error::Terminal(format!(
+            "Shell not found: {}. Please check the path in preferences.",
+            shell_path
+        )));
+    }
+
     let session_id = Uuid::new_v4().to_string();
 
     let pty_system = native_pty_system();
@@ -32,7 +41,7 @@ pub async fn create_terminal_session(
         })
         .map_err(|e| Error::Terminal(format!("Failed to create PTY: {}", e)))?;
 
-    let cmd = CommandBuilder::new("/bin/zsh");
+    let cmd = CommandBuilder::new(shell_path);
     let _child = pty_pair
         .slave
         .spawn_command(cmd)
@@ -90,6 +99,7 @@ pub async fn create_terminal_session(
     Ok(session_id)
 }
 
+// Write user input data to shell session
 #[tauri::command]
 pub async fn write_to_terminal(
     sessions: State<'_, TerminalSessions>,

@@ -22,6 +22,16 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
     });
   };
 
+  const handleShellPathChange = async (shellPath: string) => {
+    await updatePreferences({
+      ...preferences,
+      terminal: {
+        ...preferences.terminal,
+        shellPath,
+      },
+    });
+  };
+
   return (
     <div className="preferences-page">
       <div className="preferences-page-header">
@@ -90,6 +100,23 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
             <section className="preferences-section">
               <h2>Terminal</h2>
               <p className="section-description">Configure terminal settings.</p>
+
+              <div className="preference-row">
+                <div className="preference-label-wrapper">
+                  <label htmlFor="shell-path">Shell Path</label>
+                  <p className="preference-description">
+                    Path to the shell executable (e.g., /bin/zsh, /bin/bash, /usr/bin/fish).
+                  </p>
+                </div>
+                <input
+                  id="shell-path"
+                  type="text"
+                  value={preferences.terminal.shellPath}
+                  onChange={e => handleShellPathChange(e.target.value)}
+                  placeholder="/bin/zsh"
+                  className="text-input"
+                />
+              </div>
             </section>
           )}
         </main>

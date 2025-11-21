@@ -6,7 +6,11 @@ import { z } from 'zod';
 export const PreferencesSchema = z.object({
   // UI設定
   ui: z.object({
-    showAiChatPane: z.boolean().default(true),
+    showAiChatPane: z.boolean().default(false),
+  }),
+  // Terminal設定
+  terminal: z.object({
+    shellPath: z.string().default('/bin/zsh'),
   }),
 });
 
@@ -17,6 +21,9 @@ export type Preferences = z.infer<typeof PreferencesSchema>;
  */
 export const defaultPreferences: Preferences = {
   ui: {
-    showAiChatPane: true,
+    showAiChatPane: false,
+  },
+  terminal: {
+    shellPath: '/bin/zsh',
   },
 };
