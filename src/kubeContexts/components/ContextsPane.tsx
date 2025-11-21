@@ -1,32 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, Input } from '../../main/ui';
 import '../styles/contextsPane.css';
 import { ContextNode, NodeType, buildTreeFromContexts } from '../../lib/contextTree';
 import { gkeProvider } from '../../lib/providers/gke';
 import { eksProvider } from '../../lib/providers/eks';
 import { othersProvider } from '../../lib/providers/others';
+import { commands } from '../../api';
 
 interface ContextsPaneProps {
   selectedContext: ContextNode | undefined;
   onContextNodeSelect?: (contextNode: ContextNode) => void;
 }
-
-// ダミーのGKE、EKS、その他のコンテキストデータ
-const DUMMY_CONTEXTS = [
-  'gke_project-alpha_us-central1_cluster-prod',
-  'gke_project-alpha_us-central1_cluster-staging',
-  'gke_project-alpha_us-west1_cluster-dev',
-  'gke_project-beta_asia-northeast1_cluster-prod',
-  'gke_project-beta_asia-northeast1_cluster-staging',
-  'gke_project-beta_europe-west1_cluster-test',
-  'arn:aws:eks:us-east-1:123456789012:cluster/production-cluster',
-  'arn:aws:eks:us-east-1:123456789012:cluster/staging-cluster',
-  'arn:aws:eks:us-west-2:123456789012:cluster/dev-cluster',
-  'arn:aws:eks:ap-northeast-1:987654321098:cluster/prod-cluster',
-  'minikube',
-  'docker-desktop',
-  'kind-local-cluster',
-];
 
 // 使用するプロバイダーのリスト（Othersは最後に配置）
 const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
@@ -35,13 +19,27 @@ const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
  * Kubernetes contexts tree view component with static hierarchical structure.
  */
 function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProps) {
-  const [contextTree] = useState<ContextNode[]>(() =>
-    buildTreeFromContexts(DUMMY_CONTEXTS, PROVIDERS)
-  );
+  const [contextTree, setContextTree] = useState<ContextNode[]>([]);
   const [searchText, setSearchText] = useState('');
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(
-    new Set(getAllOpenFolderIds(buildTreeFromContexts(DUMMY_CONTEXTS, PROVIDERS)))
-  );
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadContexts() {
+      try {
+        setLoading(true);
+        const contexts = await commands.getKubeContexts();
+        const tree = buildTreeFromContexts(contexts, PROVIDERS);
+        setContextTree(tree);
+        setExpandedIds(new Set(getAllOpenFolderIds(tree)));
+      } catch (error) {
+        console.error('Failed to load contexts:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadContexts();
+  }, []);
 
   /**
    * すべてのフォルダIDを取得
@@ -151,6 +149,14 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
   const clearSearch = () => {
     setSearchText('');
   };
+
+  if (loading) {
+    return (
+      <div className="contexts-pane">
+        <div className="loading">Loading contexts...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="contexts-pane">
