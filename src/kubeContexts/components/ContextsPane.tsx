@@ -12,7 +12,6 @@ import {
   findNodeById,
   findNodeIndex,
 } from '../../lib/contextTree';
-import K8sContextModal from './K8sContextModal';
 import { mockFs, STORAGE_KEY, saveConfig } from '../../lib/fs';
 import { ContextConfigSchema } from '../../lib/configSchema';
 
@@ -33,8 +32,6 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
   const [error, setError] = useState<string | undefined>(undefined);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
-  const [showContextModal, setShowContextModal] = useState(false);
-  const [parentFolderId, setParentFolderId] = useState<string | undefined>(undefined);
   const [isDragging, setIsDragging] = useState(false);
   const [focusedNodeName, setFocusedNodeName] = useState('');
 
@@ -212,15 +209,16 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
    */
   const handleTreeChange = ({
     dragIds,
-    parentId,
+    parentId: rawParentId,
     index,
   }: {
     dragIds: string[];
     dragNodes: NodeApi<ContextNode>[];
-    parentId: string | undefined;
-    parentNode: NodeApi<ContextNode> | undefined;
+    parentId: string | null;
+    parentNode: NodeApi<ContextNode> | null;
     index: number;
   }) => {
+    const parentId = rawParentId ?? undefined;
     console.info('handleTreeChange', { dragIds, parentId, index });
     const dragId = dragIds[0]; // temporally only single node can be dragged
 
@@ -233,7 +231,7 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
 
         for (const node of nodes) {
           if (dragIds.includes(node.id)) {
-            removed.push({ ...node, parentId: parentId || undefined });
+            removed.push({ ...node, parentId });
             continue;
           }
 
@@ -305,26 +303,6 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
 
       return newTree;
     });
-  };
-
-  /**
-   * Shows the modal for creating a new context.
-   */
-  const handleNewContextClick = () => {
-    const parentId = selectedContext?.parentId;
-    setParentFolderId(parentId);
-    setShowContextModal(true);
-  };
-
-  /**
-   * Handles saving a new context created via the modal.
-   * @param contextInfo Information about the new context.
-   */
-  const handleSaveContext = (contextInfo: { name: string; server: string; user: string }) => {
-    console.info('unimplemented: save context', contextInfo);
-    // TODO: Implement actual saving logic, including creating the context node
-    // and adding it to the contextTree.
-    setShowContextModal(false);
   };
 
   /**
@@ -699,9 +677,6 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
         </div>
 
         <div className="context-actions">
-          <Button className="icon-button" onClick={handleNewContextClick} title="New Context">
-            <span className="context-icon">⚙️</span>
-          </Button>
           <Button className="icon-button" onClick={handleNewFolderClick} title="New Folder">
             <span className="folder-icon">📁</span>
           </Button>
@@ -754,14 +729,6 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
             {NodeRenderer}
           </Tree>
         </div>
-      )}
-
-      {showContextModal && (
-        <K8sContextModal
-          parentFolderId={parentFolderId}
-          onClose={() => setShowContextModal(false)}
-          onSave={handleSaveContext}
-        />
       )}
     </div>
   );
