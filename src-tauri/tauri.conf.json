@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "swimmer",
-        "width": 800,
-        "height": 600,
+        "width": 1400,
+        "height": 900,
         "dragDropEnabled": false
       }
     ],
