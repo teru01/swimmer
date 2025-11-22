@@ -10,7 +10,12 @@ import { debug } from '@tauri-apps/plugin-log';
 import './resizable.css';
 import { ContextNode, NodeType } from '../lib/contextTree';
 import { usePreferences } from '../contexts/PreferencesContext';
-import { ClusterOperationPanel, generatePanelId, createCompositeKey } from '../cluster/types/panel';
+import {
+  ClusterOperationPanel,
+  generatePanelId,
+  createCompositeKey,
+  newClusterContextTab,
+} from '../cluster/types/panel';
 import { resourceGroups } from '../cluster/components/ResourceKindSidebar';
 
 const createDefaultClusterViewState = (): ClusterViewState => ({
@@ -58,10 +63,7 @@ function MainLayout() {
       const currentPanel = panels.find(p => p.id === activePanelId);
       if (!currentPanel) return;
 
-      const clusterContextTab = {
-        panelId: activePanelId,
-        clusterContext: contextNode.clusterContext,
-      };
+      const clusterContextTab = newClusterContextTab(activePanelId, contextNode.clusterContext);
 
       // Update panel's tabs and active context
       setPanels(prev =>
@@ -234,10 +236,7 @@ function MainLayout() {
 
     const newPanelId = generatePanelId();
 
-    const clusterContextTab = {
-      panelId: newPanelId,
-      clusterContext: contextNode.clusterContext,
-    };
+    const clusterContextTab = newClusterContextTab(newPanelId, contextNode.clusterContext);
 
     // Create new panel with the same context
     setPanels(prev => [

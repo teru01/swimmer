@@ -10,6 +10,7 @@ export type ClusterOperationPanelId = string;
  * Contains ClusterContext and the panel ID it belongs to
  */
 export interface ClusterContextTab {
+  id: string; // Format: panelId-clusterContextId
   panelId: ClusterOperationPanelId;
   clusterContext: ClusterContext;
 }
@@ -46,4 +47,18 @@ export function parseCompositeKey(compositeKey: string): {
  */
 export function generatePanelId(): ClusterOperationPanelId {
   return `panel-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * Creates a new ClusterContextTab
+ */
+export function newClusterContextTab(
+  panelId: ClusterOperationPanelId,
+  clusterContext: ClusterContext
+): ClusterContextTab {
+  return {
+    id: `${panelId}-${clusterContext.id}`,
+    panelId,
+    clusterContext,
+  };
 }
