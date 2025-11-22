@@ -11,140 +11,40 @@ import { usePreferences } from '../../contexts/PreferencesContext';
 
 interface TerminalPaneProps {
   selectedContext: ContextNode | undefined;
+  terminalSession: TerminalSession | undefined;
 }
 
-interface TerminalSession {
+export interface TerminalSession {
   terminal: Terminal;
   sessionId: string;
   unlisten: () => void;
   fitAddon: FitAddon;
 }
 
-// Store terminal sessions per context
-const terminalSessions = new Map<string, TerminalSession>();
-
 /**
  * Terminal pane component with real terminal functionality
  */
-function TerminalPane({ selectedContext }: TerminalPaneProps) {
+function TerminalPane({ selectedContext, terminalSession }: TerminalPaneProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const fitAddon = useRef<FitAddon | undefined>(undefined);
-  const { preferences } = usePreferences();
   const contextKey = selectedContext?.name || 'default';
 
-  // Initialize or restore terminal for current context
+  // Restore terminal session when it changes
   useEffect(() => {
-    if (!terminalRef.current) return;
+    if (!terminalRef.current || !terminalSession) return;
 
-    debug(`TerminalPane: contextKey=${contextKey}`);
+    debug(`TerminalPane: Mounting terminal for contextKey=${contextKey}`);
 
-    // Check if session already exists for this context
-    const existingSession = terminalSessions.get(contextKey);
-    if (existingSession) {
-      debug('TerminalPane: Restoring existing session');
-      // Restore existing session
-      const { terminal, fitAddon: fit } = existingSession;
-      terminal.open(terminalRef.current);
-      fit.fit();
-      fitAddon.current = fit;
-      return;
-    }
-
-    debug('TerminalPane: Creating new terminal session');
-
-    // Create new terminal instance
-    const term = new Terminal({
-      theme: {
-        background: '#1e1e1e',
-        foreground: '#d4d4d4',
-        cursor: '#ffffff',
-        black: '#000000',
-        red: '#cd3131',
-        green: '#0dbc79',
-        yellow: '#e5e510',
-        blue: '#2472c8',
-        magenta: '#bc3fbc',
-        cyan: '#11a8cd',
-        white: '#e5e5e5',
-        brightBlack: '#666666',
-        brightRed: '#f14c4c',
-        brightGreen: '#23d18b',
-        brightYellow: '#f5f543',
-        brightBlue: '#3b8eea',
-        brightMagenta: '#d670d6',
-        brightCyan: '#29b8db',
-        brightWhite: '#e5e5e5',
-      },
-      fontSize: 12,
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      cursorBlink: true,
-      rows: 24,
-      cols: 80,
-    });
-
-    const fit = new FitAddon();
-    const webLinks = new WebLinksAddon();
-
-    term.loadAddon(fit);
-    term.loadAddon(webLinks);
-
-    term.open(terminalRef.current);
+    const { terminal, fitAddon: fit } = terminalSession;
+    terminal.open(terminalRef.current);
     fit.fit();
-
     fitAddon.current = fit;
 
-    let currentSessionId: string | undefined = undefined;
-    let unlistenFn: (() => void) | undefined = undefined;
-
-    // Handle terminal input
-    term.onData(data => {
-      if (currentSessionId) {
-        invoke('write_to_terminal', { sessionId: currentSessionId, data }).catch(console.error);
-      }
-    });
-
-    // Setup output listener
-    const setupListener = async (sessionId: string) => {
-      const unlisten = await listen<{ session_id: string; data: string }>(
-        'terminal-output',
-        event => {
-          const { session_id, data } = event.payload;
-          if (session_id === sessionId) {
-            term.write(data);
-          }
-        }
-      );
-      return unlisten;
-    };
-
-    // Create terminal session
-    invoke('create_terminal_session', { shellPath: preferences.terminal.shellPath })
-      .then(async id => {
-        currentSessionId = id as string;
-        term.writeln(`Context: ${selectedContext?.name || 'No context selected'}`);
-
-        // Setup listener after session is created
-        unlistenFn = await setupListener(currentSessionId);
-
-        // Store session for this context
-        terminalSessions.set(contextKey, {
-          terminal: term,
-          sessionId: currentSessionId,
-          unlisten: unlistenFn,
-          fitAddon: fit,
-        });
-      })
-      .catch((error: unknown) => {
-        console.error('Failed to create terminal session:', error);
-        term.writeln('Failed to create terminal session');
-        term.writeln(String(error));
-      });
-
     return () => {
-      // Don't dispose terminal, just detach it
-      // Session will be reused when switching back
+      debug(`TerminalPane: Unmounting terminal for contextKey=${contextKey}`);
+      // Don't dispose, just detach
     };
-  }, [contextKey]);
+  }, [terminalSession, contextKey]);
 
   // Handle terminal pane resize
   useEffect(() => {
@@ -173,5 +73,73 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
     </div>
   );
 }
+
+export const createTerminalSession = async (
+  selectedContext: ContextNode,
+  shellPath: string
+): Promise<TerminalSession> => {
+  // Create new terminal instance
+  const term = new Terminal({
+    theme: {
+      background: '#1e1e1e',
+      foreground: '#d4d4d4',
+      cursor: '#ffffff',
+      black: '#000000',
+      red: '#cd3131',
+      green: '#0dbc79',
+      yellow: '#e5e510',
+      blue: '#2472c8',
+      magenta: '#bc3fbc',
+      cyan: '#11a8cd',
+      white: '#e5e5e5',
+      brightBlack: '#666666',
+      brightRed: '#f14c4c',
+      brightGreen: '#23d18b',
+      brightYellow: '#f5f543',
+      brightBlue: '#3b8eea',
+      brightMagenta: '#d670d6',
+      brightCyan: '#29b8db',
+      brightWhite: '#e5e5e5',
+    },
+    fontSize: 12,
+    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    cursorBlink: true,
+    rows: 24,
+    cols: 80,
+  });
+
+  const fit = new FitAddon();
+  const webLinks = new WebLinksAddon();
+
+  term.loadAddon(fit);
+  term.loadAddon(webLinks);
+
+  debug(`createTerminalSession: Creating session for ${selectedContext.name}`);
+
+  // Create terminal session on backend
+  const sessionId = (await invoke('create_terminal_session', { shellPath })) as string;
+
+  // Handle terminal input
+  term.onData(data => {
+    invoke('write_to_terminal', { sessionId, data }).catch(console.error);
+  });
+
+  // Setup output listener
+  const unlisten = await listen<{ session_id: string; data: string }>('terminal-output', event => {
+    const { session_id, data } = event.payload;
+    if (session_id === sessionId) {
+      term.write(data);
+    }
+  });
+
+  term.writeln(`Context: ${selectedContext.name}`);
+
+  return {
+    terminal: term,
+    sessionId,
+    unlisten,
+    fitAddon: fit,
+  };
+};
 
 export default TerminalPane;

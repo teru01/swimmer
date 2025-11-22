@@ -1,10 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import ClusterTabs from '../cluster/components/ClusterTabs';
 import ContextsPane from '../kubeContexts/components/ContextsPane';
 import ClusterInfoPane from '../cluster/components/ClusterInfoPane';
-import TerminalPane from '../cluster/components/TerminalPane';
+import TerminalPane, {
+  createTerminalSession,
+  TerminalSession,
+} from '../cluster/components/TerminalPane';
 import ChatPane from '../chat/components/ChatPane';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { debug } from '@tauri-apps/plugin-log';
 import './resizable.css';
 import { ContextNode, NodeType } from '../lib/contextTree';
 import { usePreferences } from '../contexts/PreferencesContext';
@@ -22,20 +26,37 @@ function MainLayout() {
   const [selectedClusterContext, setSelectedClusterContext] = useState<ContextNode | undefined>(
     undefined
   );
+  // include folder
   const [selectedContext, setSelectedContext] = useState<ContextNode | undefined>(undefined);
   const [openClusterContexts, setOpenClusterContexts] = useState<ContextNode[]>([]);
+  const [terminalSession, setTerminalSession] = useState<TerminalSession | undefined>(undefined);
+  const [terminalSessions, setTerminalSessions] = useState<Map<string, TerminalSession>>(new Map());
 
   // Context selection handler
-  const handleContextNodeSelect = useCallback((contextNode: ContextNode) => {
+  const handleContextNodeSelect = async (contextNode: ContextNode) => {
     setSelectedContext(contextNode);
     if (contextNode.type === NodeType.Context) {
       setSelectedClusterContext(contextNode);
       setOpenClusterContexts(prev =>
         prev.some(item => item.id === contextNode.id) ? prev : [...prev, contextNode]
       );
+
+      // Get or create terminal session
+      if (terminalSessions.has(contextNode.name)) {
+        debug(`MainLayout: Restoring session for ${contextNode.name}`);
+        setTerminalSession(terminalSessions.get(contextNode.name));
+      } else {
+        debug(`MainLayout: Creating new session for ${contextNode.name}`);
+        try {
+          const session = await createTerminalSession(contextNode, preferences.terminal.shellPath);
+          setTerminalSessions(prev => new Map(prev).set(contextNode.name, session));
+          setTerminalSession(session);
+        } catch (error) {
+          console.error('Failed to create terminal session:', error);
+        }
+      }
     }
-    console.info('Selected context:', contextNode);
-  }, []);
+  };
 
   const handleContextNodeClose = (contextNode: ContextNode) => {
     setOpenClusterContexts(prev => {
@@ -93,7 +114,10 @@ function MainLayout() {
 
                 {/* Center bottom: Terminal */}
                 <Panel defaultSize={50} minSize={20}>
-                  <TerminalPane selectedContext={selectedContext} />
+                  <TerminalPane
+                    selectedContext={selectedContext}
+                    terminalSession={terminalSession}
+                  />
                 </Panel>
               </PanelGroup>
             </div>
