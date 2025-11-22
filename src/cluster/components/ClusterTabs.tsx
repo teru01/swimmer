@@ -7,6 +7,7 @@ interface ClusterTabsProps {
   onSelectCluster: (clusterContext: ContextNode) => void;
   onCloseCluster: (clusterContext: ContextNode) => void;
   onReloadCluster?: (clusterContext: ContextNode) => void;
+  onSplitRight?: (clusterContext: ContextNode) => void;
 }
 
 /**
@@ -18,11 +19,13 @@ function ClusterTabs({
   onSelectCluster: onClusterSelect,
   onCloseCluster: onCloseCluster,
   onReloadCluster,
+  onSplitRight,
 }: ClusterTabsProps) {
   const { handleContextMenu } = useTabContextMenu({
     contextNodes: clusterContextNodes,
     onCloseTab: onCloseCluster,
     onReloadTab: onReloadCluster,
+    onSplitRight,
   });
 
   return (

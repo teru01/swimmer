@@ -5,12 +5,14 @@ interface UseTabContextMenuProps {
   contextNodes: ContextNode[];
   onCloseTab: (node: ContextNode) => void;
   onReloadTab?: (node: ContextNode) => void;
+  onSplitRight?: (node: ContextNode) => void;
 }
 
 export const useTabContextMenu = ({
   contextNodes,
   onCloseTab,
   onReloadTab,
+  onSplitRight,
 }: UseTabContextMenuProps) => {
   const handleContextMenu = async (e: React.MouseEvent, node: ContextNode) => {
     e.preventDefault();
@@ -34,7 +36,20 @@ export const useTabContextMenu = ({
           },
         },
         {
-          id: 'separator',
+          id: 'separator1',
+          item: 'Separator',
+        },
+        {
+          id: 'split-right',
+          text: 'Split Right',
+          action: () => {
+            if (onSplitRight) {
+              onSplitRight(node);
+            }
+          },
+        },
+        {
+          id: 'separator2',
           item: 'Separator',
         },
         {

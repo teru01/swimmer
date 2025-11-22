@@ -1,11 +1,8 @@
 import { useState } from 'react';
-import ClusterTabs from '../cluster/components/ClusterTabs';
 import ContextsPane from '../kubeContexts/components/ContextsPane';
-import ClusterInfoPane, { ClusterViewState } from '../cluster/components/ClusterInfoPane';
-import TerminalPane, {
-  createTerminalSession,
-  TerminalSession,
-} from '../cluster/components/TerminalPane';
+import ClusterOperationPanelComponent from '../cluster/components/ClusterOperationPanelComponent';
+import { ClusterViewState } from '../cluster/components/ClusterInfoPane';
+import { createTerminalSession, TerminalSession } from '../cluster/components/TerminalPane';
 import ChatPane from '../chat/components/ChatPane';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { invoke } from '@tauri-apps/api/core';
@@ -13,6 +10,7 @@ import { debug } from '@tauri-apps/plugin-log';
 import './resizable.css';
 import { ContextNode, NodeType } from '../lib/contextTree';
 import { usePreferences } from '../contexts/PreferencesContext';
+import { ClusterOperationPanel, generatePanelId, createCompositeKey } from '../cluster/types/panel';
 
 const createDefaultClusterViewState = (): ClusterViewState => ({
   selectedKind: undefined,
@@ -31,14 +29,23 @@ const createDefaultClusterViewState = (): ClusterViewState => ({
 function MainLayout() {
   const { preferences } = usePreferences();
 
-  // Currently selected cluster and context
-  const [selectedClusterContext, setSelectedClusterContext] = useState<ContextNode | undefined>(
-    undefined
-  );
   // include folder
   const [selectedContext, setSelectedContext] = useState<ContextNode | undefined>(undefined);
-  const [openClusterContexts, setOpenClusterContexts] = useState<ContextNode[]>([]);
+
+  // ClusterOperationPanel management (max 10 panels)
+  const [panels, setPanels] = useState<ClusterOperationPanel[]>(() => [
+    {
+      id: generatePanelId(),
+      contextNodes: [],
+      activeContextId: undefined,
+    },
+  ]);
+  const [activePanelId, setActivePanelId] = useState<string>(panels[0].id);
+
+  // Terminal sessions keyed by composite key (panelId:contextId)
   const [terminalSessions, setTerminalSessions] = useState<Map<string, TerminalSession>>(new Map());
+
+  // Cluster view states keyed by composite key (panelId:contextId)
   const [clusterViewStates, setClusterViewStates] = useState<Map<string, ClusterViewState>>(
     new Map()
   );
@@ -47,46 +54,60 @@ function MainLayout() {
   const handleContextNodeSelect = async (contextNode: ContextNode) => {
     setSelectedContext(contextNode);
     if (contextNode.type === NodeType.Context) {
-      setSelectedClusterContext(contextNode);
-      setOpenClusterContexts(prev =>
-        prev.some(item => item.id === contextNode.id) ? prev : [...prev, contextNode]
+      const currentPanel = panels.find(p => p.id === activePanelId);
+      if (!currentPanel) return;
+
+      // Update panel's context nodes and active context
+      setPanels(prev =>
+        prev.map(panel => {
+          if (panel.id === activePanelId) {
+            const hasContext = panel.contextNodes.some(item => item.id === contextNode.id);
+            return {
+              ...panel,
+              contextNodes: hasContext ? panel.contextNodes : [...panel.contextNodes, contextNode],
+              activeContextId: contextNode.id,
+            };
+          }
+          return panel;
+        })
       );
 
+      const compositeKey = createCompositeKey(activePanelId, contextNode.id);
+
       // Get or create terminal session
-      if (!terminalSessions.has(contextNode.id)) {
-        debug(`MainLayout: Creating new session for ${contextNode.id}`);
+      if (!terminalSessions.has(compositeKey)) {
+        debug(`MainLayout: Creating new session for ${compositeKey}`);
         try {
           const session = await createTerminalSession(contextNode);
-          setTerminalSessions(prev => new Map(prev).set(contextNode.id, session));
+          setTerminalSessions(prev => new Map(prev).set(compositeKey, session));
         } catch (error) {
           console.error('Failed to create terminal session:', error);
         }
       }
 
       // Get or create cluster view state
-      if (!clusterViewStates.has(contextNode.id)) {
-        debug(`MainLayout: Creating new cluster view state for ${contextNode.id}`);
+      if (!clusterViewStates.has(compositeKey)) {
+        debug(`MainLayout: Creating new cluster view state for ${compositeKey}`);
         setClusterViewStates(prev =>
-          new Map(prev).set(contextNode.id, createDefaultClusterViewState())
+          new Map(prev).set(compositeKey, createDefaultClusterViewState())
         );
       }
     }
   };
 
-  const handleClusterViewStateChange = (contextId: string, state: ClusterViewState) => {
-    setClusterViewStates(prev => new Map(prev).set(contextId, state));
+  const handleClusterViewStateChange = (compositeKey: string, state: ClusterViewState) => {
+    setClusterViewStates(prev => new Map(prev).set(compositeKey, state));
   };
 
-  const handleReloadCluster = async (contextNode: ContextNode) => {
-    debug(`MainLayout: Reloading cluster ${contextNode.id}`);
+  const handleReloadCluster = async (panelId: string, contextNode: ContextNode) => {
+    const compositeKey = createCompositeKey(panelId, contextNode.id);
+    debug(`MainLayout: Reloading cluster ${compositeKey}`);
 
     // Reset cluster view state to default
-    setClusterViewStates(prev =>
-      new Map(prev).set(contextNode.id, createDefaultClusterViewState())
-    );
+    setClusterViewStates(prev => new Map(prev).set(compositeKey, createDefaultClusterViewState()));
 
     // Close and recreate terminal session
-    const session = terminalSessions.get(contextNode.id);
+    const session = terminalSessions.get(compositeKey);
     if (session) {
       try {
         await invoke('close_terminal_session', { sessionId: session.sessionId });
@@ -95,27 +116,27 @@ function MainLayout() {
 
         // Create new session
         const newSession = await createTerminalSession(contextNode);
-        setTerminalSessions(prev => new Map(prev).set(contextNode.id, newSession));
+        setTerminalSessions(prev => new Map(prev).set(compositeKey, newSession));
       } catch (error) {
         console.error('Failed to reload terminal session:', error);
       }
     }
   };
 
-  const handleContextNodeClose = async (contextNode: ContextNode) => {
+  const handleContextNodeClose = async (panelId: string, contextNode: ContextNode) => {
+    const compositeKey = createCompositeKey(panelId, contextNode.id);
+
     // Close terminal session
-    const session = terminalSessions.get(contextNode.id);
+    const session = terminalSessions.get(compositeKey);
     if (session) {
-      debug(`MainLayout: Closing terminal session for ${contextNode.id}`);
+      debug(`MainLayout: Closing terminal session for ${compositeKey}`);
       try {
-        // Close backend session
         await invoke('close_terminal_session', { sessionId: session.sessionId });
-        // Cleanup frontend
         session.unlisten();
         session.terminal.dispose();
         setTerminalSessions(prev => {
           const next = new Map(prev);
-          next.delete(contextNode.id);
+          next.delete(compositeKey);
           return next;
         });
       } catch (error) {
@@ -126,21 +147,88 @@ function MainLayout() {
     // Remove cluster view state
     setClusterViewStates(prev => {
       const next = new Map(prev);
-      next.delete(contextNode.id);
+      next.delete(compositeKey);
       return next;
     });
 
-    setOpenClusterContexts(prev => {
-      const deleteNodeIdx = prev.findIndex(c => c.id === contextNode.id);
-      const newContexts = prev.filter(c => c.id !== contextNode.id);
+    // Update panel's context nodes
+    setPanels(prev => {
+      return prev
+        .map(panel => {
+          if (panel.id === panelId) {
+            const deleteNodeIdx = panel.contextNodes.findIndex(c => c.id === contextNode.id);
+            const newContexts = panel.contextNodes.filter(c => c.id !== contextNode.id);
 
-      if (selectedClusterContext?.id === contextNode.id) {
-        const next = newContexts[Math.max(0, deleteNodeIdx - 1)];
-        setSelectedClusterContext(next);
-        setSelectedContext(next);
-      }
-      return newContexts;
+            let newActiveContextId = panel.activeContextId;
+            if (panel.activeContextId === contextNode.id) {
+              const nextContext = newContexts[Math.max(0, deleteNodeIdx - 1)];
+              newActiveContextId = nextContext?.id;
+              if (nextContext) {
+                setSelectedContext(nextContext);
+              }
+            }
+
+            return {
+              ...panel,
+              contextNodes: newContexts,
+              activeContextId: newActiveContextId,
+            };
+          }
+          return panel;
+        })
+        .filter(panel => panel.contextNodes.length > 0); // Remove empty panels
     });
+  };
+
+  const handleSplitRight = async (panelId: string, contextNode: ContextNode) => {
+    // Check max panels limit (10)
+    if (panels.length >= 10) {
+      debug('MainLayout: Cannot split, maximum 10 panels reached');
+      return;
+    }
+
+    const sourcePanel = panels.find(p => p.id === panelId);
+    if (!sourcePanel) return;
+
+    const newPanelId = generatePanelId();
+
+    // Create new panel with the same context
+    setPanels(prev => [
+      ...prev,
+      {
+        id: newPanelId,
+        contextNodes: [contextNode],
+        activeContextId: contextNode.id,
+      },
+    ]);
+
+    // Copy terminal session state
+    const sourceCompositeKey = createCompositeKey(panelId, contextNode.id);
+    const newCompositeKey = createCompositeKey(newPanelId, contextNode.id);
+
+    try {
+      const newSession = await createTerminalSession(contextNode);
+      setTerminalSessions(prev => new Map(prev).set(newCompositeKey, newSession));
+    } catch (error) {
+      console.error('Failed to create terminal session for split panel:', error);
+    }
+
+    // Copy cluster view state
+    const sourceViewState = clusterViewStates.get(sourceCompositeKey);
+    if (sourceViewState) {
+      setClusterViewStates(prev =>
+        new Map(prev).set(newCompositeKey, {
+          ...sourceViewState,
+          expandedGroups: new Set(sourceViewState.expandedGroups),
+        })
+      );
+    } else {
+      setClusterViewStates(prev =>
+        new Map(prev).set(newCompositeKey, createDefaultClusterViewState())
+      );
+    }
+
+    setActivePanelId(newPanelId);
   };
 
   return (
@@ -159,42 +247,27 @@ function MainLayout() {
 
           <PanelResizeHandle className="resize-handle" />
 
-          {/* Center area: Cluster tabs + info + Terminal */}
+          {/* Center area: ClusterOperationPanels */}
           <Panel defaultSize={60} minSize={30}>
-            <div className="center-area">
-              {/* Cluster tabs */}
-              <div className="center-tabs">
-                <ClusterTabs
-                  contextNodes={openClusterContexts}
-                  activeCluster={selectedClusterContext}
-                  onSelectCluster={handleContextNodeSelect}
-                  onCloseCluster={handleContextNodeClose}
-                  onReloadCluster={handleReloadCluster}
-                />
-              </div>
-
-              <PanelGroup direction="vertical">
-                {/* Center top: Cluster information */}
-                <Panel defaultSize={50} minSize={20}>
-                  <div className="cluster-info-pane-container">
-                    <ClusterInfoPane
-                      selectedContext={selectedContext}
-                      allViewStates={clusterViewStates}
-                      onViewStateChange={handleClusterViewStateChange}
-                    />
-                  </div>
-                </Panel>
-
-                <PanelResizeHandle className="resize-handle horizontal" />
-
-                {/* Center bottom: Terminal */}
-                <Panel defaultSize={50} minSize={20}>
-                  <TerminalPane
+            <div style={{ display: 'flex', height: '100%' }}>
+              {panels.map(panel => {
+                const panelWidth = `${100 / panels.length}%`;
+                return (
+                  <ClusterOperationPanelComponent
+                    key={panel.id}
+                    panel={panel}
                     selectedContext={selectedContext}
                     allTerminalSessions={terminalSessions}
+                    allClusterViewStates={clusterViewStates}
+                    onSelectCluster={handleContextNodeSelect}
+                    onCloseCluster={contextNode => handleContextNodeClose(panel.id, contextNode)}
+                    onReloadCluster={contextNode => handleReloadCluster(panel.id, contextNode)}
+                    onSplitRight={contextNode => handleSplitRight(panel.id, contextNode)}
+                    onViewStateChange={handleClusterViewStateChange}
+                    panelWidth={panelWidth}
                   />
-                </Panel>
-              </PanelGroup>
+                );
+              })}
             </div>
           </Panel>
 

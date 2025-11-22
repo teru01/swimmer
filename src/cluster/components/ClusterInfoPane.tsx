@@ -5,6 +5,7 @@ import ResourceList, { KubeResource } from './ResourceList';
 import ResourceDetailPane from './ResourceDetailPane';
 import './ClusterInfoPane.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { createCompositeKey } from '../types/panel';
 
 export interface ClusterViewState {
   selectedKind: string | undefined;
@@ -92,13 +93,14 @@ const fetchResourceDetail = async (
 // --- End Dummy Fetch ---
 
 interface ClusterInfoPaneProps {
+  panelId: string;
   selectedContext: ContextNode | undefined;
   allViewStates: Map<string, ClusterViewState>;
-  onViewStateChange: (contextId: string, state: ClusterViewState) => void;
+  onViewStateChange: (compositeKey: string, state: ClusterViewState) => void;
 }
 
 interface ClusterViewInstanceProps {
-  contextId: string;
+  compositeKey: string;
   isVisible: boolean;
   viewState: ClusterViewState;
   onViewStateChange: (state: ClusterViewState) => void;
@@ -108,7 +110,7 @@ interface ClusterViewInstanceProps {
  * Individual cluster view instance
  */
 function ClusterViewInstance({
-  contextId,
+  compositeKey,
   isVisible,
   viewState,
   onViewStateChange,
@@ -226,6 +228,7 @@ function ClusterViewInstance({
  * Center Pane: Component to display cluster information with sidebar, list, and detail views.
  */
 function ClusterInfoPane({
+  panelId,
   selectedContext,
   allViewStates,
   onViewStateChange,
@@ -234,15 +237,18 @@ function ClusterInfoPane({
     <div className="cluster-info-pane-container">
       {selectedContext ? (
         <>
-          {Array.from(allViewStates.entries()).map(([contextId, viewState]) => (
-            <ClusterViewInstance
-              key={contextId}
-              contextId={contextId}
-              isVisible={contextId === selectedContext.id}
-              viewState={viewState}
-              onViewStateChange={state => onViewStateChange(contextId, state)}
-            />
-          ))}
+          {Array.from(allViewStates.entries()).map(([compositeKey, viewState]) => {
+            const currentCompositeKey = createCompositeKey(panelId, selectedContext.id);
+            return (
+              <ClusterViewInstance
+                key={compositeKey}
+                compositeKey={compositeKey}
+                isVisible={compositeKey === currentCompositeKey}
+                viewState={viewState}
+                onViewStateChange={state => onViewStateChange(compositeKey, state)}
+              />
+            );
+          })}
         </>
       ) : (
         <p className="no-context">Select a context to view cluster information</p>

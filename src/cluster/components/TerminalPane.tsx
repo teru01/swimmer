@@ -8,8 +8,10 @@ import { listen } from '@tauri-apps/api/event';
 import { debug } from '@tauri-apps/plugin-log';
 import { ContextNode } from '../../lib/contextTree';
 import { loadPreferences } from '../../lib/fs';
+import { createCompositeKey } from '../types/panel';
 
 interface TerminalPaneProps {
+  panelId: string;
   selectedContext: ContextNode | undefined;
   allTerminalSessions: Map<string, TerminalSession>;
 }
@@ -67,16 +69,17 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
 /**
  * Terminal pane component with real terminal functionality
  */
-function TerminalPane({ selectedContext, allTerminalSessions }: TerminalPaneProps) {
+function TerminalPane({ panelId, selectedContext, allTerminalSessions }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Handle terminal pane resize
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !selectedContext) return;
 
+    const compositeKey = createCompositeKey(panelId, selectedContext.id);
     const resizeObserver = new ResizeObserver(() => {
       // Fit the currently visible terminal
-      const visibleSession = allTerminalSessions.get(selectedContext?.id || '');
+      const visibleSession = allTerminalSessions.get(compositeKey);
       if (visibleSession) {
         visibleSession.fitAddon.fit();
       }
@@ -87,7 +90,7 @@ function TerminalPane({ selectedContext, allTerminalSessions }: TerminalPaneProp
     return () => {
       resizeObserver.disconnect();
     };
-  }, [selectedContext, allTerminalSessions]);
+  }, [panelId, selectedContext, allTerminalSessions]);
 
   return (
     <div className="terminal-pane">
@@ -96,13 +99,17 @@ function TerminalPane({ selectedContext, allTerminalSessions }: TerminalPaneProp
         <span>{selectedContext ? `Context: ${selectedContext.name}` : 'No context selected'}</span>
       </div>
       <div className="terminal-container" ref={containerRef}>
-        {Array.from(allTerminalSessions.entries()).map(([contextId, session]) => (
-          <TerminalInstance
-            key={contextId}
-            session={session}
-            isVisible={contextId === selectedContext?.id}
-          />
-        ))}
+        {selectedContext &&
+          Array.from(allTerminalSessions.entries()).map(([compositeKey, session]) => {
+            const currentCompositeKey = createCompositeKey(panelId, selectedContext.id);
+            return (
+              <TerminalInstance
+                key={compositeKey}
+                session={session}
+                isVisible={compositeKey === currentCompositeKey}
+              />
+            );
+          })}
       </div>
     </div>
   );
