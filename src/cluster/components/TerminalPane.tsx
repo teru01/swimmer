@@ -14,6 +14,12 @@ interface TerminalPaneProps {
   allTerminalSessions: Map<string, TerminalSession>;
 }
 
+interface TerminalInstanceProps {
+  session: TerminalSession;
+  isVisible: boolean;
+  onResize?: () => void;
+}
+
 export interface TerminalSession {
   terminal: Terminal;
   sessionId: string;
@@ -24,71 +30,45 @@ export interface TerminalSession {
 }
 
 /**
+ * Individual terminal instance component
+ */
+function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
+  const terminalRef = useRef<HTMLDivElement>(null);
+
+  // Mount terminal when component mounts
+  useEffect(() => {
+    if (!terminalRef.current || session.mounted) return;
+
+    debug(`TerminalInstance: Mounting terminal for ${session.contextId}`);
+    session.terminal.open(terminalRef.current);
+    session.fitAddon.fit();
+    session.mounted = true;
+  }, [session]);
+
+  // Fit terminal when visibility changes
+  useEffect(() => {
+    if (isVisible && session.mounted) {
+      session.fitAddon.fit();
+    }
+  }, [isVisible, session]);
+
+  return (
+    <div
+      ref={terminalRef}
+      style={{
+        width: '100%',
+        height: '100%',
+        display: isVisible ? 'block' : 'none',
+      }}
+    />
+  );
+}
+
+/**
  * Terminal pane component with real terminal functionality
  */
 function TerminalPane({ selectedContext, allTerminalSessions }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Mount all terminal sessions and keep them in DOM
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const container = containerRef.current;
-
-    // Mount new sessions
-    allTerminalSessions.forEach((session, contextId) => {
-      if (!session.mounted) {
-        debug(`TerminalPane: Mounting terminal for contextId=${contextId}`);
-
-        const terminalDiv = document.createElement('div');
-        terminalDiv.className = 'terminal-instance';
-        terminalDiv.setAttribute('data-context-id', contextId);
-        terminalDiv.style.width = '100%';
-        terminalDiv.style.height = '100%';
-        terminalDiv.style.display = 'none'; // Initially hidden
-
-        container.appendChild(terminalDiv);
-        session.terminal.open(terminalDiv);
-        session.fitAddon.fit();
-        session.mounted = true;
-      }
-    });
-
-    // Remove DOM elements for sessions that no longer exist
-    const allTerminalDivs = container.querySelectorAll('.terminal-instance');
-    allTerminalDivs.forEach(div => {
-      const htmlDiv = div as HTMLDivElement;
-      const contextId = htmlDiv.getAttribute('data-context-id');
-      if (contextId && !allTerminalSessions.has(contextId)) {
-        debug(`TerminalPane: Removing terminal DOM for contextId=${contextId}`);
-        container.removeChild(htmlDiv);
-      }
-    });
-  }, [allTerminalSessions]);
-
-  // Show/hide terminals based on active session
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const container = containerRef.current;
-    const allTerminalDivs = container.querySelectorAll('.terminal-instance');
-
-    allTerminalDivs.forEach(div => {
-      const htmlDiv = div as HTMLDivElement;
-      const contextId = htmlDiv.getAttribute('data-context-id');
-
-      if (contextId === selectedContext?.id) {
-        htmlDiv.style.display = 'block';
-        // Fit terminal when it becomes visible
-        const session = allTerminalSessions.get(contextId);
-        if (session) {
-          session.fitAddon.fit();
-        }
-      } else {
-        htmlDiv.style.display = 'none';
-      }
-    });
-  }, [selectedContext, allTerminalSessions]);
 
   // Handle terminal pane resize
   useEffect(() => {
@@ -115,7 +95,15 @@ function TerminalPane({ selectedContext, allTerminalSessions }: TerminalPaneProp
         <span>Terminal</span>
         <span>{selectedContext ? `Context: ${selectedContext.name}` : 'No context selected'}</span>
       </div>
-      <div className="terminal-container" ref={containerRef} />
+      <div className="terminal-container" ref={containerRef}>
+        {Array.from(allTerminalSessions.entries()).map(([contextId, session]) => (
+          <TerminalInstance
+            key={contextId}
+            session={session}
+            isVisible={contextId === selectedContext?.id}
+          />
+        ))}
+      </div>
     </div>
   );
 }

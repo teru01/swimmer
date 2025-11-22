@@ -14,6 +14,7 @@
 - Minor linter warnings may be ignored
 - When you edit TypeScript, always use undefined instead of null if you can.
 - Write comments only for function, interface. Don't put comments for plain flow.
+- Manipulating of DOM elements directly in the React component is not basically allowed
 
 ## Development Workflow
 
