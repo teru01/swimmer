@@ -93,14 +93,26 @@ const fetchResourceDetail = async (
 
 interface ClusterInfoPaneProps {
   selectedContext: ContextNode | undefined;
+  allViewStates: Map<string, ClusterViewState>;
+  onViewStateChange: (contextId: string, state: ClusterViewState) => void;
+}
+
+interface ClusterViewInstanceProps {
+  contextId: string;
+  isVisible: boolean;
   viewState: ClusterViewState;
   onViewStateChange: (state: ClusterViewState) => void;
 }
 
 /**
- * Center Pane: Component to display cluster information with sidebar, list, and detail views.
+ * Individual cluster view instance
  */
-function ClusterInfoPane({ selectedContext, viewState, onViewStateChange }: ClusterInfoPaneProps) {
+function ClusterViewInstance({
+  contextId,
+  isVisible,
+  viewState,
+  onViewStateChange,
+}: ClusterViewInstanceProps) {
   const handleKindSelect = (kind: string) => {
     onViewStateChange({
       ...viewState,
@@ -161,49 +173,77 @@ function ClusterInfoPane({ selectedContext, viewState, onViewStateChange }: Clus
   };
 
   return (
+    <div
+      className="cluster-view-instance"
+      style={{ display: isVisible ? 'block' : 'none', width: '100%', height: '100%' }}
+    >
+      <PanelGroup direction="horizontal">
+        <Panel defaultSize={20} minSize={15} maxSize={40} id="sidebar">
+          <ResourceKindSidebar
+            selectedKind={viewState.selectedKind}
+            onKindSelect={handleKindSelect}
+            expandedGroups={viewState.expandedGroups}
+            onExpandedGroupsChange={handleExpandedGroupsChange}
+          />
+        </Panel>
+        <PanelResizeHandle className="resize-handle-vertical" />
+        <Panel minSize={30} id="main-area">
+          <PanelGroup direction="vertical">
+            <Panel defaultSize={viewState.showDetailPane ? 70 : 100} minSize={20} id="list">
+              <ResourceList
+                selectedKind={viewState.selectedKind}
+                onResourceSelect={handleResourceSelect}
+              />
+            </Panel>
+            {viewState.showDetailPane && (
+              <>
+                <PanelResizeHandle className="resize-handle-horizontal" />
+                <Panel
+                  defaultSize={30}
+                  minSize={5}
+                  maxSize={80}
+                  id="detail"
+                  collapsible={true}
+                  onCollapse={handleCloseDetailPane}
+                  onResize={handleDetailPaneResize}
+                >
+                  <ResourceDetailPane
+                    resource={viewState.selectedResourceDetail}
+                    isLoading={viewState.isDetailLoading}
+                    onClose={handleCloseDetailPane}
+                  />
+                </Panel>
+              </>
+            )}
+          </PanelGroup>
+        </Panel>
+      </PanelGroup>
+    </div>
+  );
+}
+
+/**
+ * Center Pane: Component to display cluster information with sidebar, list, and detail views.
+ */
+function ClusterInfoPane({
+  selectedContext,
+  allViewStates,
+  onViewStateChange,
+}: ClusterInfoPaneProps) {
+  return (
     <div className="cluster-info-pane-container">
       {selectedContext ? (
-        <PanelGroup direction="horizontal">
-          <Panel defaultSize={20} minSize={15} maxSize={40} id="sidebar">
-            <ResourceKindSidebar
-              selectedKind={viewState.selectedKind}
-              onKindSelect={handleKindSelect}
-              expandedGroups={viewState.expandedGroups}
-              onExpandedGroupsChange={handleExpandedGroupsChange}
+        <>
+          {Array.from(allViewStates.entries()).map(([contextId, viewState]) => (
+            <ClusterViewInstance
+              key={contextId}
+              contextId={contextId}
+              isVisible={contextId === selectedContext.id}
+              viewState={viewState}
+              onViewStateChange={state => onViewStateChange(contextId, state)}
             />
-          </Panel>
-          <PanelResizeHandle className="resize-handle-vertical" />
-          <Panel minSize={30} id="main-area">
-            <PanelGroup direction="vertical">
-              <Panel defaultSize={viewState.showDetailPane ? 70 : 100} minSize={20} id="list">
-                <ResourceList
-                  selectedKind={viewState.selectedKind}
-                  onResourceSelect={handleResourceSelect}
-                />
-              </Panel>
-              {viewState.showDetailPane && (
-                <>
-                  <PanelResizeHandle className="resize-handle-horizontal" />
-                  <Panel
-                    defaultSize={30}
-                    minSize={5}
-                    maxSize={80}
-                    id="detail"
-                    collapsible={true}
-                    onCollapse={handleCloseDetailPane}
-                    onResize={handleDetailPaneResize}
-                  >
-                    <ResourceDetailPane
-                      resource={viewState.selectedResourceDetail}
-                      isLoading={viewState.isDetailLoading}
-                      onClose={handleCloseDetailPane}
-                    />
-                  </Panel>
-                </>
-              )}
-            </PanelGroup>
-          </Panel>
-        </PanelGroup>
+          ))}
+        </>
       ) : (
         <p className="no-context">Select a context to view cluster information</p>
       )}

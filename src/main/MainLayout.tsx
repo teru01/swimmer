@@ -73,10 +73,8 @@ function MainLayout() {
     }
   };
 
-  const handleClusterViewStateChange = (state: ClusterViewState) => {
-    if (selectedClusterContext) {
-      setClusterViewStates(prev => new Map(prev).set(selectedClusterContext.id, state));
-    }
+  const handleClusterViewStateChange = (contextId: string, state: ClusterViewState) => {
+    setClusterViewStates(prev => new Map(prev).set(contextId, state));
   };
 
   const handleContextNodeClose = async (contextNode: ContextNode) => {
@@ -155,10 +153,7 @@ function MainLayout() {
                   <div className="cluster-info-pane-container">
                     <ClusterInfoPane
                       selectedContext={selectedContext}
-                      viewState={
-                        clusterViewStates.get(selectedClusterContext?.id || '') ||
-                        createDefaultClusterViewState()
-                      }
+                      allViewStates={clusterViewStates}
                       onViewStateChange={handleClusterViewStateChange}
                     />
                   </div>
