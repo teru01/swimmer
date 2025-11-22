@@ -104,3 +104,37 @@
   text-align: center;
   font-size: 12px;
 }
+
+/* Context Menu - macOS Native Style */
+.context-menu {
+  background-color: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 0 0 0.5px rgba(0, 0, 0, 0.05);
+  min-width: 200px;
+  padding: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.context-menu-item {
+  padding: 6px 20px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #1d1d1f;
+  user-select: none;
+  border-radius: 4px;
+  transition: background-color 0.1s ease;
+  line-height: 1.4;
+}
+
+.context-menu-item:hover {
+  background-color: #0066CC;
+  color: #fff;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background-color: rgba(0, 0, 0, 0.1);
+  margin: 6px 12px;
+}

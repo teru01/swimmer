@@ -150,7 +150,7 @@
 
 .slider:before {
   position: absolute;
-  content: "";
+  content: '';
   height: 18px;
   width: 18px;
   left: 3px;
@@ -184,4 +184,3 @@ input:checked + .slider:before {
   outline: none;
   border-color: var(--color-primary);
 }
-

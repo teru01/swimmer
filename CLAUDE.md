@@ -18,6 +18,6 @@
 
 ## Development Workflow
 
-- Format code: Run appropriate formatters (e.g., `prettier`, `gofmt`, `terraform fmt`)
+- Format code: Run appropriate formatters. for ts files, run `npm run format`. for rust files, run `cargo fmt`
 - Lint code: Run linters and address errors (warnings can be ignored if minor)
 - Ensure code quality standards are met before marking tasks as complete

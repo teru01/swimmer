@@ -6,6 +6,11 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "log:default"
+    "log:default",
+    "core:menu:default",
+    "core:menu:allow-popup",
+    "core:menu:allow-new",
+    "core:menu:allow-append",
+    "core:menu:allow-text"
   ]
 }

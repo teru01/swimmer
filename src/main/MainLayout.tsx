@@ -77,6 +77,31 @@ function MainLayout() {
     setClusterViewStates(prev => new Map(prev).set(contextId, state));
   };
 
+  const handleReloadCluster = async (contextNode: ContextNode) => {
+    debug(`MainLayout: Reloading cluster ${contextNode.id}`);
+
+    // Reset cluster view state to default
+    setClusterViewStates(prev =>
+      new Map(prev).set(contextNode.id, createDefaultClusterViewState())
+    );
+
+    // Close and recreate terminal session
+    const session = terminalSessions.get(contextNode.id);
+    if (session) {
+      try {
+        await invoke('close_terminal_session', { sessionId: session.sessionId });
+        session.unlisten();
+        session.terminal.dispose();
+
+        // Create new session
+        const newSession = await createTerminalSession(contextNode);
+        setTerminalSessions(prev => new Map(prev).set(contextNode.id, newSession));
+      } catch (error) {
+        console.error('Failed to reload terminal session:', error);
+      }
+    }
+  };
+
   const handleContextNodeClose = async (contextNode: ContextNode) => {
     // Close terminal session
     const session = terminalSessions.get(contextNode.id);
@@ -144,6 +169,7 @@ function MainLayout() {
                   activeCluster={selectedClusterContext}
                   onSelectCluster={handleContextNodeSelect}
                   onCloseCluster={handleContextNodeClose}
+                  onReloadCluster={handleReloadCluster}
                 />
               </div>
 
