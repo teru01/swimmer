@@ -1,4 +1,4 @@
-import { ContextNode, NodeType, ContextProvider } from '../contextTree';
+import { ContextNode, NodeType, ContextProvider, ClusterContext } from '../contextTree';
 
 /**
  * GKE (Google Kubernetes Engine) プロバイダー
@@ -66,11 +66,18 @@ export const gkeProvider: ContextProvider = {
       }
 
       // クラスターノード（コンテキスト）を追加
+      const clusterContext: ClusterContext = {
+        id: context,
+        provider: 'GKE',
+        region: region,
+        resourceContainerID: project,
+        clusterName: cluster,
+      };
       const contextNode: ContextNode = {
         id: `context-${context}`,
         name: cluster,
         type: NodeType.Context,
-        contextName: context,
+        clusterContext,
         parentId: regionNode.id,
       };
       regionNode.children?.push(contextNode);

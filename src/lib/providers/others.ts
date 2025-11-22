@@ -1,4 +1,4 @@
-import { ContextNode, NodeType, ContextProvider } from '../contextTree';
+import { ContextNode, NodeType, ContextProvider, ClusterContext } from '../contextTree';
 
 /**
  * Others プロバイダー
@@ -26,11 +26,16 @@ export const othersProvider: ContextProvider = {
     };
 
     contexts.forEach(context => {
+      const clusterContext: ClusterContext = {
+        id: context,
+        provider: 'Others',
+        clusterName: context,
+      };
       const contextNode: ContextNode = {
         id: `context-${context}`,
         name: context,
         type: NodeType.Context,
-        contextName: context,
+        clusterContext,
         parentId: root.id,
       };
       root.children?.push(contextNode);

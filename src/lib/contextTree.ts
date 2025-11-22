@@ -6,11 +6,27 @@ export const NodeType = {
 
 export type NodeType = (typeof NodeType)[keyof typeof NodeType];
 
+/**
+ * ClusterContext represents a Kubernetes cluster context
+ * Used in places where tree structure is not needed
+ */
+export interface ClusterContext {
+  id: string; // kubectl context id (raw context name from getKubeContexts)
+  provider: 'GKE' | 'AWS' | 'Others'; // Derived from PROVIDERS
+  region?: string; // Region (GKE, AWS)
+  resourceContainerID?: string; // GCP project id or AWS account id
+  clusterName: string; // Cluster name
+}
+
+/**
+ * ContextNode represents a node in the context tree (used in ContextsPane)
+ * Contains optional ClusterContext when type is 'context'
+ */
 export interface ContextNode {
   id: string;
   name: string;
   type: NodeType;
-  contextName?: string; // only if type=NodeType.Context
+  clusterContext?: ClusterContext; // only if type=NodeType.Context
   children?: ContextNode[];
   parentId?: string;
   tags?: string[];

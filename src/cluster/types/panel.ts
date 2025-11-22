@@ -1,4 +1,4 @@
-import { ContextNode } from '../../lib/contextTree';
+import { ClusterContext } from '../../lib/contextTree';
 
 /**
  * Unique identifier for a ClusterOperationPanel
@@ -6,11 +6,20 @@ import { ContextNode } from '../../lib/contextTree';
 export type ClusterOperationPanelId = string;
 
 /**
+ * ClusterContextTab represents a tab in ClusterOperationPanel
+ * Contains ClusterContext and the panel ID it belongs to
+ */
+export interface ClusterContextTab {
+  panelId: ClusterOperationPanelId;
+  clusterContext: ClusterContext;
+}
+
+/**
  * ClusterOperationPanel contains tabs, resource sidebar, details, and terminal
  */
 export interface ClusterOperationPanel {
   id: ClusterOperationPanelId;
-  contextNodes: ContextNode[];
+  tabs: ClusterContextTab[];
   activeContextId: string | undefined;
 }
 

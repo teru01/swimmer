@@ -7,7 +7,6 @@ import { ClusterOperationPanel } from '../types/panel';
 
 interface ClusterOperationPanelComponentProps {
   panel: ClusterOperationPanel;
-  selectedContext: ContextNode | undefined;
   allTerminalSessions: Map<string, TerminalSession>;
   allClusterViewStates: Map<string, ClusterViewState>;
   onSelectCluster: (contextNode: ContextNode) => void;
@@ -23,7 +22,6 @@ interface ClusterOperationPanelComponentProps {
  */
 function ClusterOperationPanelComponent({
   panel,
-  selectedContext,
   allTerminalSessions,
   allClusterViewStates,
   onSelectCluster,
@@ -33,8 +31,17 @@ function ClusterOperationPanelComponent({
   onViewStateChange,
   panelWidth,
 }: ClusterOperationPanelComponentProps) {
-  const activeCluster = panel.contextNodes.find(node => node.id === panel.activeContextId);
-  const activeContextForThisPanel = activeCluster;
+  const activeTab = panel.tabs.find(tab => tab.clusterContext.id === panel.activeContextId);
+
+  // Reconstruct ContextNode for active cluster (needed for ClusterInfoPane and TerminalPane)
+  const activeContextForThisPanel: ContextNode | undefined = activeTab
+    ? {
+        id: `context-${activeTab.clusterContext.id}`,
+        name: activeTab.clusterContext.clusterName,
+        type: 'context' as const,
+        clusterContext: activeTab.clusterContext,
+      }
+    : undefined;
 
   return (
     <div className="cluster-operation-panel" style={{ width: panelWidth }}>
@@ -42,8 +49,8 @@ function ClusterOperationPanelComponent({
         {/* Cluster tabs */}
         <div className="center-tabs">
           <ClusterTabs
-            contextNodes={panel.contextNodes}
-            activeCluster={activeCluster}
+            tabs={panel.tabs}
+            activeContextId={panel.activeContextId}
             onSelectCluster={onSelectCluster}
             onCloseCluster={onCloseCluster}
             onReloadCluster={onReloadCluster}

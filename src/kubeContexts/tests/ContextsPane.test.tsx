@@ -41,7 +41,7 @@ vi.mock('react-arborist', () => ({
 
 describe('ContextsPane UI', () => {
   it('New Folder ボタンを押すとフォルダが追加される', async () => {
-    render(<ContextsPane selectedContext={null} />);
+    render(<ContextsPane selectedContext={undefined} />);
 
     const folderButton = await screen.findByTitle('New Folder');
     fireEvent.click(folderButton);

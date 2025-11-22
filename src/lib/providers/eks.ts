@@ -1,4 +1,4 @@
-import { ContextNode, NodeType, ContextProvider } from '../contextTree';
+import { ContextNode, NodeType, ContextProvider, ClusterContext } from '../contextTree';
 
 /**
  * EKS (Amazon Elastic Kubernetes Service) プロバイダー
@@ -66,11 +66,18 @@ export const eksProvider: ContextProvider = {
       }
 
       // クラスターノード（コンテキスト）を追加
+      const clusterContext: ClusterContext = {
+        id: context,
+        provider: 'AWS',
+        region: region,
+        resourceContainerID: account,
+        clusterName: cluster,
+      };
       const contextNode: ContextNode = {
         id: `context-${context}`,
         name: cluster,
         type: NodeType.Context,
-        contextName: context,
+        clusterContext,
         parentId: regionNode.id,
       };
       regionNode.children?.push(contextNode);

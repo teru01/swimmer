@@ -110,7 +110,6 @@ interface ClusterViewInstanceProps {
  * Individual cluster view instance
  */
 function ClusterViewInstance({
-  compositeKey,
   isVisible,
   viewState,
   onViewStateChange,
