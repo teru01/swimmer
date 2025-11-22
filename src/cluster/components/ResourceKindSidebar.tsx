@@ -1,83 +1,48 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './ClusterInfoPane.css';
 
-// Define resource groups and their kinds with icons
+// Define resource groups and their kinds
 const resourceGroups = [
   {
     groupName: 'Overview',
     kinds: ['Overview'],
     isSingle: true,
-    icon: '📊',
   },
   {
     groupName: 'Cluster',
     kinds: ['Nodes', 'Namespaces', 'Events'],
-    icon: '🏗️',
   },
   {
     groupName: 'Workloads',
     kinds: ['Pods', 'Deployments', 'ReplicaSets', 'StatefulSets', 'DaemonSets', 'Jobs', 'CronJobs'],
-    icon: '⚙️',
   },
   {
     groupName: 'Network',
     kinds: ['Services', 'Ingresses', 'NetworkPolicies'],
-    icon: '🌐',
   },
   {
     groupName: 'Storage',
     kinds: ['PersistentVolumes', 'PersistentVolumeClaims', 'StorageClasses'],
-    icon: '💾',
   },
   {
     groupName: 'Configuration',
     kinds: ['ConfigMaps', 'Secrets'],
-    icon: '⚙️',
   },
   {
     groupName: 'RBAC',
     kinds: ['Roles', 'ClusterRoles', 'RoleBindings', 'ClusterRoleBindings', 'ServiceAccounts'],
-    icon: '🔐',
   },
   {
     groupName: 'Custom Resources',
     kinds: ['CRDs'],
-    icon: '🔧',
   },
 ];
-
-// Kind icons mapping
-const kindIcons: Record<string, string> = {
-  Overview: '📊',
-  Nodes: '🖥️',
-  Namespaces: '📁',
-  Events: '📝',
-  Pods: '📦',
-  Deployments: '🚀',
-  ReplicaSets: '📋',
-  StatefulSets: '🗃️',
-  DaemonSets: '👥',
-  Jobs: '⚡',
-  CronJobs: '⏰',
-  Services: '🔗',
-  Ingresses: '🌍',
-  NetworkPolicies: '🛡️',
-  PersistentVolumes: '💽',
-  PersistentVolumeClaims: '📀',
-  StorageClasses: '🗄️',
-  ConfigMaps: '📄',
-  Secrets: '🔒',
-  Roles: '👤',
-  ClusterRoles: '👥',
-  RoleBindings: '🔗',
-  ClusterRoleBindings: '🌐',
-  ServiceAccounts: '🆔',
-  CRDs: '🔧',
-};
 
 interface ResourceKindSidebarProps {
   selectedKind: string | undefined;
   onKindSelect: (kind: string) => void;
+  expandedGroups: Set<string>;
+  onExpandedGroupsChange: (expandedGroups: Set<string>) => void;
 }
 
 /**
@@ -86,27 +51,23 @@ interface ResourceKindSidebarProps {
 const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
   selectedKind,
   onKindSelect,
+  expandedGroups,
+  onExpandedGroupsChange,
 }) => {
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(['Overview', 'Cluster', 'Workloads'])
-  );
-
   const toggleGroup = (groupName: string) => {
-    setExpandedGroups(prevExpanded => {
-      const newExpanded = new Set(prevExpanded);
-      if (newExpanded.has(groupName)) {
-        newExpanded.delete(groupName);
-      } else {
-        newExpanded.add(groupName);
-      }
-      return newExpanded;
-    });
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupName)) {
+      newExpanded.delete(groupName);
+    } else {
+      newExpanded.add(groupName);
+    }
+    onExpandedGroupsChange(newExpanded);
   };
 
   return (
     <div className="resource-kind-sidebar">
       <div className="content">
-        {resourceGroups.map(({ groupName, kinds, isSingle, icon }) => {
+        {resourceGroups.map(({ groupName, kinds, isSingle }) => {
           const isExpanded = expandedGroups.has(groupName);
 
           if (isSingle && kinds.length === 1) {

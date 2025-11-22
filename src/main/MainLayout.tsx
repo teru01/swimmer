@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import ClusterTabs from '../cluster/components/ClusterTabs';
 import ContextsPane from '../kubeContexts/components/ContextsPane';
-import ClusterInfoPane from '../cluster/components/ClusterInfoPane';
+import ClusterInfoPane, { ClusterViewState } from '../cluster/components/ClusterInfoPane';
 import TerminalPane, {
   createTerminalSession,
   TerminalSession,
@@ -13,6 +13,14 @@ import { debug } from '@tauri-apps/plugin-log';
 import './resizable.css';
 import { ContextNode, NodeType } from '../lib/contextTree';
 import { usePreferences } from '../contexts/PreferencesContext';
+
+const createDefaultClusterViewState = (): ClusterViewState => ({
+  selectedKind: undefined,
+  selectedResourceDetail: undefined,
+  isDetailLoading: false,
+  showDetailPane: false,
+  expandedGroups: new Set(['Overview', 'Cluster', 'Workloads']),
+});
 
 /**
  * Main Layout Component
@@ -31,6 +39,9 @@ function MainLayout() {
   const [selectedContext, setSelectedContext] = useState<ContextNode | undefined>(undefined);
   const [openClusterContexts, setOpenClusterContexts] = useState<ContextNode[]>([]);
   const [terminalSessions, setTerminalSessions] = useState<Map<string, TerminalSession>>(new Map());
+  const [clusterViewStates, setClusterViewStates] = useState<Map<string, ClusterViewState>>(
+    new Map()
+  );
 
   // Context selection handler
   const handleContextNodeSelect = async (contextNode: ContextNode) => {
@@ -51,6 +62,20 @@ function MainLayout() {
           console.error('Failed to create terminal session:', error);
         }
       }
+
+      // Get or create cluster view state
+      if (!clusterViewStates.has(contextNode.id)) {
+        debug(`MainLayout: Creating new cluster view state for ${contextNode.id}`);
+        setClusterViewStates(prev =>
+          new Map(prev).set(contextNode.id, createDefaultClusterViewState())
+        );
+      }
+    }
+  };
+
+  const handleClusterViewStateChange = (state: ClusterViewState) => {
+    if (selectedClusterContext) {
+      setClusterViewStates(prev => new Map(prev).set(selectedClusterContext.id, state));
     }
   };
 
@@ -74,6 +99,13 @@ function MainLayout() {
         console.error('Failed to close terminal session:', error);
       }
     }
+
+    // Remove cluster view state
+    setClusterViewStates(prev => {
+      const next = new Map(prev);
+      next.delete(contextNode.id);
+      return next;
+    });
 
     setOpenClusterContexts(prev => {
       const deleteNodeIdx = prev.findIndex(c => c.id === contextNode.id);
@@ -121,7 +153,14 @@ function MainLayout() {
                 {/* Center top: Cluster information */}
                 <Panel defaultSize={50} minSize={20}>
                   <div className="cluster-info-pane-container">
-                    <ClusterInfoPane selectedContext={selectedContext} />
+                    <ClusterInfoPane
+                      selectedContext={selectedContext}
+                      viewState={
+                        clusterViewStates.get(selectedClusterContext?.id || '') ||
+                        createDefaultClusterViewState()
+                      }
+                      onViewStateChange={handleClusterViewStateChange}
+                    />
                   </div>
                 </Panel>
 

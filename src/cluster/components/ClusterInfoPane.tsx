@@ -1,10 +1,18 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { ContextNode } from '../../lib/contextTree';
 import ResourceKindSidebar from './ResourceKindSidebar';
 import ResourceList, { KubeResource } from './ResourceList';
 import ResourceDetailPane from './ResourceDetailPane';
 import './ClusterInfoPane.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+
+export interface ClusterViewState {
+  selectedKind: string | undefined;
+  selectedResourceDetail: KubeResource | undefined;
+  isDetailLoading: boolean;
+  showDetailPane: boolean;
+  expandedGroups: Set<string>;
+}
 
 // --- Dummy Fetch Detail ---
 // Simulates fetching full details for a specific resource
@@ -85,47 +93,69 @@ const fetchResourceDetail = async (
 
 interface ClusterInfoPaneProps {
   selectedContext: ContextNode | undefined;
+  viewState: ClusterViewState;
+  onViewStateChange: (state: ClusterViewState) => void;
 }
 
 /**
  * Center Pane: Component to display cluster information with sidebar, list, and detail views.
  */
-function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
-  const [selectedKind, setSelectedKind] = useState<string | undefined>(undefined);
-  const [selectedResourceDetail, setSelectedResourceDetail] = useState<KubeResource | undefined>(
-    undefined
-  );
-  const [isDetailLoading, setIsDetailLoading] = useState<boolean>(false);
-  const [showDetailPane, setShowDetailPane] = useState<boolean>(false);
-
+function ClusterInfoPane({ selectedContext, viewState, onViewStateChange }: ClusterInfoPaneProps) {
   const handleKindSelect = (kind: string) => {
-    setSelectedKind(kind);
-    setSelectedResourceDetail(undefined);
-    setShowDetailPane(false);
+    onViewStateChange({
+      ...viewState,
+      selectedKind: kind,
+      selectedResourceDetail: undefined,
+      showDetailPane: false,
+    });
   };
 
-  const handleResourceSelect = useCallback(async (resource: KubeResource) => {
-    setShowDetailPane(true);
-    setIsDetailLoading(true);
-    setSelectedResourceDetail(undefined);
-    try {
-      const details = await fetchResourceDetail(resource);
-      setSelectedResourceDetail(details);
-    } catch (error) {
-      console.error('Failed to fetch resource details:', error);
-      setSelectedResourceDetail(undefined);
-    } finally {
-      setIsDetailLoading(false);
-    }
-  }, []);
+  const handleExpandedGroupsChange = (expandedGroups: Set<string>) => {
+    onViewStateChange({
+      ...viewState,
+      expandedGroups,
+    });
+  };
+
+  const handleResourceSelect = useCallback(
+    async (resource: KubeResource) => {
+      onViewStateChange({
+        ...viewState,
+        showDetailPane: true,
+        isDetailLoading: true,
+        selectedResourceDetail: undefined,
+      });
+      try {
+        const details = await fetchResourceDetail(resource);
+        onViewStateChange({
+          ...viewState,
+          showDetailPane: true,
+          isDetailLoading: false,
+          selectedResourceDetail: details,
+        });
+      } catch (error) {
+        console.error('Failed to fetch resource details:', error);
+        onViewStateChange({
+          ...viewState,
+          showDetailPane: true,
+          isDetailLoading: false,
+          selectedResourceDetail: undefined,
+        });
+      }
+    },
+    [viewState, onViewStateChange]
+  );
 
   const handleCloseDetailPane = () => {
-    setShowDetailPane(false);
-    setSelectedResourceDetail(undefined);
+    onViewStateChange({
+      ...viewState,
+      showDetailPane: false,
+      selectedResourceDetail: undefined,
+    });
   };
 
   const handleDetailPaneResize = (size: number) => {
-    if (size < 5 && showDetailPane) {
+    if (size < 5 && viewState.showDetailPane) {
       handleCloseDetailPane();
     }
   };
@@ -135,15 +165,23 @@ function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
       {selectedContext ? (
         <PanelGroup direction="horizontal">
           <Panel defaultSize={20} minSize={15} maxSize={40} id="sidebar">
-            <ResourceKindSidebar selectedKind={selectedKind} onKindSelect={handleKindSelect} />
+            <ResourceKindSidebar
+              selectedKind={viewState.selectedKind}
+              onKindSelect={handleKindSelect}
+              expandedGroups={viewState.expandedGroups}
+              onExpandedGroupsChange={handleExpandedGroupsChange}
+            />
           </Panel>
           <PanelResizeHandle className="resize-handle-vertical" />
           <Panel minSize={30} id="main-area">
             <PanelGroup direction="vertical">
-              <Panel defaultSize={showDetailPane ? 70 : 100} minSize={20} id="list">
-                <ResourceList selectedKind={selectedKind} onResourceSelect={handleResourceSelect} />
+              <Panel defaultSize={viewState.showDetailPane ? 70 : 100} minSize={20} id="list">
+                <ResourceList
+                  selectedKind={viewState.selectedKind}
+                  onResourceSelect={handleResourceSelect}
+                />
               </Panel>
-              {showDetailPane && (
+              {viewState.showDetailPane && (
                 <>
                   <PanelResizeHandle className="resize-handle-horizontal" />
                   <Panel
@@ -156,8 +194,8 @@ function ClusterInfoPane({ selectedContext }: ClusterInfoPaneProps) {
                     onResize={handleDetailPaneResize}
                   >
                     <ResourceDetailPane
-                      resource={selectedResourceDetail}
-                      isLoading={isDetailLoading}
+                      resource={viewState.selectedResourceDetail}
+                      isLoading={viewState.isDetailLoading}
                       onClose={handleCloseDetailPane}
                     />
                   </Panel>
