@@ -96,6 +96,25 @@ function MainLayout() {
     }
   };
 
+  // Context selection handler from ClusterTabs
+  const handleContextSelectOnTab = (panelId: string, contextNode: ContextNode) => {
+    setSelectedContext(contextNode);
+    setActivePanelId(panelId);
+
+    // Update panel's active context
+    setPanels(prev =>
+      prev.map(panel => {
+        if (panel.id === panelId) {
+          return {
+            ...panel,
+            activeContextId: contextNode.id,
+          };
+        }
+        return panel;
+      })
+    );
+  };
+
   const handleClusterViewStateChange = (compositeKey: string, state: ClusterViewState) => {
     setClusterViewStates(prev => new Map(prev).set(compositeKey, state));
   };
@@ -260,7 +279,7 @@ function MainLayout() {
                     selectedContext={selectedContext}
                     allTerminalSessions={terminalSessions}
                     allClusterViewStates={clusterViewStates}
-                    onSelectCluster={handleContextNodeSelect}
+                    onSelectCluster={contextNode => handleContextSelectOnTab(panel.id, contextNode)}
                     onCloseCluster={contextNode => handleContextNodeClose(panel.id, contextNode)}
                     onReloadCluster={contextNode => handleReloadCluster(panel.id, contextNode)}
                     onSplitRight={contextNode => handleSplitRight(panel.id, contextNode)}
