@@ -8,6 +8,7 @@ import { listen } from '@tauri-apps/api/event';
 import { debug } from '@tauri-apps/plugin-log';
 import { ContextNode } from '../../lib/contextTree';
 import { usePreferences } from '../../contexts/PreferencesContext';
+import { loadPreferences } from '../../lib/fs';
 
 interface TerminalPaneProps {
   selectedContext: ContextNode | undefined;
@@ -75,34 +76,15 @@ function TerminalPane({ selectedContext, terminalSession }: TerminalPaneProps) {
 }
 
 export const createTerminalSession = async (
-  selectedContext: ContextNode,
-  shellPath: string
+  selectedContext: ContextNode
 ): Promise<TerminalSession> => {
+  const preferences = await loadPreferences();
+
   // Create new terminal instance
   const term = new Terminal({
-    theme: {
-      background: '#1e1e1e',
-      foreground: '#d4d4d4',
-      cursor: '#ffffff',
-      black: '#000000',
-      red: '#cd3131',
-      green: '#0dbc79',
-      yellow: '#e5e510',
-      blue: '#2472c8',
-      magenta: '#bc3fbc',
-      cyan: '#11a8cd',
-      white: '#e5e5e5',
-      brightBlack: '#666666',
-      brightRed: '#f14c4c',
-      brightGreen: '#23d18b',
-      brightYellow: '#f5f543',
-      brightBlue: '#3b8eea',
-      brightMagenta: '#d670d6',
-      brightCyan: '#29b8db',
-      brightWhite: '#e5e5e5',
-    },
-    fontSize: 12,
-    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    theme: preferences.terminal.theme,
+    fontSize: preferences.terminal.fontSize,
+    fontFamily: preferences.terminal.fontFamily,
     cursorBlink: true,
     rows: 24,
     cols: 80,
@@ -117,7 +99,9 @@ export const createTerminalSession = async (
   debug(`createTerminalSession: Creating session for ${selectedContext.name}`);
 
   // Create terminal session on backend
-  const sessionId = (await invoke('create_terminal_session', { shellPath })) as string;
+  const sessionId = (await invoke('create_terminal_session', {
+    shellPath: preferences.terminal.shellPath,
+  })) as string;
 
   // Handle terminal input
   term.onData(data => {

@@ -48,7 +48,7 @@ function MainLayout() {
       } else {
         debug(`MainLayout: Creating new session for ${contextNode.name}`);
         try {
-          const session = await createTerminalSession(contextNode, preferences.terminal.shellPath);
+          const session = await createTerminalSession(contextNode);
           setTerminalSessions(prev => new Map(prev).set(contextNode.name, session));
           setTerminalSession(session);
         } catch (error) {
