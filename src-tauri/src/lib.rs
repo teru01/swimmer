@@ -1,6 +1,7 @@
 mod terminal;
 
 use kube::config::Kubeconfig;
+use log::LevelFilter;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
@@ -47,6 +48,14 @@ pub fn run() {
     let terminal_sessions: TerminalSessions = Arc::new(Mutex::new(HashMap::new()));
 
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(LevelFilter::Debug)
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::Stdout,
+                ))
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .manage(terminal_sessions)
         .invoke_handler(tauri::generate_handler![

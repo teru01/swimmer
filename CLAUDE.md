@@ -10,6 +10,7 @@
 - Always add a newline at the end of each file
 - Always run formatters before completing tasks
 - Always run linters and fix errors
+- Always check compilation error and fix it.
 - Minor linter warnings may be ignored
 - When you edit TypeScript, always use undefined instead of null if you can.
 - Write comments only for function, interface. Don't put comments for plain flow.

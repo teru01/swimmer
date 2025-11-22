@@ -5,12 +5,23 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { debug } from '@tauri-apps/plugin-log';
 import { ContextNode } from '../../lib/contextTree';
 import { usePreferences } from '../../contexts/PreferencesContext';
 
 interface TerminalPaneProps {
   selectedContext: ContextNode | undefined;
 }
+
+interface TerminalSession {
+  terminal: Terminal;
+  sessionId: string;
+  unlisten: () => void;
+  fitAddon: FitAddon;
+}
+
+// Store terminal sessions per context
+const terminalSessions = new Map<string, TerminalSession>();
 
 /**
  * Terminal pane component with real terminal functionality
@@ -19,11 +30,29 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const fitAddon = useRef<FitAddon | undefined>(undefined);
   const { preferences } = usePreferences();
+  const contextKey = selectedContext?.name || 'default';
 
-  // Initialize terminal
+  // Initialize or restore terminal for current context
   useEffect(() => {
     if (!terminalRef.current) return;
 
+    debug(`TerminalPane: contextKey=${contextKey}`);
+
+    // Check if session already exists for this context
+    const existingSession = terminalSessions.get(contextKey);
+    if (existingSession) {
+      debug('TerminalPane: Restoring existing session');
+      // Restore existing session
+      const { terminal, fitAddon: fit } = existingSession;
+      terminal.open(terminalRef.current);
+      fit.fit();
+      fitAddon.current = fit;
+      return;
+    }
+
+    debug('TerminalPane: Creating new terminal session');
+
+    // Create new terminal instance
     const term = new Terminal({
       theme: {
         background: '#1e1e1e',
@@ -68,7 +97,7 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
     let unlistenFn: (() => void) | undefined = undefined;
 
     // Handle terminal input
-    const inputDisposable = term.onData(data => {
+    term.onData(data => {
       if (currentSessionId) {
         invoke('write_to_terminal', { sessionId: currentSessionId, data }).catch(console.error);
       }
@@ -96,6 +125,14 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
 
         // Setup listener after session is created
         unlistenFn = await setupListener(currentSessionId);
+
+        // Store session for this context
+        terminalSessions.set(contextKey, {
+          terminal: term,
+          sessionId: currentSessionId,
+          unlisten: unlistenFn,
+          fitAddon: fit,
+        });
       })
       .catch((error: unknown) => {
         console.error('Failed to create terminal session:', error);
@@ -104,16 +141,10 @@ function TerminalPane({ selectedContext }: TerminalPaneProps) {
       });
 
     return () => {
-      inputDisposable.dispose();
-      term.dispose();
-      if (unlistenFn) {
-        unlistenFn();
-      }
-      if (currentSessionId) {
-        invoke('close_terminal_session', { sessionId: currentSessionId }).catch(console.error);
-      }
+      // Don't dispose terminal, just detach it
+      // Session will be reused when switching back
     };
-  }, [selectedContext, preferences.terminal.shellPath]);
+  }, [contextKey]);
 
   // Handle terminal pane resize
   useEffect(() => {
