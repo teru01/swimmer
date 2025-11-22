@@ -13,6 +13,7 @@ import { loadPreferences } from '../../lib/fs';
 interface TerminalPaneProps {
   selectedContext: ContextNode | undefined;
   terminalSession: TerminalSession | undefined;
+  allTerminalSessions: Map<string, TerminalSession>;
 }
 
 export interface TerminalSession {
@@ -20,49 +21,85 @@ export interface TerminalSession {
   sessionId: string;
   unlisten: () => void;
   fitAddon: FitAddon;
+  contextId: string;
+  mounted: boolean;
 }
 
 /**
  * Terminal pane component with real terminal functionality
  */
-function TerminalPane({ selectedContext, terminalSession }: TerminalPaneProps) {
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const fitAddon = useRef<FitAddon | undefined>(undefined);
-  const contextKey = selectedContext?.name || 'default';
+function TerminalPane({
+  selectedContext,
+  terminalSession,
+  allTerminalSessions,
+}: TerminalPaneProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Restore terminal session when it changes
+  // Mount all terminal sessions and keep them in DOM
   useEffect(() => {
-    if (!terminalRef.current || !terminalSession) return;
+    if (!containerRef.current) return;
 
-    debug(`TerminalPane: Mounting terminal for contextKey=${contextKey}`);
+    const container = containerRef.current;
 
-    const { terminal, fitAddon: fit } = terminalSession;
-    terminal.open(terminalRef.current);
-    fit.fit();
-    fitAddon.current = fit;
+    allTerminalSessions.forEach((session, contextId) => {
+      if (!session.mounted) {
+        debug(`TerminalPane: Mounting terminal for contextId=${contextId}`);
 
-    return () => {
-      debug(`TerminalPane: Unmounting terminal for contextKey=${contextKey}`);
-      // Don't dispose, just detach
-    };
-  }, [terminalSession, contextKey]);
+        const terminalDiv = document.createElement('div');
+        terminalDiv.className = 'terminal-instance';
+        terminalDiv.setAttribute('data-context-id', contextId);
+        terminalDiv.style.width = '100%';
+        terminalDiv.style.height = '100%';
+        terminalDiv.style.display = 'none'; // Initially hidden
+
+        container.appendChild(terminalDiv);
+        session.terminal.open(terminalDiv);
+        session.fitAddon.fit();
+        session.mounted = true;
+      }
+    });
+  }, [allTerminalSessions]);
+
+  // Show/hide terminals based on active session
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const container = containerRef.current;
+    const allTerminalDivs = container.querySelectorAll('.terminal-instance');
+
+    allTerminalDivs.forEach(div => {
+      const htmlDiv = div as HTMLDivElement;
+      const contextId = htmlDiv.getAttribute('data-context-id');
+
+      if (contextId === selectedContext?.id) {
+        htmlDiv.style.display = 'block';
+        // Fit terminal when it becomes visible
+        const session = allTerminalSessions.get(contextId);
+        if (session) {
+          session.fitAddon.fit();
+        }
+      } else {
+        htmlDiv.style.display = 'none';
+      }
+    });
+  }, [selectedContext, allTerminalSessions]);
 
   // Handle terminal pane resize
   useEffect(() => {
-    if (!terminalRef.current || !fitAddon.current) return;
+    if (!containerRef.current || !terminalSession) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      if (fitAddon.current) {
-        fitAddon.current.fit();
+      if (terminalSession?.fitAddon) {
+        terminalSession.fitAddon.fit();
       }
     });
 
-    resizeObserver.observe(terminalRef.current);
+    resizeObserver.observe(containerRef.current);
 
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [terminalSession]);
 
   return (
     <div className="terminal-pane">
@@ -70,7 +107,7 @@ function TerminalPane({ selectedContext, terminalSession }: TerminalPaneProps) {
         <span>Terminal</span>
         <span>{selectedContext ? `Context: ${selectedContext.name}` : 'No context selected'}</span>
       </div>
-      <div className="terminal-container" ref={terminalRef} />
+      <div className="terminal-container" ref={containerRef} />
     </div>
   );
 }
@@ -123,6 +160,8 @@ export const createTerminalSession = async (
     sessionId,
     unlisten,
     fitAddon: fit,
+    contextId: selectedContext.id,
+    mounted: false,
   };
 };
 

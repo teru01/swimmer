@@ -42,14 +42,14 @@ function MainLayout() {
       );
 
       // Get or create terminal session
-      if (terminalSessions.has(contextNode.name)) {
-        debug(`MainLayout: Restoring session for ${contextNode.name}`);
-        setTerminalSession(terminalSessions.get(contextNode.name));
+      if (terminalSessions.has(contextNode.id)) {
+        debug(`MainLayout: Restoring session for ${contextNode.id}`);
+        setTerminalSession(terminalSessions.get(contextNode.id));
       } else {
-        debug(`MainLayout: Creating new session for ${contextNode.name}`);
+        debug(`MainLayout: Creating new session for ${contextNode.id}`);
         try {
           const session = await createTerminalSession(contextNode);
-          setTerminalSessions(prev => new Map(prev).set(contextNode.name, session));
+          setTerminalSessions(prev => new Map(prev).set(contextNode.id, session));
           setTerminalSession(session);
         } catch (error) {
           console.error('Failed to create terminal session:', error);
@@ -117,6 +117,7 @@ function MainLayout() {
                   <TerminalPane
                     selectedContext={selectedContext}
                     terminalSession={terminalSession}
+                    allTerminalSessions={terminalSessions}
                   />
                 </Panel>
               </PanelGroup>
