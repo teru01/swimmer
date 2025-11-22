@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -7,12 +7,10 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { debug } from '@tauri-apps/plugin-log';
 import { ContextNode } from '../../lib/contextTree';
-import { usePreferences } from '../../contexts/PreferencesContext';
 import { loadPreferences } from '../../lib/fs';
 
 interface TerminalPaneProps {
   selectedContext: ContextNode | undefined;
-  terminalSession: TerminalSession | undefined;
   allTerminalSessions: Map<string, TerminalSession>;
 }
 
@@ -28,11 +26,7 @@ export interface TerminalSession {
 /**
  * Terminal pane component with real terminal functionality
  */
-function TerminalPane({
-  selectedContext,
-  terminalSession,
-  allTerminalSessions,
-}: TerminalPaneProps) {
+function TerminalPane({ selectedContext, allTerminalSessions }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Mount all terminal sessions and keep them in DOM
@@ -41,6 +35,7 @@ function TerminalPane({
 
     const container = containerRef.current;
 
+    // Mount new sessions
     allTerminalSessions.forEach((session, contextId) => {
       if (!session.mounted) {
         debug(`TerminalPane: Mounting terminal for contextId=${contextId}`);
@@ -56,6 +51,17 @@ function TerminalPane({
         session.terminal.open(terminalDiv);
         session.fitAddon.fit();
         session.mounted = true;
+      }
+    });
+
+    // Remove DOM elements for sessions that no longer exist
+    const allTerminalDivs = container.querySelectorAll('.terminal-instance');
+    allTerminalDivs.forEach(div => {
+      const htmlDiv = div as HTMLDivElement;
+      const contextId = htmlDiv.getAttribute('data-context-id');
+      if (contextId && !allTerminalSessions.has(contextId)) {
+        debug(`TerminalPane: Removing terminal DOM for contextId=${contextId}`);
+        container.removeChild(htmlDiv);
       }
     });
   }, [allTerminalSessions]);
@@ -86,11 +92,13 @@ function TerminalPane({
 
   // Handle terminal pane resize
   useEffect(() => {
-    if (!containerRef.current || !terminalSession) return;
+    if (!containerRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      if (terminalSession?.fitAddon) {
-        terminalSession.fitAddon.fit();
+      // Fit the currently visible terminal
+      const visibleSession = allTerminalSessions.get(selectedContext?.id || '');
+      if (visibleSession) {
+        visibleSession.fitAddon.fit();
       }
     });
 
@@ -99,7 +107,7 @@ function TerminalPane({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [terminalSession]);
+  }, [selectedContext, allTerminalSessions]);
 
   return (
     <div className="terminal-pane">

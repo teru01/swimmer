@@ -8,6 +8,7 @@ import TerminalPane, {
 } from '../cluster/components/TerminalPane';
 import ChatPane from '../chat/components/ChatPane';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { invoke } from '@tauri-apps/api/core';
 import { debug } from '@tauri-apps/plugin-log';
 import './resizable.css';
 import { ContextNode, NodeType } from '../lib/contextTree';
@@ -29,7 +30,6 @@ function MainLayout() {
   // include folder
   const [selectedContext, setSelectedContext] = useState<ContextNode | undefined>(undefined);
   const [openClusterContexts, setOpenClusterContexts] = useState<ContextNode[]>([]);
-  const [terminalSession, setTerminalSession] = useState<TerminalSession | undefined>(undefined);
   const [terminalSessions, setTerminalSessions] = useState<Map<string, TerminalSession>>(new Map());
 
   // Context selection handler
@@ -42,15 +42,11 @@ function MainLayout() {
       );
 
       // Get or create terminal session
-      if (terminalSessions.has(contextNode.id)) {
-        debug(`MainLayout: Restoring session for ${contextNode.id}`);
-        setTerminalSession(terminalSessions.get(contextNode.id));
-      } else {
+      if (!terminalSessions.has(contextNode.id)) {
         debug(`MainLayout: Creating new session for ${contextNode.id}`);
         try {
           const session = await createTerminalSession(contextNode);
           setTerminalSessions(prev => new Map(prev).set(contextNode.id, session));
-          setTerminalSession(session);
         } catch (error) {
           console.error('Failed to create terminal session:', error);
         }
@@ -58,7 +54,27 @@ function MainLayout() {
     }
   };
 
-  const handleContextNodeClose = (contextNode: ContextNode) => {
+  const handleContextNodeClose = async (contextNode: ContextNode) => {
+    // Close terminal session
+    const session = terminalSessions.get(contextNode.id);
+    if (session) {
+      debug(`MainLayout: Closing terminal session for ${contextNode.id}`);
+      try {
+        // Close backend session
+        await invoke('close_terminal_session', { sessionId: session.sessionId });
+        // Cleanup frontend
+        session.unlisten();
+        session.terminal.dispose();
+        setTerminalSessions(prev => {
+          const next = new Map(prev);
+          next.delete(contextNode.id);
+          return next;
+        });
+      } catch (error) {
+        console.error('Failed to close terminal session:', error);
+      }
+    }
+
     setOpenClusterContexts(prev => {
       const deleteNodeIdx = prev.findIndex(c => c.id === contextNode.id);
       const newContexts = prev.filter(c => c.id !== contextNode.id);
@@ -68,7 +84,6 @@ function MainLayout() {
         setSelectedClusterContext(next);
         setSelectedContext(next);
       }
-      console.info(newContexts);
       return newContexts;
     });
   };
@@ -116,7 +131,6 @@ function MainLayout() {
                 <Panel defaultSize={50} minSize={20}>
                   <TerminalPane
                     selectedContext={selectedContext}
-                    terminalSession={terminalSession}
                     allTerminalSessions={terminalSessions}
                   />
                 </Panel>
