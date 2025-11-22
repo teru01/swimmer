@@ -1,14 +1,13 @@
-import { ContextNode } from '../../lib/contextTree';
 import { ClusterContextTab } from '../types/panel';
 import { useTabContextMenu } from './useTabContextMenu';
 
 interface ClusterTabsProps {
   tabs: ClusterContextTab[];
   activeContextId: string | undefined;
-  onSelectCluster: (clusterContext: ContextNode) => void;
-  onCloseCluster: (clusterContext: ContextNode) => void;
-  onReloadCluster?: (clusterContext: ContextNode) => void;
-  onSplitRight?: (clusterContext: ContextNode) => void;
+  onSelectCluster: (tab: ClusterContextTab) => void;
+  onCloseCluster: (tab: ClusterContextTab) => void;
+  onReloadCluster?: (tab: ClusterContextTab) => void;
+  onSplitRight?: (tab: ClusterContextTab) => void;
 }
 
 /**
@@ -32,26 +31,18 @@ function ClusterTabs({
   return (
     <div className="cluster-tabs">
       {tabs.map(tab => {
-        // Reconstruct ContextNode for callbacks
-        const contextNode: ContextNode = {
-          id: `context-${tab.clusterContext.id}`,
-          name: tab.clusterContext.clusterName,
-          type: 'context' as const,
-          clusterContext: tab.clusterContext,
-        };
-
         return (
           <div
-            key={tab.clusterContext.id}
+            key={tab.id}
             className={`cluster-tab ${activeContextId === tab.clusterContext.id ? 'active' : ''}`}
-            onClick={() => onClusterSelect(contextNode)}
-            onContextMenu={e => handleContextMenu(e, contextNode)}
+            onClick={() => onClusterSelect(tab)}
+            onContextMenu={e => handleContextMenu(e, tab)}
           >
             {tab.clusterContext.clusterName}
             <button
               onClick={e => {
                 e.stopPropagation();
-                onCloseCluster(contextNode);
+                onCloseCluster(tab);
               }}
             >
               x

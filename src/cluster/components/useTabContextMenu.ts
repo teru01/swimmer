@@ -1,12 +1,11 @@
 import { Menu } from '@tauri-apps/api/menu';
-import { ContextNode } from '../../lib/contextTree';
 import { ClusterContextTab } from '../types/panel';
 
 interface UseTabContextMenuProps {
   tabs: ClusterContextTab[];
-  onCloseTab: (node: ContextNode) => void;
-  onReloadTab?: (node: ContextNode) => void;
-  onSplitRight?: (node: ContextNode) => void;
+  onCloseTab: (tab: ClusterContextTab) => void;
+  onReloadTab?: (tab: ClusterContextTab) => void;
+  onSplitRight?: (tab: ClusterContextTab) => void;
 }
 
 export const useTabContextMenu = ({
@@ -15,7 +14,7 @@ export const useTabContextMenu = ({
   onReloadTab,
   onSplitRight,
 }: UseTabContextMenuProps) => {
-  const handleContextMenu = async (e: React.MouseEvent, node: ContextNode) => {
+  const handleContextMenu = async (e: React.MouseEvent, tab: ClusterContextTab) => {
     e.preventDefault();
 
     const menu = await Menu.new({
@@ -23,22 +22,15 @@ export const useTabContextMenu = ({
         {
           id: 'close',
           text: 'Close',
-          action: () => onCloseTab(node),
+          action: () => onCloseTab(tab),
         },
         {
           id: 'close-others',
           text: 'Close Others',
           action: () => {
-            tabs.forEach(tab => {
-              if (tab.clusterContext.id !== node.clusterContext?.id) {
-                // Reconstruct ContextNode for callback
-                const contextNode: ContextNode = {
-                  id: `context-${tab.clusterContext.id}`,
-                  name: tab.clusterContext.clusterName,
-                  type: 'context' as const,
-                  clusterContext: tab.clusterContext,
-                };
-                onCloseTab(contextNode);
+            tabs.forEach(t => {
+              if (t.id !== tab.id) {
+                onCloseTab(t);
               }
             });
           },
@@ -52,7 +44,7 @@ export const useTabContextMenu = ({
           text: 'Split Right',
           action: () => {
             if (onSplitRight) {
-              onSplitRight(node);
+              onSplitRight(tab);
             }
           },
         },
@@ -65,7 +57,7 @@ export const useTabContextMenu = ({
           text: 'Reload',
           action: () => {
             if (onReloadTab) {
-              onReloadTab(node);
+              onReloadTab(tab);
             }
           },
         },

@@ -12,6 +12,7 @@ import { ContextNode, NodeType } from '../lib/contextTree';
 import { usePreferences } from '../contexts/PreferencesContext';
 import {
   ClusterOperationPanel,
+  ClusterContextTab,
   generatePanelId,
   createCompositeKey,
   newClusterContextTab,
@@ -106,17 +107,24 @@ function MainLayout() {
   };
 
   // Context selection handler from ClusterTabs
-  const handleContextSelectOnTab = (panelId: string, contextNode: ContextNode) => {
+  const handleContextSelectOnTab = (tab: ClusterContextTab) => {
+    // Reconstruct ContextNode for setSelectedContext
+    const contextNode: ContextNode = {
+      id: `context-${tab.clusterContext.id}`,
+      name: tab.clusterContext.clusterName,
+      type: NodeType.Context,
+      clusterContext: tab.clusterContext,
+    };
     setSelectedContext(contextNode);
-    setActivePanelId(panelId);
+    setActivePanelId(tab.panelId);
 
     // Update panel's active context
     setPanels(prev =>
       prev.map(panel => {
-        if (panel.id === panelId && contextNode.clusterContext) {
+        if (panel.id === tab.panelId) {
           return {
             ...panel,
-            activeContextId: contextNode.clusterContext.id,
+            activeContextId: tab.clusterContext.id,
           };
         }
         return panel;
@@ -128,10 +136,8 @@ function MainLayout() {
     setClusterViewStates(prev => new Map(prev).set(compositeKey, state));
   };
 
-  const handleReloadCluster = async (panelId: string, contextNode: ContextNode) => {
-    if (!contextNode.clusterContext) return;
-
-    const compositeKey = createCompositeKey(panelId, contextNode.clusterContext.id);
+  const handleReloadCluster = async (tab: ClusterContextTab) => {
+    const compositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
     debug(`MainLayout: Reloading cluster ${compositeKey}`);
 
     // Reset cluster view state to default
@@ -145,6 +151,14 @@ function MainLayout() {
         session.unlisten();
         session.terminal.dispose();
 
+        // Reconstruct ContextNode for createTerminalSession
+        const contextNode: ContextNode = {
+          id: `context-${tab.clusterContext.id}`,
+          name: tab.clusterContext.clusterName,
+          type: NodeType.Context,
+          clusterContext: tab.clusterContext,
+        };
+
         // Create new session
         const newSession = await createTerminalSession(contextNode, compositeKey);
         setTerminalSessions(prev => new Map(prev).set(compositeKey, newSession));
@@ -154,10 +168,8 @@ function MainLayout() {
     }
   };
 
-  const handleContextNodeClose = async (panelId: string, contextNode: ContextNode) => {
-    if (!contextNode.clusterContext) return;
-
-    const compositeKey = createCompositeKey(panelId, contextNode.clusterContext.id);
+  const handleContextNodeClose = async (tab: ClusterContextTab) => {
+    const compositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
 
     // Close terminal session
     const session = terminalSessions.get(compositeKey);
@@ -188,16 +200,12 @@ function MainLayout() {
     setPanels(prev => {
       return prev
         .map(panel => {
-          if (panel.id === panelId) {
-            const deleteTabIdx = panel.tabs.findIndex(
-              tab => tab.clusterContext.id === contextNode.clusterContext!.id
-            );
-            const newTabs = panel.tabs.filter(
-              tab => tab.clusterContext.id !== contextNode.clusterContext!.id
-            );
+          if (panel.id === tab.panelId) {
+            const deleteTabIdx = panel.tabs.findIndex(t => t.id === tab.id);
+            const newTabs = panel.tabs.filter(t => t.id !== tab.id);
 
             let newActiveContextId = panel.activeContextId;
-            if (panel.activeContextId === contextNode.clusterContext!.id) {
+            if (panel.activeContextId === tab.clusterContext.id) {
               const nextTab = newTabs[Math.max(0, deleteTabIdx - 1)];
               newActiveContextId = nextTab?.clusterContext.id;
               if (nextTab) {
@@ -224,19 +232,19 @@ function MainLayout() {
     });
   };
 
-  const handleSplitRight = async (panelId: string, contextNode: ContextNode) => {
+  const handleSplitRight = async (tab: ClusterContextTab) => {
     // Check max panels limit (10)
     if (panels.length >= 10) {
       debug('MainLayout: Cannot split, maximum 10 panels reached');
       return;
     }
 
-    const sourcePanel = panels.find(p => p.id === panelId);
-    if (!sourcePanel || !contextNode.clusterContext) return;
+    const sourcePanel = panels.find(p => p.id === tab.panelId);
+    if (!sourcePanel) return;
 
     const newPanelId = generatePanelId();
 
-    const clusterContextTab = newClusterContextTab(newPanelId, contextNode.clusterContext);
+    const clusterContextTab = newClusterContextTab(newPanelId, tab.clusterContext);
 
     // Create new panel with the same context
     setPanels(prev => [
@@ -244,13 +252,21 @@ function MainLayout() {
       {
         id: newPanelId,
         tabs: [clusterContextTab],
-        activeContextId: contextNode.clusterContext!.id,
+        activeContextId: tab.clusterContext.id,
       },
     ]);
 
     // Copy terminal session state
-    const sourceCompositeKey = createCompositeKey(panelId, contextNode.clusterContext.id);
-    const newCompositeKey = createCompositeKey(newPanelId, contextNode.clusterContext.id);
+    const sourceCompositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
+    const newCompositeKey = createCompositeKey(newPanelId, tab.clusterContext.id);
+
+    // Reconstruct ContextNode for createTerminalSession
+    const contextNode: ContextNode = {
+      id: `context-${tab.clusterContext.id}`,
+      name: tab.clusterContext.clusterName,
+      type: NodeType.Context,
+      clusterContext: tab.clusterContext,
+    };
 
     try {
       const newSession = await createTerminalSession(contextNode, newCompositeKey);
@@ -304,10 +320,10 @@ function MainLayout() {
                     panel={panel}
                     allTerminalSessions={terminalSessions}
                     allClusterViewStates={clusterViewStates}
-                    onSelectCluster={contextNode => handleContextSelectOnTab(panel.id, contextNode)}
-                    onCloseCluster={contextNode => handleContextNodeClose(panel.id, contextNode)}
-                    onReloadCluster={contextNode => handleReloadCluster(panel.id, contextNode)}
-                    onSplitRight={contextNode => handleSplitRight(panel.id, contextNode)}
+                    onSelectCluster={handleContextSelectOnTab}
+                    onCloseCluster={handleContextNodeClose}
+                    onReloadCluster={handleReloadCluster}
+                    onSplitRight={handleSplitRight}
                     onViewStateChange={handleClusterViewStateChange}
                     panelWidth={panelWidth}
                   />

@@ -3,16 +3,16 @@ import ClusterTabs from './ClusterTabs';
 import ClusterInfoPane, { ClusterViewState } from './ClusterInfoPane';
 import TerminalPane, { TerminalSession } from './TerminalPane';
 import { ContextNode } from '../../lib/contextTree';
-import { ClusterOperationPanel } from '../types/panel';
+import { ClusterOperationPanel, ClusterContextTab } from '../types/panel';
 
 interface ClusterOperationPanelComponentProps {
   panel: ClusterOperationPanel;
   allTerminalSessions: Map<string, TerminalSession>;
   allClusterViewStates: Map<string, ClusterViewState>;
-  onSelectCluster: (contextNode: ContextNode) => void;
-  onCloseCluster: (contextNode: ContextNode) => void;
-  onReloadCluster: (contextNode: ContextNode) => void;
-  onSplitRight: (contextNode: ContextNode) => void;
+  onSelectCluster: (tab: ClusterContextTab) => void;
+  onCloseCluster: (tab: ClusterContextTab) => void;
+  onReloadCluster: (tab: ClusterContextTab) => void;
+  onSplitRight: (tab: ClusterContextTab) => void;
   onViewStateChange: (compositeKey: string, state: ClusterViewState) => void;
   panelWidth: string;
 }
