@@ -2,7 +2,7 @@ import React from 'react';
 import './ClusterInfoPane.css';
 
 // Define resource groups and their kinds
-const resourceGroups = [
+export const resourceGroups = [
   {
     groupName: 'Overview',
     kinds: ['Overview'],

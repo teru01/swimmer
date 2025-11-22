@@ -34,7 +34,7 @@ function ClusterOperationPanelComponent({
   panelWidth,
 }: ClusterOperationPanelComponentProps) {
   const activeCluster = panel.contextNodes.find(node => node.id === panel.activeContextId);
-  const activeContextForThisPanel = activeCluster || selectedContext;
+  const activeContextForThisPanel = activeCluster;
 
   return (
     <div className="cluster-operation-panel" style={{ width: panelWidth }}>

@@ -27,7 +27,7 @@ export const gkeProvider: ContextProvider = {
       name: 'GKE',
       type: NodeType.Folder,
       children: [],
-      isExpanded: false,
+      isExpanded: true,
     };
 
     contexts.forEach(context => {
@@ -44,7 +44,7 @@ export const gkeProvider: ContextProvider = {
           name: project,
           type: NodeType.Folder,
           children: [],
-          isExpanded: false,
+          isExpanded: true,
           parentId: root.id,
         };
         projectsMap[project] = projectNode;
@@ -59,7 +59,7 @@ export const gkeProvider: ContextProvider = {
           name: region,
           type: NodeType.Folder,
           children: [],
-          isExpanded: false,
+          isExpanded: true,
           parentId: projectNode.id,
         };
         projectNode.children?.push(regionNode);

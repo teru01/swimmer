@@ -27,7 +27,7 @@ export interface TerminalSession {
   sessionId: string;
   unlisten: () => void;
   fitAddon: FitAddon;
-  contextId: string;
+  compositeKey: string;
   mounted: boolean;
 }
 
@@ -41,7 +41,7 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
   useEffect(() => {
     if (!terminalRef.current || session.mounted) return;
 
-    debug(`TerminalInstance: Mounting terminal for ${session.contextId}`);
+    debug(`TerminalInstance: Mounting terminal for ${session.compositeKey}`);
     session.terminal.open(terminalRef.current);
     session.fitAddon.fit();
     session.mounted = true;
@@ -100,23 +100,22 @@ function TerminalPane({ panelId, selectedContext, allTerminalSessions }: Termina
       </div>
       <div className="terminal-container" ref={containerRef}>
         {selectedContext &&
-          Array.from(allTerminalSessions.entries()).map(([compositeKey, session]) => {
-            const currentCompositeKey = createCompositeKey(panelId, selectedContext.id);
-            return (
-              <TerminalInstance
-                key={compositeKey}
-                session={session}
-                isVisible={compositeKey === currentCompositeKey}
-              />
-            );
-          })}
+          Array.from(allTerminalSessions.entries())
+            .filter(([compositeKey]) => {
+              const currentCompositeKey = createCompositeKey(panelId, selectedContext.id);
+              return compositeKey === currentCompositeKey;
+            })
+            .map(([compositeKey, session]) => (
+              <TerminalInstance key={compositeKey} session={session} isVisible={true} />
+            ))}
       </div>
     </div>
   );
 }
 
 export const createTerminalSession = async (
-  selectedContext: ContextNode
+  selectedContext: ContextNode,
+  compositeKey: string
 ): Promise<TerminalSession> => {
   const preferences = await loadPreferences();
 
@@ -136,7 +135,7 @@ export const createTerminalSession = async (
   term.loadAddon(fit);
   term.loadAddon(webLinks);
 
-  debug(`createTerminalSession: Creating session for ${selectedContext.name}`);
+  debug(`createTerminalSession: Creating session for ${selectedContext.name} (${compositeKey})`);
 
   // Create terminal session on backend
   const sessionId = (await invoke('create_terminal_session', {
@@ -163,7 +162,7 @@ export const createTerminalSession = async (
     sessionId,
     unlisten,
     fitAddon: fit,
-    contextId: selectedContext.id,
+    compositeKey,
     mounted: false,
   };
 };

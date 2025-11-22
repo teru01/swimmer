@@ -11,13 +11,14 @@ import './resizable.css';
 import { ContextNode, NodeType } from '../lib/contextTree';
 import { usePreferences } from '../contexts/PreferencesContext';
 import { ClusterOperationPanel, generatePanelId, createCompositeKey } from '../cluster/types/panel';
+import { resourceGroups } from '../cluster/components/ResourceKindSidebar';
 
 const createDefaultClusterViewState = (): ClusterViewState => ({
   selectedKind: undefined,
   selectedResourceDetail: undefined,
   isDetailLoading: false,
   showDetailPane: false,
-  expandedGroups: new Set(['Overview', 'Cluster', 'Workloads']),
+  expandedGroups: new Set(resourceGroups.map(group => group.groupName)),
 });
 
 /**
@@ -78,7 +79,7 @@ function MainLayout() {
       if (!terminalSessions.has(compositeKey)) {
         debug(`MainLayout: Creating new session for ${compositeKey}`);
         try {
-          const session = await createTerminalSession(contextNode);
+          const session = await createTerminalSession(contextNode, compositeKey);
           setTerminalSessions(prev => new Map(prev).set(compositeKey, session));
         } catch (error) {
           console.error('Failed to create terminal session:', error);
@@ -115,7 +116,7 @@ function MainLayout() {
         session.terminal.dispose();
 
         // Create new session
-        const newSession = await createTerminalSession(contextNode);
+        const newSession = await createTerminalSession(contextNode, compositeKey);
         setTerminalSessions(prev => new Map(prev).set(compositeKey, newSession));
       } catch (error) {
         console.error('Failed to reload terminal session:', error);
@@ -207,7 +208,7 @@ function MainLayout() {
     const newCompositeKey = createCompositeKey(newPanelId, contextNode.id);
 
     try {
-      const newSession = await createTerminalSession(contextNode);
+      const newSession = await createTerminalSession(contextNode, newCompositeKey);
       setTerminalSessions(prev => new Map(prev).set(newCompositeKey, newSession));
     } catch (error) {
       console.error('Failed to create terminal session for split panel:', error);

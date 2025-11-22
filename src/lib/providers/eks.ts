@@ -27,7 +27,7 @@ export const eksProvider: ContextProvider = {
       name: 'AWS',
       type: NodeType.Folder,
       children: [],
-      isExpanded: false,
+      isExpanded: true,
     };
 
     contexts.forEach(context => {
@@ -44,7 +44,7 @@ export const eksProvider: ContextProvider = {
           name: account,
           type: NodeType.Folder,
           children: [],
-          isExpanded: false,
+          isExpanded: true,
           parentId: root.id,
         };
         accountsMap[account] = accountNode;
@@ -59,7 +59,7 @@ export const eksProvider: ContextProvider = {
           name: region,
           type: NodeType.Folder,
           children: [],
-          isExpanded: false,
+          isExpanded: true,
           parentId: accountNode.id,
         };
         accountNode.children?.push(regionNode);

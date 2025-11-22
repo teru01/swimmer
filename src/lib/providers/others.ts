@@ -22,7 +22,7 @@ export const othersProvider: ContextProvider = {
       name: 'Others',
       type: NodeType.Folder,
       children: [],
-      isExpanded: false,
+      isExpanded: true,
     };
 
     contexts.forEach(context => {
