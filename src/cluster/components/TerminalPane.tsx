@@ -103,15 +103,12 @@ function TerminalPane({ panelId, selectedClusterContext, allTerminalSessions }: 
         </span>
       </div>
       <div className="terminal-container" ref={containerRef}>
-        {selectedClusterContext &&
-          Array.from(allTerminalSessions.entries())
-            .filter(([compositeKey]) => {
-              const currentCompositeKey = createCompositeKey(panelId, selectedClusterContext.id);
-              return compositeKey === currentCompositeKey;
-            })
-            .map(([compositeKey, session]) => (
-              <TerminalInstance key={compositeKey} session={session} isVisible={true} />
-            ))}
+        {Array.from(allTerminalSessions.entries()).map(([compositeKey, session]) => {
+          const isVisible =
+            selectedClusterContext &&
+            compositeKey === createCompositeKey(panelId, selectedClusterContext.id);
+          return <TerminalInstance key={compositeKey} session={session} isVisible={!!isVisible} />;
+        })}
       </div>
     </div>
   );
