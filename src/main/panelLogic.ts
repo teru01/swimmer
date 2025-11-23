@@ -167,6 +167,27 @@ export function handleContextNodeClose(
                 activeContextId: foundTab.clusterContext.id,
               };
             }
+            // 削除したタブのパネルで、まだタブが残っている場合
+            if (panel.id === tab.panelId && panel.tabs.length > 0) {
+              // historyから最新のタブを探す
+              let panelActiveTab: ClusterContextTab | undefined;
+              for (let i = newTabHistory.length - 1; i >= 0; i--) {
+                const historyTabId = newTabHistory[i];
+                const foundInPanel = panel.tabs.find(t => t.id === historyTabId);
+                if (foundInPanel) {
+                  panelActiveTab = foundInPanel;
+                  break;
+                }
+              }
+              // historyになければ最後のタブを使う
+              if (!panelActiveTab) {
+                panelActiveTab = panel.tabs[panel.tabs.length - 1];
+              }
+              return {
+                ...panel,
+                activeContextId: panelActiveTab.clusterContext.id,
+              };
+            }
             return panel;
           }),
           activePanelId: foundPanelId,
