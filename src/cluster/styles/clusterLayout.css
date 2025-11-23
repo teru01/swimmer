@@ -46,6 +46,10 @@
   font-weight: 600;
 }
 
+.cluster-tab.dimmed {
+  opacity: 0.5;
+}
+
 /* 中央中部：クラスタ情報 */
 .cluster-info-pane-container {
   flex: 2;

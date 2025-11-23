@@ -358,6 +358,7 @@ function MainLayout() {
                   <Panel defaultSize={100 / panels.length} minSize={10}>
                     <ClusterOperationPanelComponent
                       panel={panel}
+                      activePanelId={activePanelId}
                       allTerminalSessions={terminalSessions}
                       allClusterViewStates={clusterViewStates}
                       onSelectCluster={handleContextSelectOnTab}

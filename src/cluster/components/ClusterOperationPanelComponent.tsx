@@ -6,6 +6,7 @@ import { ClusterOperationPanel, ClusterContextTab } from '../types/panel';
 
 interface ClusterOperationPanelComponentProps {
   panel: ClusterOperationPanel;
+  activePanelId: string;
   allTerminalSessions: Map<string, TerminalSession>;
   allClusterViewStates: Map<string, ClusterViewState>;
   onSelectCluster: (tab: ClusterContextTab) => void;
@@ -20,6 +21,7 @@ interface ClusterOperationPanelComponentProps {
  */
 function ClusterOperationPanelComponent({
   panel,
+  activePanelId,
   allTerminalSessions,
   allClusterViewStates,
   onSelectCluster,
@@ -41,6 +43,7 @@ function ClusterOperationPanelComponent({
           <ClusterTabs
             tabs={panel.tabs}
             activeContextId={panel.activeContextId}
+            activePanelId={activePanelId}
             onSelectCluster={onSelectCluster}
             onCloseCluster={onCloseCluster}
             onReloadCluster={onReloadCluster}

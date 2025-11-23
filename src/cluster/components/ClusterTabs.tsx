@@ -4,6 +4,7 @@ import { useTabContextMenu } from './useTabContextMenu';
 interface ClusterTabsProps {
   tabs: ClusterContextTab[];
   activeContextId: string | undefined;
+  activePanelId: string;
   onSelectCluster: (tab: ClusterContextTab) => void;
   onCloseCluster: (tab: ClusterContextTab) => void;
   onReloadCluster?: (tab: ClusterContextTab) => void;
@@ -16,6 +17,7 @@ interface ClusterTabsProps {
 function ClusterTabs({
   tabs,
   activeContextId,
+  activePanelId,
   onSelectCluster: onClusterSelect,
   onCloseCluster: onCloseCluster,
   onReloadCluster,
@@ -31,10 +33,14 @@ function ClusterTabs({
   return (
     <div className="cluster-tabs">
       {tabs.map(tab => {
+        const isActive = activeContextId === tab.clusterContext.id;
+        const isPanelActive = tab.panelId === activePanelId;
+        const shouldDim = !isPanelActive || (isPanelActive && !isActive);
+
         return (
           <div
             key={tab.id}
-            className={`cluster-tab ${activeContextId === tab.clusterContext.id ? 'active' : ''}`}
+            className={`cluster-tab ${isActive ? 'active' : ''} ${shouldDim ? 'dimmed' : ''}`}
             onClick={() => onClusterSelect(tab)}
             onContextMenu={e => handleContextMenu(e, tab)}
           >
