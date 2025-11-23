@@ -8,7 +8,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { invoke } from '@tauri-apps/api/core';
 import { debug } from '@tauri-apps/plugin-log';
 import './resizable.css';
-import { ContextNode, NodeType } from '../lib/contextTree';
+import { ContextNode, newClusterContextNode, NodeType } from '../lib/contextTree';
 import { usePreferences } from '../contexts/PreferencesContext';
 import {
   ClusterOperationPanel,
@@ -108,6 +108,7 @@ function MainLayout() {
 
   // Context selection handler from ClusterTabs
   const handleContextSelectOnTab = (tab: ClusterContextTab) => {
+    setSelectedContext(newClusterContextNode(tab.clusterContext, undefined));
     setActivePanelId(tab.panelId);
 
     // Update panel's active context
@@ -192,6 +193,10 @@ function MainLayout() {
             if (panel.activeContextId === tab.clusterContext.id) {
               const nextTab = newTabs[Math.max(0, deleteTabIdx - 1)];
               newActiveContextId = nextTab?.clusterContext.id;
+              if (nextTab) {
+                const nextContextNode = newClusterContextNode(nextTab.clusterContext, undefined);
+                setSelectedContext(nextContextNode);
+              }
             }
 
             return {

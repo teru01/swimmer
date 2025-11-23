@@ -112,7 +112,7 @@ export const newRegionNode = (regionName: string, parentId: string): ContextNode
  */
 export const newClusterContextNode = (
   clusterContext: ClusterContext,
-  parentId: string
+  parentId: string | undefined
 ): ContextNode => {
   const id = `context-${clusterContext.id}`;
   return {
