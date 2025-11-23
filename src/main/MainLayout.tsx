@@ -220,20 +220,17 @@ function MainLayout() {
       return;
     }
 
-    // Update state
-    setPanels(result.state.panels);
-    setActivePanelId(result.state.activePanelId);
-
-    // Add to tab history
-    addToTabHistory(result.newTab.id);
+    debug(`MainLayout: Splitting panel. New panel ID: ${result.newPanelId}`);
 
     // Copy terminal session state
     const sourceCompositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
     const newCompositeKey = createCompositeKey(result.newPanelId, tab.clusterContext.id);
 
+    debug(`MainLayout: Creating terminal session for ${newCompositeKey}`);
     try {
       const newSession = await createTerminalSession(tab.clusterContext, newCompositeKey);
       setTerminalSessions(prev => new Map(prev).set(newCompositeKey, newSession));
+      debug(`MainLayout: Terminal session created successfully for ${newCompositeKey}`);
     } catch (error) {
       console.error('Failed to create terminal session for split panel:', error);
     }
@@ -252,6 +249,13 @@ function MainLayout() {
         new Map(prev).set(newCompositeKey, createDefaultClusterViewState())
       );
     }
+
+    // Update state
+    setPanels(result.state.panels);
+    setActivePanelId(result.state.activePanelId);
+
+    // Add to tab history
+    addToTabHistory(result.newTab.id);
   };
 
   return (

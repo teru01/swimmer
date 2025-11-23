@@ -29,6 +29,7 @@ export interface TerminalSession {
   fitAddon: FitAddon;
   compositeKey: string;
   mounted: boolean;
+  clusterContext: ClusterContext;
 }
 
 /**
@@ -37,15 +38,18 @@ export interface TerminalSession {
 function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
 
-  // Mount terminal when component mounts
+  // Mount terminal when it becomes visible for the first time
   useEffect(() => {
-    if (!terminalRef.current || session.mounted) return;
+    if (!terminalRef.current || session.mounted || !isVisible) return;
 
     debug(`TerminalInstance: Mounting terminal for ${session.compositeKey}`);
     session.terminal.open(terminalRef.current);
     session.fitAddon.fit();
     session.mounted = true;
-  }, [session]);
+
+    // Write context info after terminal is opened
+    session.terminal.writeln(`Context: ${session.clusterContext.id}`);
+  }, [session, isVisible]);
 
   // Fit terminal when visibility changes
   useEffect(() => {
@@ -156,8 +160,6 @@ export const createTerminalSession = async (
     }
   });
 
-  term.writeln(`Context: ${clusterContext.id}`);
-
   return {
     terminal: term,
     sessionId,
@@ -165,6 +167,7 @@ export const createTerminalSession = async (
     fitAddon: fit,
     compositeKey,
     mounted: false,
+    clusterContext,
   };
 };
 
