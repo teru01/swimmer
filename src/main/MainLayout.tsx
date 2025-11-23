@@ -13,15 +13,14 @@ import { usePreferences } from '../contexts/PreferencesContext';
 import {
   ClusterOperationPanel,
   ClusterContextTab,
-  generatePanelId,
   createCompositeKey,
   createDefaultPanel,
-  newClusterContextTab,
 } from '../cluster/types/panel';
 import { resourceGroups } from '../cluster/components/ResourceKindSidebar';
 import {
   handleContextNodeSelect as handleContextNodeSelectLogic,
   handleContextNodeClose as handleContextNodeCloseLogic,
+  handleSplitRight as handleSplitRightLogic,
 } from './panelLogic';
 
 const createDefaultClusterViewState = (): ClusterViewState => ({
@@ -214,35 +213,23 @@ function MainLayout() {
   };
 
   const handleSplitRight = async (tab: ClusterContextTab) => {
-    // Check max panels limit (10)
-    if (panels.length >= 10) {
-      debug('MainLayout: Cannot split, maximum 10 panels reached');
+    const result = handleSplitRightLogic({ panels, activePanelId, selectedContext }, tab);
+
+    if (!result) {
+      debug('MainLayout: Cannot split, maximum 10 panels reached or panel not found');
       return;
     }
 
-    const sourcePanel = panels.find(p => p.id === tab.panelId);
-    if (!sourcePanel) return;
-
-    const newPanelId = generatePanelId();
-
-    const clusterContextTab = newClusterContextTab(newPanelId, tab.clusterContext);
+    // Update state
+    setPanels(result.state.panels);
+    setActivePanelId(result.state.activePanelId);
 
     // Add to tab history
-    addToTabHistory(clusterContextTab.id);
-
-    // Create new panel with the same context
-    setPanels(prev => [
-      ...prev,
-      {
-        id: newPanelId,
-        tabs: [clusterContextTab],
-        activeContextId: tab.clusterContext.id,
-      },
-    ]);
+    addToTabHistory(result.newTab.id);
 
     // Copy terminal session state
     const sourceCompositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
-    const newCompositeKey = createCompositeKey(newPanelId, tab.clusterContext.id);
+    const newCompositeKey = createCompositeKey(result.newPanelId, tab.clusterContext.id);
 
     try {
       const newSession = await createTerminalSession(tab.clusterContext, newCompositeKey);
@@ -265,8 +252,6 @@ function MainLayout() {
         new Map(prev).set(newCompositeKey, createDefaultClusterViewState())
       );
     }
-
-    setActivePanelId(newPanelId);
   };
 
   return (

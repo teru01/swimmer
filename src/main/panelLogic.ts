@@ -4,12 +4,19 @@ import {
   ClusterContextTab,
   newClusterContextTab,
   createDefaultPanel,
+  generatePanelId,
 } from '../cluster/types/panel';
 
 export interface PanelState {
   panels: ClusterOperationPanel[];
   activePanelId: string;
   selectedContext: ContextNode | undefined;
+}
+
+export interface SplitRightResult {
+  state: PanelState;
+  newTab: ClusterContextTab;
+  newPanelId: string;
 }
 
 /**
@@ -232,4 +239,43 @@ export function handleContextNodeClose(
       newTabHistory,
     };
   }
+}
+
+/**
+ * パネルを右に分割する時の状態更新ロジック
+ */
+export function handleSplitRight(
+  state: PanelState,
+  tab: ClusterContextTab
+): SplitRightResult | undefined {
+  // Check max panels limit (10)
+  if (state.panels.length >= 10) {
+    return undefined;
+  }
+
+  const sourcePanel = state.panels.find(p => p.id === tab.panelId);
+  if (!sourcePanel) return undefined;
+
+  const newPanelId = generatePanelId();
+  const clusterContextTab = newClusterContextTab(newPanelId, tab.clusterContext);
+
+  // Create new panel with the same context
+  const newPanels = [
+    ...state.panels,
+    {
+      id: newPanelId,
+      tabs: [clusterContextTab],
+      activeContextId: tab.clusterContext.id,
+    },
+  ];
+
+  return {
+    state: {
+      ...state,
+      panels: newPanels,
+      activePanelId: newPanelId,
+    },
+    newTab: clusterContextTab,
+    newPanelId,
+  };
 }
