@@ -9,29 +9,32 @@
   flex: 1;
   overflow: hidden;
   min-width: 300px;
+  border-top: 1px solid #ddd;
 }
 
 /* 中央上部：クラスタタブ */
 .center-tabs {
-  border-bottom: 1px solid #ddd;
-  background-color: #f0f0f0;
+  background-color: #fff;
+  position: relative;
 }
 
 /* クラスタタブ */
 .cluster-tabs {
   display: flex;
   padding: 3px 3px 0 3px;
+  margin-bottom: 4px;
 }
 
 .cluster-tab {
   padding: 6px 12px;
   cursor: pointer;
   border: 1px solid #ddd;
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
+  border-bottom: 1px solid #ddd;
+  border-radius: 6px 6px 0 0;
   margin-right: 2px;
   background-color: #f8f9fa;
   font-size: 12px;
+  position: relative;
 }
 
 .cluster-tab:hover {
@@ -40,10 +43,32 @@
 
 .cluster-tab.active {
   background-color: #fff;
-  border-bottom-color: #fff;
+  border-bottom-color: transparent;
   position: relative;
-  z-index: 1;
+  z-index: 2;
   font-weight: 600;
+}
+
+.cluster-tab.active::before,
+.cluster-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  width: 6px;
+  height: 6px;
+  background-color: transparent;
+}
+
+.cluster-tab.active::before {
+  left: -6px;
+  border-bottom-right-radius: 6px;
+  box-shadow: 3px 0 0 0 #fff;
+}
+
+.cluster-tab.active::after {
+  right: -6px;
+  border-bottom-left-radius: 6px;
+  box-shadow: -3px 0 0 0 #fff;
 }
 
 .cluster-tab.dimmed {
