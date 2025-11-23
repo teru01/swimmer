@@ -8,17 +8,21 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { invoke } from '@tauri-apps/api/core';
 import { debug } from '@tauri-apps/plugin-log';
 import './resizable.css';
-import { ContextNode, newClusterContextNode, NodeType } from '../lib/contextTree';
+import { ContextNode, NodeType, newClusterContextNode } from '../lib/contextTree';
 import { usePreferences } from '../contexts/PreferencesContext';
 import {
   ClusterOperationPanel,
   ClusterContextTab,
   generatePanelId,
   createCompositeKey,
-  newClusterContextTab,
   createDefaultPanel,
+  newClusterContextTab,
 } from '../cluster/types/panel';
 import { resourceGroups } from '../cluster/components/ResourceKindSidebar';
+import {
+  handleContextNodeSelect as handleContextNodeSelectLogic,
+  handleContextNodeClose as handleContextNodeCloseLogic,
+} from './panelLogic';
 
 const createDefaultClusterViewState = (): ClusterViewState => ({
   selectedKind: undefined,
@@ -72,95 +76,47 @@ function MainLayout() {
 
   // Context selection handler
   const handleContextNodeSelect = async (contextNode: ContextNode) => {
-    setSelectedContext(contextNode);
+    const newState = handleContextNodeSelectLogic(
+      { panels, activePanelId, selectedContext },
+      contextNode
+    );
+
+    setSelectedContext(newState.selectedContext);
+    setActivePanelId(newState.activePanelId);
+    setPanels(newState.panels);
+
+    // Add to tab history if a new tab was created or existing tab was activated
     if (contextNode.type === NodeType.Context && contextNode.clusterContext) {
       const contextId = contextNode.clusterContext.id;
+      const activePanel = newState.panels.find(p => p.id === newState.activePanelId);
+      const activeTab = activePanel?.tabs.find(t => t.clusterContext.id === contextId);
+      if (activeTab) {
+        addToTabHistory(activeTab.id);
+      }
+    }
 
-      // Find if this context is already open in any panel
-      let existingTab: ClusterContextTab | undefined;
-      let existingPanelId: string | undefined;
+    // Handle side effects (terminal session, cluster view state)
+    if (contextNode.type === NodeType.Context && contextNode.clusterContext) {
+      const contextId = contextNode.clusterContext.id;
+      const compositeKey = createCompositeKey(newState.activePanelId, contextId);
 
-      for (const panel of panels) {
-        const tab = panel.tabs.find(t => t.clusterContext.id === contextId);
-        if (tab) {
-          // Found in active panel - use it directly
-          if (panel.id === activePanelId) {
-            existingTab = tab;
-            existingPanelId = panel.id;
-            break;
-          }
-          // Found in non-active panel - remember the leftmost one
-          if (!existingTab) {
-            existingTab = tab;
-            existingPanelId = panel.id;
-          }
+      // Get or create terminal session
+      if (!terminalSessions.has(compositeKey)) {
+        debug(`MainLayout: Creating new session for ${compositeKey}`);
+        try {
+          const session = await createTerminalSession(contextNode.clusterContext, compositeKey);
+          setTerminalSessions(prev => new Map(prev).set(compositeKey, session));
+        } catch (error) {
+          console.error('Failed to create terminal session:', error);
         }
       }
 
-      if (existingTab && existingPanelId) {
-        // Context already open - activate it
-        debug(`MainLayout: Context ${contextId} already open in panel ${existingPanelId}`);
-
-        // Add to tab history
-        addToTabHistory(existingTab.id);
-
-        // Set active panel and context
-        setActivePanelId(existingPanelId);
-        setPanels(prev =>
-          prev.map(panel => {
-            if (panel.id === existingPanelId) {
-              return {
-                ...panel,
-                activeContextId: contextId,
-              };
-            }
-            return panel;
-          })
+      // Get or create cluster view state
+      if (!clusterViewStates.has(compositeKey)) {
+        debug(`MainLayout: Creating new cluster view state for ${compositeKey}`);
+        setClusterViewStates(prev =>
+          new Map(prev).set(compositeKey, createDefaultClusterViewState())
         );
-      } else {
-        // Context not open - create new tab in active panel
-        const currentPanel = panels.find(p => p.id === activePanelId);
-        if (!currentPanel) return;
-
-        const clusterContextTab = newClusterContextTab(activePanelId, contextNode.clusterContext);
-
-        // Add to tab history
-        addToTabHistory(clusterContextTab.id);
-
-        // Update panel's tabs and active context
-        setPanels(prev =>
-          prev.map(panel => {
-            if (panel.id === activePanelId) {
-              return {
-                ...panel,
-                tabs: [...panel.tabs, clusterContextTab],
-                activeContextId: contextId,
-              };
-            }
-            return panel;
-          })
-        );
-
-        const compositeKey = createCompositeKey(activePanelId, contextId);
-
-        // Get or create terminal session
-        if (!terminalSessions.has(compositeKey)) {
-          debug(`MainLayout: Creating new session for ${compositeKey}`);
-          try {
-            const session = await createTerminalSession(contextNode.clusterContext, compositeKey);
-            setTerminalSessions(prev => new Map(prev).set(compositeKey, session));
-          } catch (error) {
-            console.error('Failed to create terminal session:', error);
-          }
-        }
-
-        // Get or create cluster view state
-        if (!clusterViewStates.has(compositeKey)) {
-          debug(`MainLayout: Creating new cluster view state for ${compositeKey}`);
-          setClusterViewStates(prev =>
-            new Map(prev).set(compositeKey, createDefaultClusterViewState())
-          );
-        }
       }
     }
   };
@@ -217,10 +173,6 @@ function MainLayout() {
 
   const handleContextNodeClose = async (tab: ClusterContextTab) => {
     const compositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
-    const currentPanel = panels.find(p => p.id === tab.panelId);
-    if (!currentPanel) return;
-
-    const isClosingActiveTab = currentPanel.activeContextId === tab.clusterContext.id;
 
     // Close terminal session
     const session = terminalSessions.get(compositeKey);
@@ -247,106 +199,18 @@ function MainLayout() {
       return next;
     });
 
-    // Remove from history
-    tabHistoryRef.current = tabHistoryRef.current.filter(id => id !== tab.id);
+    // Apply logic
+    const result = handleContextNodeCloseLogic(
+      { panels, activePanelId, selectedContext },
+      tab,
+      tabHistoryRef.current
+    );
 
-    if (isClosingActiveTab) {
-      // アクティブタブを削除した時
-      const updatedPanels = panels
-        .map(panel => {
-          if (panel.id === tab.panelId) {
-            const newTabs = panel.tabs.filter(t => t.id !== tab.id);
-            return {
-              ...panel,
-              tabs: newTabs,
-              activeContextId: undefined,
-            };
-          }
-          return panel;
-        })
-        .filter(panel => panel.tabs.length > 0);
-
-      // パネルが0になるなら起動時と同じデフォルトパネルを作る
-      if (updatedPanels.length === 0) {
-        const defaultPanel = createDefaultPanel();
-        setPanels([defaultPanel]);
-        setActivePanelId(defaultPanel.id);
-        setSelectedContext(undefined);
-      } else {
-        setPanels(updatedPanels);
-
-        // 最新のhistoryのtabのidを取り、そのタブ、パネルをアクティブに設定
-        let foundTab: ClusterContextTab | undefined;
-        let foundPanelId: string | undefined;
-
-        for (let i = tabHistoryRef.current.length - 1; i >= 0; i--) {
-          const historyTabId = tabHistoryRef.current[i];
-          for (const panel of updatedPanels) {
-            const tab = panel.tabs.find(t => t.id === historyTabId);
-            if (tab) {
-              foundTab = tab;
-              foundPanelId = panel.id;
-              break;
-            }
-          }
-          if (foundTab) break;
-        }
-
-        if (foundTab && foundPanelId) {
-          setActivePanelId(foundPanelId);
-          setSelectedContext(newClusterContextNode(foundTab.clusterContext, undefined));
-          setPanels(prev =>
-            prev.map(panel => {
-              if (panel.id === foundPanelId) {
-                return {
-                  ...panel,
-                  activeContextId: foundTab.clusterContext.id,
-                };
-              }
-              return panel;
-            })
-          );
-        } else {
-          // historyに有効なタブがない場合は、最初のパネルの最初のタブをアクティブにする
-          const firstPanel = updatedPanels[0];
-          const firstTab = firstPanel.tabs[0];
-          if (firstTab) {
-            setActivePanelId(firstPanel.id);
-            setSelectedContext(newClusterContextNode(firstTab.clusterContext, undefined));
-            setPanels(prev =>
-              prev.map(panel => {
-                if (panel.id === firstPanel.id) {
-                  return {
-                    ...panel,
-                    activeContextId: firstTab.clusterContext.id,
-                  };
-                }
-                return panel;
-              })
-            );
-          } else {
-            setActivePanelId(firstPanel.id);
-            setSelectedContext(undefined);
-          }
-        }
-      }
-    } else {
-      // 非アクティブタブを削除した時
-      setPanels(prev => {
-        return prev
-          .map(panel => {
-            if (panel.id === tab.panelId) {
-              const newTabs = panel.tabs.filter(t => t.id !== tab.id);
-              return {
-                ...panel,
-                tabs: newTabs,
-              };
-            }
-            return panel;
-          })
-          .filter(panel => panel.tabs.length > 0);
-      });
-    }
+    // Update state
+    setSelectedContext(result.state.selectedContext);
+    setActivePanelId(result.state.activePanelId);
+    setPanels(result.state.panels);
+    tabHistoryRef.current = result.newTabHistory;
   };
 
   const handleSplitRight = async (tab: ClusterContextTab) => {
