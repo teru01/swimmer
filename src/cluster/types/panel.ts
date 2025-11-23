@@ -62,3 +62,14 @@ export function newClusterContextTab(
     clusterContext,
   };
 }
+
+/**
+ * Creates a default empty ClusterOperationPanel
+ */
+export function createDefaultPanel(): ClusterOperationPanel {
+  return {
+    id: generatePanelId(),
+    tabs: [],
+    activeContextId: undefined,
+  };
+}

@@ -16,6 +16,7 @@ import {
   generatePanelId,
   createCompositeKey,
   newClusterContextTab,
+  createDefaultPanel,
 } from '../cluster/types/panel';
 import { resourceGroups } from '../cluster/components/ResourceKindSidebar';
 
@@ -40,13 +41,7 @@ function MainLayout() {
   const [selectedContext, setSelectedContext] = useState<ContextNode | undefined>(undefined);
 
   // ClusterOperationPanel management (max 10 panels)
-  const [panels, setPanels] = useState<ClusterOperationPanel[]>(() => [
-    {
-      id: generatePanelId(),
-      tabs: [],
-      activeContextId: undefined,
-    },
-  ]);
+  const [panels, setPanels] = useState<ClusterOperationPanel[]>(() => [createDefaultPanel()]);
   const [activePanelId, setActivePanelId] = useState<string>(panels[0].id);
 
   // Terminal sessions keyed by composite key (panelId:contextId)
@@ -222,6 +217,10 @@ function MainLayout() {
 
   const handleContextNodeClose = async (tab: ClusterContextTab) => {
     const compositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
+    const currentPanel = panels.find(p => p.id === tab.panelId);
+    if (!currentPanel) return;
+
+    const isClosingActiveTab = currentPanel.activeContextId === tab.clusterContext.id;
 
     // Close terminal session
     const session = terminalSessions.get(compositeKey);
@@ -248,34 +247,106 @@ function MainLayout() {
       return next;
     });
 
-    // Update panel's tabs
-    setPanels(prev => {
-      return prev
+    // Remove from history
+    tabHistoryRef.current = tabHistoryRef.current.filter(id => id !== tab.id);
+
+    if (isClosingActiveTab) {
+      // アクティブタブを削除した時
+      const updatedPanels = panels
         .map(panel => {
           if (panel.id === tab.panelId) {
-            const deleteTabIdx = panel.tabs.findIndex(t => t.id === tab.id);
             const newTabs = panel.tabs.filter(t => t.id !== tab.id);
-
-            let newActiveContextId = panel.activeContextId;
-            if (panel.activeContextId === tab.clusterContext.id) {
-              const nextTab = newTabs[Math.max(0, deleteTabIdx - 1)];
-              newActiveContextId = nextTab?.clusterContext.id;
-              if (nextTab) {
-                const nextContextNode = newClusterContextNode(nextTab.clusterContext, undefined);
-                setSelectedContext(nextContextNode);
-              }
-            }
-
             return {
               ...panel,
               tabs: newTabs,
-              activeContextId: newActiveContextId,
+              activeContextId: undefined,
             };
           }
           return panel;
         })
-        .filter(panel => panel.tabs.length > 0); // Remove empty panels
-    });
+        .filter(panel => panel.tabs.length > 0);
+
+      // パネルが0になるなら起動時と同じデフォルトパネルを作る
+      if (updatedPanels.length === 0) {
+        const defaultPanel = createDefaultPanel();
+        setPanels([defaultPanel]);
+        setActivePanelId(defaultPanel.id);
+        setSelectedContext(undefined);
+      } else {
+        setPanels(updatedPanels);
+
+        // 最新のhistoryのtabのidを取り、そのタブ、パネルをアクティブに設定
+        let foundTab: ClusterContextTab | undefined;
+        let foundPanelId: string | undefined;
+
+        for (let i = tabHistoryRef.current.length - 1; i >= 0; i--) {
+          const historyTabId = tabHistoryRef.current[i];
+          for (const panel of updatedPanels) {
+            const tab = panel.tabs.find(t => t.id === historyTabId);
+            if (tab) {
+              foundTab = tab;
+              foundPanelId = panel.id;
+              break;
+            }
+          }
+          if (foundTab) break;
+        }
+
+        if (foundTab && foundPanelId) {
+          setActivePanelId(foundPanelId);
+          setSelectedContext(newClusterContextNode(foundTab.clusterContext, undefined));
+          setPanels(prev =>
+            prev.map(panel => {
+              if (panel.id === foundPanelId) {
+                return {
+                  ...panel,
+                  activeContextId: foundTab.clusterContext.id,
+                };
+              }
+              return panel;
+            })
+          );
+        } else {
+          // historyに有効なタブがない場合は、最初のパネルの最初のタブをアクティブにする
+          const firstPanel = updatedPanels[0];
+          const firstTab = firstPanel.tabs[0];
+          if (firstTab) {
+            setActivePanelId(firstPanel.id);
+            setSelectedContext(newClusterContextNode(firstTab.clusterContext, undefined));
+            setPanels(prev =>
+              prev.map(panel => {
+                if (panel.id === firstPanel.id) {
+                  return {
+                    ...panel,
+                    activeContextId: firstTab.clusterContext.id,
+                  };
+                }
+                return panel;
+              })
+            );
+          } else {
+            setActivePanelId(firstPanel.id);
+            setSelectedContext(undefined);
+          }
+        }
+      }
+    } else {
+      // 非アクティブタブを削除した時
+      setPanels(prev => {
+        return prev
+          .map(panel => {
+            if (panel.id === tab.panelId) {
+              const newTabs = panel.tabs.filter(t => t.id !== tab.id);
+              return {
+                ...panel,
+                tabs: newTabs,
+              };
+            }
+            return panel;
+          })
+          .filter(panel => panel.tabs.length > 0);
+      });
+    }
   };
 
   const handleSplitRight = async (tab: ClusterContextTab) => {
