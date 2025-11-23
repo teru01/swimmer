@@ -108,14 +108,6 @@ function MainLayout() {
 
   // Context selection handler from ClusterTabs
   const handleContextSelectOnTab = (tab: ClusterContextTab) => {
-    // Reconstruct ContextNode for setSelectedContext
-    const contextNode: ContextNode = {
-      id: `context-${tab.clusterContext.id}`,
-      name: tab.clusterContext.clusterName,
-      type: NodeType.Context,
-      clusterContext: tab.clusterContext,
-    };
-    setSelectedContext(contextNode);
     setActivePanelId(tab.panelId);
 
     // Update panel's active context
@@ -200,16 +192,6 @@ function MainLayout() {
             if (panel.activeContextId === tab.clusterContext.id) {
               const nextTab = newTabs[Math.max(0, deleteTabIdx - 1)];
               newActiveContextId = nextTab?.clusterContext.id;
-              if (nextTab) {
-                // Reconstruct ContextNode from ClusterContext for setSelectedContext
-                const nextContextNode: ContextNode = {
-                  id: `context-${nextTab.clusterContext.id}`,
-                  name: nextTab.clusterContext.clusterName,
-                  type: NodeType.Context,
-                  clusterContext: nextTab.clusterContext,
-                };
-                setSelectedContext(nextContextNode);
-              }
             }
 
             return {
@@ -323,7 +305,7 @@ function MainLayout() {
               {/* Right pane: AI chat */}
               <Panel defaultSize={25} minSize={15}>
                 <div className="chat-pane-container">
-                  <ChatPane selectedContext={selectedContext} />
+                  <ChatPane selectedClusterContext={selectedContext?.clusterContext} />
                 </div>
               </Panel>
             </>

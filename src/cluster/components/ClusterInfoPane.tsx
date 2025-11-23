@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { ContextNode } from '../../lib/contextTree';
+import { ClusterContext } from '../../lib/contextTree';
 import ResourceKindSidebar from './ResourceKindSidebar';
 import ResourceList, { KubeResource } from './ResourceList';
 import ResourceDetailPane from './ResourceDetailPane';
@@ -94,7 +94,7 @@ const fetchResourceDetail = async (
 
 interface ClusterInfoPaneProps {
   panelId: string;
-  selectedContext: ContextNode | undefined;
+  selectedClusterContext: ClusterContext | undefined;
   allViewStates: Map<string, ClusterViewState>;
   onViewStateChange: (compositeKey: string, state: ClusterViewState) => void;
 }
@@ -228,16 +228,16 @@ function ClusterViewInstance({
  */
 function ClusterInfoPane({
   panelId,
-  selectedContext,
+  selectedClusterContext,
   allViewStates,
   onViewStateChange,
 }: ClusterInfoPaneProps) {
   return (
     <div className="cluster-info-pane-container">
-      {selectedContext ? (
+      {selectedClusterContext ? (
         <>
           {Array.from(allViewStates.entries()).map(([compositeKey, viewState]) => {
-            const currentCompositeKey = createCompositeKey(panelId, selectedContext.id);
+            const currentCompositeKey = createCompositeKey(panelId, selectedClusterContext.id);
             return (
               <ClusterViewInstance
                 key={compositeKey}

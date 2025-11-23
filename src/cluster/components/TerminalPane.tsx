@@ -6,13 +6,13 @@ import '@xterm/xterm/css/xterm.css';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { debug } from '@tauri-apps/plugin-log';
-import { ContextNode, ClusterContext } from '../../lib/contextTree';
+import { ClusterContext } from '../../lib/contextTree';
 import { loadPreferences } from '../../lib/fs';
 import { createCompositeKey } from '../types/panel';
 
 interface TerminalPaneProps {
   panelId: string;
-  selectedContext: ContextNode | undefined;
+  selectedClusterContext: ClusterContext | undefined;
   allTerminalSessions: Map<string, TerminalSession>;
 }
 
@@ -69,14 +69,14 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
 /**
  * Terminal pane component with real terminal functionality
  */
-function TerminalPane({ panelId, selectedContext, allTerminalSessions }: TerminalPaneProps) {
+function TerminalPane({ panelId, selectedClusterContext, allTerminalSessions }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Handle terminal pane resize
   useEffect(() => {
-    if (!containerRef.current || !selectedContext) return;
+    if (!containerRef.current || !selectedClusterContext) return;
 
-    const compositeKey = createCompositeKey(panelId, selectedContext.id);
+    const compositeKey = createCompositeKey(panelId, selectedClusterContext.id);
     const resizeObserver = new ResizeObserver(() => {
       // Fit the currently visible terminal
       const visibleSession = allTerminalSessions.get(compositeKey);
@@ -90,19 +90,23 @@ function TerminalPane({ panelId, selectedContext, allTerminalSessions }: Termina
     return () => {
       resizeObserver.disconnect();
     };
-  }, [panelId, selectedContext, allTerminalSessions]);
+  }, [panelId, selectedClusterContext, allTerminalSessions]);
 
   return (
     <div className="terminal-pane">
       <div className="terminal-header">
         <span>Terminal</span>
-        <span>{selectedContext ? `Context: ${selectedContext.name}` : 'No context selected'}</span>
+        <span>
+          {selectedClusterContext
+            ? `Context: ${selectedClusterContext.clusterName}`
+            : 'No context selected'}
+        </span>
       </div>
       <div className="terminal-container" ref={containerRef}>
-        {selectedContext &&
+        {selectedClusterContext &&
           Array.from(allTerminalSessions.entries())
             .filter(([compositeKey]) => {
-              const currentCompositeKey = createCompositeKey(panelId, selectedContext.id);
+              const currentCompositeKey = createCompositeKey(panelId, selectedClusterContext.id);
               return compositeKey === currentCompositeKey;
             })
             .map(([compositeKey, session]) => (

@@ -2,7 +2,6 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import ClusterTabs from './ClusterTabs';
 import ClusterInfoPane, { ClusterViewState } from './ClusterInfoPane';
 import TerminalPane, { TerminalSession } from './TerminalPane';
-import { ContextNode } from '../../lib/contextTree';
 import { ClusterOperationPanel, ClusterContextTab } from '../types/panel';
 
 interface ClusterOperationPanelComponentProps {
@@ -33,15 +32,8 @@ function ClusterOperationPanelComponent({
 }: ClusterOperationPanelComponentProps) {
   const activeTab = panel.tabs.find(tab => tab.clusterContext.id === panel.activeContextId);
 
-  // Reconstruct ContextNode for active cluster (needed for ClusterInfoPane and TerminalPane)
-  const activeContextForThisPanel: ContextNode | undefined = activeTab
-    ? {
-        id: `context-${activeTab.clusterContext.id}`,
-        name: activeTab.clusterContext.clusterName,
-        type: 'context' as const,
-        clusterContext: activeTab.clusterContext,
-      }
-    : undefined;
+  // Get active cluster context
+  const activeClusterContext = activeTab?.clusterContext;
 
   return (
     <div className="cluster-operation-panel" style={{ width: panelWidth }}>
@@ -64,7 +56,7 @@ function ClusterOperationPanelComponent({
             <div className="cluster-info-pane-container">
               <ClusterInfoPane
                 panelId={panel.id}
-                selectedContext={activeContextForThisPanel}
+                selectedClusterContext={activeClusterContext}
                 allViewStates={allClusterViewStates}
                 onViewStateChange={onViewStateChange}
               />
@@ -77,7 +69,7 @@ function ClusterOperationPanelComponent({
           <Panel defaultSize={50} minSize={20}>
             <TerminalPane
               panelId={panel.id}
-              selectedContext={activeContextForThisPanel}
+              selectedClusterContext={activeClusterContext}
               allTerminalSessions={allTerminalSessions}
             />
           </Panel>
