@@ -1,4 +1,12 @@
-import { ContextNode, NodeType, ContextProvider, ClusterContext } from '../contextTree';
+import {
+  ContextNode,
+  ContextProvider,
+  newClusterContext,
+  newRootNode,
+  newResourceContainerNode,
+  newRegionNode,
+  newClusterContextNode,
+} from '../contextTree';
 
 /**
  * EKS (Amazon Elastic Kubernetes Service) プロバイダー
@@ -20,15 +28,9 @@ export const eksProvider: ContextProvider = {
     };
   },
 
-  buildTree: (contexts: string[], rootId: string): ContextNode => {
+  buildTree: (contexts: string[], _rootId: string): ContextNode => {
     const accountsMap: { [account: string]: ContextNode } = {};
-    const root: ContextNode = {
-      id: rootId,
-      name: 'AWS',
-      type: NodeType.Folder,
-      children: [],
-      isExpanded: true,
-    };
+    const root = newRootNode('AWS');
 
     contexts.forEach(context => {
       const parsed = eksProvider.parse(context);
@@ -39,14 +41,7 @@ export const eksProvider: ContextProvider = {
       // アカウントノードを取得または作成
       let accountNode = accountsMap[account];
       if (!accountNode) {
-        accountNode = {
-          id: `${rootId}-${account}`,
-          name: account,
-          type: NodeType.Folder,
-          children: [],
-          isExpanded: true,
-          parentId: root.id,
-        };
+        accountNode = newResourceContainerNode(account, root.id);
         accountsMap[account] = accountNode;
         root.children?.push(accountNode);
       }
@@ -54,32 +49,19 @@ export const eksProvider: ContextProvider = {
       // リージョンノードを取得または作成
       let regionNode = accountNode.children?.find(c => c.name === region);
       if (!regionNode) {
-        regionNode = {
-          id: `${rootId}-${account}-${region}`,
-          name: region,
-          type: NodeType.Folder,
-          children: [],
-          isExpanded: true,
-          parentId: accountNode.id,
-        };
+        regionNode = newRegionNode(region, accountNode.id);
         accountNode.children?.push(regionNode);
       }
 
       // クラスターノード（コンテキスト）を追加
-      const clusterContext: ClusterContext = {
+      const clusterContext = newClusterContext({
         id: context,
         provider: 'AWS',
         region: region,
         resourceContainerID: account,
         clusterName: cluster,
-      };
-      const contextNode: ContextNode = {
-        id: `context-${context}`,
-        name: cluster,
-        type: NodeType.Context,
-        clusterContext,
-        parentId: regionNode.id,
-      };
+      });
+      const contextNode = newClusterContextNode(clusterContext, regionNode.id);
       regionNode.children?.push(contextNode);
     });
 

@@ -41,6 +41,90 @@ export interface ContextProvider {
 }
 
 /**
+ * Factory function to create a new ClusterContext
+ */
+export const newClusterContext = (params: {
+  id: string;
+  provider: 'GKE' | 'AWS' | 'Others';
+  clusterName: string;
+  region?: string;
+  resourceContainerID?: string;
+}): ClusterContext => {
+  return {
+    id: params.id,
+    provider: params.provider,
+    clusterName: params.clusterName,
+    region: params.region,
+    resourceContainerID: params.resourceContainerID,
+  };
+};
+
+/**
+ * Factory function to create a root node (provider folder)
+ * ID format: folder-{providerName}
+ */
+export const newRootNode = (providerName: string): ContextNode => {
+  const id = `folder-${providerName.toLowerCase()}`;
+  return {
+    id,
+    name: providerName,
+    type: NodeType.Folder,
+    children: [],
+    isExpanded: true,
+  };
+};
+
+/**
+ * Factory function to create a resource container node (project/account folder)
+ * ID format: {parentId}-{containerName}
+ */
+export const newResourceContainerNode = (containerName: string, parentId: string): ContextNode => {
+  const id = `${parentId}-${containerName}`;
+  return {
+    id,
+    name: containerName,
+    type: NodeType.Folder,
+    children: [],
+    isExpanded: true,
+    parentId,
+  };
+};
+
+/**
+ * Factory function to create a region node
+ * ID format: {parentId}-{regionName}
+ */
+export const newRegionNode = (regionName: string, parentId: string): ContextNode => {
+  const id = `${parentId}-${regionName}`;
+  return {
+    id,
+    name: regionName,
+    type: NodeType.Folder,
+    children: [],
+    isExpanded: true,
+    parentId,
+  };
+};
+
+/**
+ * Factory function to create a cluster context node
+ * ID format: context-{contextId}
+ */
+export const newClusterContextNode = (
+  clusterContext: ClusterContext,
+  parentId: string
+): ContextNode => {
+  const id = `context-${clusterContext.id}`;
+  return {
+    id,
+    name: clusterContext.clusterName,
+    type: NodeType.Context,
+    clusterContext,
+    parentId,
+  };
+};
+
+/**
  * コンテキストをプロバイダーごとに分類する
  */
 export const groupContextsByProvider = (

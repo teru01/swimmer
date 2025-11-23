@@ -1,4 +1,12 @@
-import { ContextNode, NodeType, ContextProvider, ClusterContext } from '../contextTree';
+import {
+  ContextNode,
+  ContextProvider,
+  newClusterContext,
+  newRootNode,
+  newResourceContainerNode,
+  newRegionNode,
+  newClusterContextNode,
+} from '../contextTree';
 
 /**
  * GKE (Google Kubernetes Engine) プロバイダー
@@ -20,15 +28,9 @@ export const gkeProvider: ContextProvider = {
     };
   },
 
-  buildTree: (contexts: string[], rootId: string): ContextNode => {
+  buildTree: (contexts: string[], _rootId: string): ContextNode => {
     const projectsMap: { [project: string]: ContextNode } = {};
-    const root: ContextNode = {
-      id: rootId,
-      name: 'GKE',
-      type: NodeType.Folder,
-      children: [],
-      isExpanded: true,
-    };
+    const root = newRootNode('GKE');
 
     contexts.forEach(context => {
       const parsed = gkeProvider.parse(context);
@@ -39,14 +41,7 @@ export const gkeProvider: ContextProvider = {
       // プロジェクトノードを取得または作成
       let projectNode = projectsMap[project];
       if (!projectNode) {
-        projectNode = {
-          id: `${rootId}-${project}`,
-          name: project,
-          type: NodeType.Folder,
-          children: [],
-          isExpanded: true,
-          parentId: root.id,
-        };
+        projectNode = newResourceContainerNode(project, root.id);
         projectsMap[project] = projectNode;
         root.children?.push(projectNode);
       }
@@ -54,32 +49,19 @@ export const gkeProvider: ContextProvider = {
       // リージョンノードを取得または作成
       let regionNode = projectNode.children?.find(c => c.name === region);
       if (!regionNode) {
-        regionNode = {
-          id: `${rootId}-${project}-${region}`,
-          name: region,
-          type: NodeType.Folder,
-          children: [],
-          isExpanded: true,
-          parentId: projectNode.id,
-        };
+        regionNode = newRegionNode(region, projectNode.id);
         projectNode.children?.push(regionNode);
       }
 
       // クラスターノード（コンテキスト）を追加
-      const clusterContext: ClusterContext = {
+      const clusterContext = newClusterContext({
         id: context,
         provider: 'GKE',
         region: region,
         resourceContainerID: project,
         clusterName: cluster,
-      };
-      const contextNode: ContextNode = {
-        id: `context-${context}`,
-        name: cluster,
-        type: NodeType.Context,
-        clusterContext,
-        parentId: regionNode.id,
-      };
+      });
+      const contextNode = newClusterContextNode(clusterContext, regionNode.id);
       regionNode.children?.push(contextNode);
     });
 

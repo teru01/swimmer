@@ -1,4 +1,10 @@
-import { ContextNode, NodeType, ContextProvider, ClusterContext } from '../contextTree';
+import {
+  ContextNode,
+  ContextProvider,
+  newClusterContext,
+  newRootNode,
+  newClusterContextNode,
+} from '../contextTree';
 
 /**
  * Others プロバイダー
@@ -16,28 +22,16 @@ export const othersProvider: ContextProvider = {
     };
   },
 
-  buildTree: (contexts: string[], rootId: string): ContextNode => {
-    const root: ContextNode = {
-      id: rootId,
-      name: 'Others',
-      type: NodeType.Folder,
-      children: [],
-      isExpanded: true,
-    };
+  buildTree: (contexts: string[], _rootId: string): ContextNode => {
+    const root = newRootNode('Others');
 
     contexts.forEach(context => {
-      const clusterContext: ClusterContext = {
+      const clusterContext = newClusterContext({
         id: context,
         provider: 'Others',
         clusterName: context,
-      };
-      const contextNode: ContextNode = {
-        id: `context-${context}`,
-        name: context,
-        type: NodeType.Context,
-        clusterContext,
-        parentId: root.id,
-      };
+      });
+      const contextNode = newClusterContextNode(clusterContext, root.id);
       root.children?.push(contextNode);
     });
 
