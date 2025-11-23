@@ -1,4 +1,4 @@
-import { ContextNode, NodeType } from '../lib/contextTree';
+import { ContextNode, NodeType, newClusterContextNode } from '../lib/contextTree';
 import {
   ClusterOperationPanel,
   ClusterContextTab,
@@ -298,5 +298,102 @@ export function handleSplitRight(
     },
     newTab: clusterContextTab,
     newPanelId,
+  };
+}
+
+/**
+ * タブの順序を並び替える時の状態更新ロジック
+ */
+export function handleTabReorder(state: PanelState, panelId: string, tabIds: string[]): PanelState {
+  return {
+    ...state,
+    panels: state.panels.map(panel => {
+      if (panel.id === panelId) {
+        const reorderedTabs = tabIds
+          .map(id => panel.tabs.find(t => t.id === id))
+          .filter((t): t is ClusterContextTab => t !== undefined);
+        return {
+          ...panel,
+          tabs: reorderedTabs,
+        };
+      }
+      return panel;
+    }),
+  };
+}
+
+export interface TabMoveResult {
+  state: PanelState;
+  oldTabId: string;
+  newTabId: string;
+  updatedTab: ClusterContextTab;
+}
+
+/**
+ * タブを別のパネルに移動する時の状態更新ロジック
+ */
+export function handleTabMove(
+  state: PanelState,
+  sourceTabId: string,
+  targetPanelId: string,
+  targetIndex: number
+): TabMoveResult | undefined {
+  // Find the source tab and panel
+  let sourceTab: ClusterContextTab | undefined;
+  let sourcePanelId: string | undefined;
+
+  for (const panel of state.panels) {
+    const tab = panel.tabs.find(t => t.id === sourceTabId);
+    if (tab) {
+      sourceTab = tab;
+      sourcePanelId = panel.id;
+      break;
+    }
+  }
+
+  if (!sourceTab || !sourcePanelId) return undefined;
+
+  // Update tab's panelId and generate new id using factory method
+  const updatedTab: ClusterContextTab = newClusterContextTab(
+    targetPanelId,
+    sourceTab.clusterContext
+  );
+
+  const newPanels = state.panels
+    .map(panel => {
+      if (panel.id === sourcePanelId) {
+        // Remove from source panel
+        return {
+          ...panel,
+          tabs: panel.tabs.filter(t => t.id !== sourceTabId),
+          activeContextId:
+            panel.activeContextId === sourceTab.clusterContext.id
+              ? undefined
+              : panel.activeContextId,
+        };
+      } else if (panel.id === targetPanelId) {
+        // Add to target panel at specified index
+        const newTabs = [...panel.tabs];
+        newTabs.splice(targetIndex, 0, updatedTab);
+        return {
+          ...panel,
+          tabs: newTabs,
+          activeContextId: updatedTab.clusterContext.id,
+        };
+      }
+      return panel;
+    })
+    .filter(panel => panel.tabs.length > 0); // Remove empty panels
+
+  return {
+    state: {
+      ...state,
+      panels: newPanels,
+      activePanelId: targetPanelId,
+      selectedContext: newClusterContextNode(updatedTab.clusterContext, undefined),
+    },
+    oldTabId: sourceTabId,
+    newTabId: updatedTab.id,
+    updatedTab,
   };
 }

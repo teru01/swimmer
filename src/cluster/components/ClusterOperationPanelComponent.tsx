@@ -14,6 +14,8 @@ interface ClusterOperationPanelComponentProps {
   onReloadCluster: (tab: ClusterContextTab) => void;
   onSplitRight: (tab: ClusterContextTab) => void;
   onViewStateChange: (tabId: string, state: ClusterViewState) => void;
+  onTabReorder?: (panelId: string, tabIds: string[]) => void;
+  onTabMove?: (sourceTabId: string, targetPanelId: string, targetIndex: number) => void;
 }
 
 /**
@@ -29,6 +31,8 @@ function ClusterOperationPanelComponent({
   onReloadCluster,
   onSplitRight,
   onViewStateChange,
+  onTabReorder,
+  onTabMove,
 }: ClusterOperationPanelComponentProps) {
   const activeTab = panel.tabs.find(tab => tab.clusterContext.id === panel.activeContextId);
 
@@ -41,10 +45,13 @@ function ClusterOperationPanelComponent({
             tabs={panel.tabs}
             activeContextId={panel.activeContextId}
             activePanelId={activePanelId}
+            panelId={panel.id}
             onSelectCluster={onSelectCluster}
             onCloseCluster={onCloseCluster}
             onReloadCluster={onReloadCluster}
             onSplitRight={onSplitRight}
+            onTabReorder={onTabReorder}
+            onTabMove={onTabMove}
           />
         </div>
 

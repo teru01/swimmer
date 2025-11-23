@@ -20,6 +20,8 @@ import {
   handleContextNodeSelect as handleContextNodeSelectLogic,
   handleContextNodeClose as handleContextNodeCloseLogic,
   handleSplitRight as handleSplitRightLogic,
+  handleTabReorder as handleTabReorderLogic,
+  handleTabMove as handleTabMoveLogic,
 } from './panelLogic';
 
 const createDefaultClusterViewState = (): ClusterViewState => ({
@@ -254,6 +256,55 @@ function MainLayout() {
     addToTabHistory(result.newTab.id);
   };
 
+  const handleTabReorder = (panelId: string, tabIds: string[]) => {
+    const newState = handleTabReorderLogic(
+      { panels, activePanelId, selectedContext },
+      panelId,
+      tabIds
+    );
+    setPanels(newState.panels);
+  };
+
+  const handleTabMove = (sourceTabId: string, targetPanelId: string, targetIndex: number) => {
+    const result = handleTabMoveLogic(
+      { panels, activePanelId, selectedContext },
+      sourceTabId,
+      targetPanelId,
+      targetIndex
+    );
+
+    if (!result) return;
+
+    const { oldTabId, newTabId } = result;
+
+    // Update terminal session and view state with new keys
+    const terminalSession = terminalSessions.get(oldTabId);
+    const viewState = clusterViewStates.get(oldTabId);
+
+    if (terminalSession) {
+      setTerminalSessions(prev => {
+        const next = new Map(prev);
+        next.delete(oldTabId);
+        next.set(newTabId, { ...terminalSession, tabId: newTabId });
+        return next;
+      });
+    }
+
+    if (viewState) {
+      setClusterViewStates(prev => {
+        const next = new Map(prev);
+        next.delete(oldTabId);
+        next.set(newTabId, viewState);
+        return next;
+      });
+    }
+
+    // Update state
+    setPanels(result.state.panels);
+    setActivePanelId(result.state.activePanelId);
+    setSelectedContext(result.state.selectedContext);
+  };
+
   return (
     <div className="layout-container">
       <div className="main-content">
@@ -286,6 +337,8 @@ function MainLayout() {
                       onReloadCluster={handleReloadCluster}
                       onSplitRight={handleSplitRight}
                       onViewStateChange={handleClusterViewStateChange}
+                      onTabReorder={handleTabReorder}
+                      onTabMove={handleTabMove}
                     />
                   </Panel>
                   {index < panels.length - 1 && (

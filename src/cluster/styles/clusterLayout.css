@@ -75,6 +75,16 @@
   opacity: 0.5;
 }
 
+/* Drag and drop styles */
+.cluster-tab {
+  touch-action: none;
+  user-select: none;
+}
+
+.cluster-tab:active {
+  cursor: grabbing;
+}
+
 /* 中央中部：クラスタ情報 */
 .cluster-info-pane-container {
   flex: 2;
