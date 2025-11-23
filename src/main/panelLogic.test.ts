@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { handleContextNodeSelect, handleContextNodeClose, PanelState } from './panelLogic';
+import {
+  handleContextNodeSelect,
+  handleContextNodeClose,
+  handleSplitRight,
+  PanelState,
+} from './panelLogic';
 import { ClusterContext, ContextNode, NodeType } from '../lib/contextTree';
 import { createDefaultPanel } from '../cluster/types/panel';
 
@@ -224,6 +229,163 @@ describe('panelLogic', () => {
       expect(tabHistory.length).toBe(0);
 
       // Active panelは新しく作成されたデフォルトパネル
+      expect(state.activePanelId).toBe(state.panels[0].id);
+    });
+  });
+
+  describe('handleSplitRight', () => {
+    it('ctx1を開く, splitする: panelが2つできてそれぞれ1つずつ同じcontextidのtabができる. 2つ目の方にactive panel, active tabがある', () => {
+      // 初期状態
+      let state: PanelState = {
+        panels: [createDefaultPanel()],
+        activePanelId: '',
+        selectedContext: undefined,
+      };
+      state.activePanelId = state.panels[0].id;
+
+      const context1: ClusterContext = {
+        id: 'context1',
+        clusterName: 'cluster1',
+        provider: 'GKE',
+        region: 'us-west-1',
+      };
+
+      const node1: ContextNode = {
+        id: 'context-context1',
+        name: 'cluster1',
+        type: NodeType.Context,
+        clusterContext: context1,
+      };
+
+      // Context1を開く
+      state = handleContextNodeSelect(state, node1);
+      const tab1 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context1');
+      expect(tab1).toBeDefined();
+
+      // Split right
+      const splitResult = handleSplitRight(state, tab1!);
+      expect(splitResult).toBeDefined();
+      state = splitResult!.state;
+
+      // パネルが2つある
+      expect(state.panels.length).toBe(2);
+
+      // 1つ目のパネルに元のtab1がある
+      expect(state.panels[0].tabs.length).toBe(1);
+      expect(state.panels[0].tabs[0].clusterContext.id).toBe('context1');
+
+      // 2つ目のパネルに新しいタブがある（同じcontext id）
+      expect(state.panels[1].tabs.length).toBe(1);
+      expect(state.panels[1].tabs[0].clusterContext.id).toBe('context1');
+
+      // 2つ目のパネルがアクティブ
+      expect(state.activePanelId).toBe(state.panels[1].id);
+
+      // 2つ目のパネルのタブがアクティブ
+      expect(state.panels[1].activeContextId).toBe('context1');
+    });
+
+    it('ctx1, ctx2, ctx3を開く、ctx2をsplitする, 2つ目のパネルのctx2を消す: パネルは1つだけ。ctx1, ctx3が残る。ctx3がactive', () => {
+      // 初期状態
+      let state: PanelState = {
+        panels: [createDefaultPanel()],
+        activePanelId: '',
+        selectedContext: undefined,
+      };
+      state.activePanelId = state.panels[0].id;
+
+      const context1: ClusterContext = {
+        id: 'context1',
+        clusterName: 'cluster1',
+        provider: 'GKE',
+        region: 'us-west-1',
+      };
+
+      const context2: ClusterContext = {
+        id: 'context2',
+        clusterName: 'cluster2',
+        provider: 'AWS',
+        region: 'us-west-2',
+      };
+
+      const context3: ClusterContext = {
+        id: 'context3',
+        clusterName: 'cluster3',
+        provider: 'GKE',
+        region: 'us-east-1',
+      };
+
+      const node1: ContextNode = {
+        id: 'context-context1',
+        name: 'cluster1',
+        type: NodeType.Context,
+        clusterContext: context1,
+      };
+
+      const node2: ContextNode = {
+        id: 'context-context2',
+        name: 'cluster2',
+        type: NodeType.Context,
+        clusterContext: context2,
+      };
+
+      const node3: ContextNode = {
+        id: 'context-context3',
+        name: 'cluster3',
+        type: NodeType.Context,
+        clusterContext: context3,
+      };
+
+      let tabHistory: string[] = [];
+
+      // Context1を開く
+      state = handleContextNodeSelect(state, node1);
+      const tab1 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context1');
+      tabHistory.push(tab1!.id);
+
+      // Context2を開く
+      state = handleContextNodeSelect(state, node2);
+      const tab2 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context2');
+      tabHistory.push(tab2!.id);
+
+      // Context3を開く
+      state = handleContextNodeSelect(state, node3);
+      const tab3 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context3');
+      tabHistory.push(tab3!.id);
+
+      // ctx2をsplitする
+      const splitResult = handleSplitRight(state, tab2!);
+      expect(splitResult).toBeDefined();
+      state = splitResult!.state;
+      tabHistory.push(splitResult!.newTab.id);
+
+      // パネルが2つある
+      expect(state.panels.length).toBe(2);
+
+      // 1つ目のパネルにctx1, ctx2, ctx3がある
+      expect(state.panels[0].tabs.length).toBe(3);
+
+      // 2つ目のパネルにctx2がある
+      expect(state.panels[1].tabs.length).toBe(1);
+      expect(state.panels[1].tabs[0].clusterContext.id).toBe('context2');
+      const panel2Tab2 = state.panels[1].tabs[0];
+
+      // 2つ目のパネルのctx2を消す
+      const closeResult = handleContextNodeClose(state, panel2Tab2, tabHistory);
+      state = closeResult.state;
+      tabHistory = closeResult.newTabHistory;
+
+      // パネルは1つだけ
+      expect(state.panels.length).toBe(1);
+
+      // ctx1, ctx3が残る
+      expect(state.panels[0].tabs.length).toBe(3);
+      expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context1')).toBeDefined();
+      expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context2')).toBeDefined();
+      expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context3')).toBeDefined();
+
+      // ctx3がactive
+      expect(state.panels[0].activeContextId).toBe('context3');
       expect(state.activePanelId).toBe(state.panels[0].id);
     });
   });
