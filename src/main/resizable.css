@@ -49,6 +49,36 @@
   width: 100%;
 }
 
+.resize-handle-vertical {
+  width: 4px;
+  background-color: var(--border-color);
+  transition: background-color 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.resize-handle-vertical::after {
+  content: '';
+  position: absolute;
+  width: 1px;
+  height: 20px;
+  background-color: var(--text-secondary);
+  opacity: 0.3;
+}
+
+.resize-handle-vertical:hover,
+.resize-handle-vertical[data-resize-handle-active='true'] {
+  background-color: var(--color-primary);
+  opacity: 0.5;
+}
+
+.resize-handle-vertical:hover::after,
+.resize-handle-vertical[data-resize-handle-active='true']::after {
+  opacity: 0;
+}
+
 /* Make sure panels fill their container */
 [data-panel] {
   display: flex;

@@ -13,7 +13,6 @@ interface ClusterOperationPanelComponentProps {
   onReloadCluster: (tab: ClusterContextTab) => void;
   onSplitRight: (tab: ClusterContextTab) => void;
   onViewStateChange: (compositeKey: string, state: ClusterViewState) => void;
-  panelWidth: string;
 }
 
 /**
@@ -28,7 +27,6 @@ function ClusterOperationPanelComponent({
   onReloadCluster,
   onSplitRight,
   onViewStateChange,
-  panelWidth,
 }: ClusterOperationPanelComponentProps) {
   const activeTab = panel.tabs.find(tab => tab.clusterContext.id === panel.activeContextId);
 
@@ -36,7 +34,7 @@ function ClusterOperationPanelComponent({
   const activeClusterContext = activeTab?.clusterContext;
 
   return (
-    <div className="cluster-operation-panel" style={{ width: panelWidth }}>
+    <div className="cluster-operation-panel" style={{ width: '100%', height: '100%' }}>
       <div className="center-area">
         {/* Cluster tabs */}
         <div className="center-tabs">

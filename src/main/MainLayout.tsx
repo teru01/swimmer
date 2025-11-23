@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, Fragment } from 'react';
 import ContextsPane from '../kubeContexts/components/ContextsPane';
 import ClusterOperationPanelComponent from '../cluster/components/ClusterOperationPanelComponent';
 import { ClusterViewState } from '../cluster/components/ClusterInfoPane';
@@ -352,25 +352,27 @@ function MainLayout() {
 
           {/* Center area: ClusterOperationPanels */}
           <Panel defaultSize={60} minSize={30}>
-            <div style={{ display: 'flex', height: '100%' }}>
-              {panels.map(panel => {
-                const panelWidth = `${100 / panels.length}%`;
-                return (
-                  <ClusterOperationPanelComponent
-                    key={panel.id}
-                    panel={panel}
-                    allTerminalSessions={terminalSessions}
-                    allClusterViewStates={clusterViewStates}
-                    onSelectCluster={handleContextSelectOnTab}
-                    onCloseCluster={handleContextNodeClose}
-                    onReloadCluster={handleReloadCluster}
-                    onSplitRight={handleSplitRight}
-                    onViewStateChange={handleClusterViewStateChange}
-                    panelWidth={panelWidth}
-                  />
-                );
-              })}
-            </div>
+            <PanelGroup direction="horizontal">
+              {panels.map((panel, index) => (
+                <Fragment key={panel.id}>
+                  <Panel defaultSize={100 / panels.length} minSize={10}>
+                    <ClusterOperationPanelComponent
+                      panel={panel}
+                      allTerminalSessions={terminalSessions}
+                      allClusterViewStates={clusterViewStates}
+                      onSelectCluster={handleContextSelectOnTab}
+                      onCloseCluster={handleContextNodeClose}
+                      onReloadCluster={handleReloadCluster}
+                      onSplitRight={handleSplitRight}
+                      onViewStateChange={handleClusterViewStateChange}
+                    />
+                  </Panel>
+                  {index < panels.length - 1 && (
+                    <PanelResizeHandle className="resize-handle-vertical" />
+                  )}
+                </Fragment>
+              ))}
+            </PanelGroup>
           </Panel>
 
           {preferences.ui.showAiChatPane && (
