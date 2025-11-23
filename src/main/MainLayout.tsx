@@ -79,50 +79,93 @@ function MainLayout() {
   const handleContextNodeSelect = async (contextNode: ContextNode) => {
     setSelectedContext(contextNode);
     if (contextNode.type === NodeType.Context && contextNode.clusterContext) {
-      const currentPanel = panels.find(p => p.id === activePanelId);
-      if (!currentPanel) return;
+      const contextId = contextNode.clusterContext.id;
 
-      const clusterContextTab = newClusterContextTab(activePanelId, contextNode.clusterContext);
+      // Find if this context is already open in any panel
+      let existingTab: ClusterContextTab | undefined;
+      let existingPanelId: string | undefined;
 
-      // Add to tab history
-      addToTabHistory(clusterContextTab.id);
-
-      // Update panel's tabs and active context
-      setPanels(prev =>
-        prev.map(panel => {
+      for (const panel of panels) {
+        const tab = panel.tabs.find(t => t.clusterContext.id === contextId);
+        if (tab) {
+          // Found in active panel - use it directly
           if (panel.id === activePanelId) {
-            const hasContext = panel.tabs.some(
-              tab => tab.clusterContext.id === contextNode.clusterContext!.id
-            );
-            return {
-              ...panel,
-              tabs: hasContext ? panel.tabs : [...panel.tabs, clusterContextTab],
-              activeContextId: contextNode.clusterContext!.id,
-            };
+            existingTab = tab;
+            existingPanelId = panel.id;
+            break;
           }
-          return panel;
-        })
-      );
-
-      const compositeKey = createCompositeKey(activePanelId, contextNode.clusterContext.id);
-
-      // Get or create terminal session
-      if (!terminalSessions.has(compositeKey)) {
-        debug(`MainLayout: Creating new session for ${compositeKey}`);
-        try {
-          const session = await createTerminalSession(contextNode.clusterContext, compositeKey);
-          setTerminalSessions(prev => new Map(prev).set(compositeKey, session));
-        } catch (error) {
-          console.error('Failed to create terminal session:', error);
+          // Found in non-active panel - remember the leftmost one
+          if (!existingTab) {
+            existingTab = tab;
+            existingPanelId = panel.id;
+          }
         }
       }
 
-      // Get or create cluster view state
-      if (!clusterViewStates.has(compositeKey)) {
-        debug(`MainLayout: Creating new cluster view state for ${compositeKey}`);
-        setClusterViewStates(prev =>
-          new Map(prev).set(compositeKey, createDefaultClusterViewState())
+      if (existingTab && existingPanelId) {
+        // Context already open - activate it
+        debug(`MainLayout: Context ${contextId} already open in panel ${existingPanelId}`);
+
+        // Add to tab history
+        addToTabHistory(existingTab.id);
+
+        // Set active panel and context
+        setActivePanelId(existingPanelId);
+        setPanels(prev =>
+          prev.map(panel => {
+            if (panel.id === existingPanelId) {
+              return {
+                ...panel,
+                activeContextId: contextId,
+              };
+            }
+            return panel;
+          })
         );
+      } else {
+        // Context not open - create new tab in active panel
+        const currentPanel = panels.find(p => p.id === activePanelId);
+        if (!currentPanel) return;
+
+        const clusterContextTab = newClusterContextTab(activePanelId, contextNode.clusterContext);
+
+        // Add to tab history
+        addToTabHistory(clusterContextTab.id);
+
+        // Update panel's tabs and active context
+        setPanels(prev =>
+          prev.map(panel => {
+            if (panel.id === activePanelId) {
+              return {
+                ...panel,
+                tabs: [...panel.tabs, clusterContextTab],
+                activeContextId: contextId,
+              };
+            }
+            return panel;
+          })
+        );
+
+        const compositeKey = createCompositeKey(activePanelId, contextId);
+
+        // Get or create terminal session
+        if (!terminalSessions.has(compositeKey)) {
+          debug(`MainLayout: Creating new session for ${compositeKey}`);
+          try {
+            const session = await createTerminalSession(contextNode.clusterContext, compositeKey);
+            setTerminalSessions(prev => new Map(prev).set(compositeKey, session));
+          } catch (error) {
+            console.error('Failed to create terminal session:', error);
+          }
+        }
+
+        // Get or create cluster view state
+        if (!clusterViewStates.has(compositeKey)) {
+          debug(`MainLayout: Creating new cluster view state for ${compositeKey}`);
+          setClusterViewStates(prev =>
+            new Map(prev).set(compositeKey, createDefaultClusterViewState())
+          );
+        }
       }
     }
   };
