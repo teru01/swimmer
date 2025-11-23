@@ -13,7 +13,7 @@ interface ClusterOperationPanelComponentProps {
   onCloseCluster: (tab: ClusterContextTab) => void;
   onReloadCluster: (tab: ClusterContextTab) => void;
   onSplitRight: (tab: ClusterContextTab) => void;
-  onViewStateChange: (compositeKey: string, state: ClusterViewState) => void;
+  onViewStateChange: (tabId: string, state: ClusterViewState) => void;
 }
 
 /**
@@ -31,9 +31,6 @@ function ClusterOperationPanelComponent({
   onViewStateChange,
 }: ClusterOperationPanelComponentProps) {
   const activeTab = panel.tabs.find(tab => tab.clusterContext.id === panel.activeContextId);
-
-  // Get active cluster context
-  const activeClusterContext = activeTab?.clusterContext;
 
   return (
     <div className="cluster-operation-panel" style={{ width: '100%', height: '100%' }}>
@@ -56,8 +53,7 @@ function ClusterOperationPanelComponent({
           <Panel defaultSize={50} minSize={20}>
             <div className="cluster-info-pane-container">
               <ClusterInfoPane
-                panelId={panel.id}
-                selectedClusterContext={activeClusterContext}
+                activeTabId={activeTab?.id}
                 allViewStates={allClusterViewStates}
                 onViewStateChange={onViewStateChange}
               />
@@ -68,11 +64,7 @@ function ClusterOperationPanelComponent({
 
           {/* Terminal */}
           <Panel defaultSize={50} minSize={20}>
-            <TerminalPane
-              panelId={panel.id}
-              selectedClusterContext={activeClusterContext}
-              allTerminalSessions={allTerminalSessions}
-            />
+            <TerminalPane activeTabId={activeTab?.id} allTerminalSessions={allTerminalSessions} />
           </Panel>
         </PanelGroup>
       </div>

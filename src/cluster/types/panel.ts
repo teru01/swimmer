@@ -25,24 +25,6 @@ export interface ClusterOperationPanel {
 }
 
 /**
- * Creates a composite key for identifying resources within a specific panel
- */
-export function createCompositeKey(panelId: ClusterOperationPanelId, contextId: string): string {
-  return `${panelId}:${contextId}`;
-}
-
-/**
- * Parses a composite key into panel ID and context ID
- */
-export function parseCompositeKey(compositeKey: string): {
-  panelId: ClusterOperationPanelId;
-  contextId: string;
-} {
-  const [panelId, contextId] = compositeKey.split(':');
-  return { panelId, contextId };
-}
-
-/**
  * Generates a new unique ClusterOperationPanel ID
  */
 export function generatePanelId(): ClusterOperationPanelId {

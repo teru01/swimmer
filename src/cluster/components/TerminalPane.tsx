@@ -8,11 +8,9 @@ import { listen } from '@tauri-apps/api/event';
 import { debug } from '@tauri-apps/plugin-log';
 import { ClusterContext } from '../../lib/contextTree';
 import { loadPreferences } from '../../lib/fs';
-import { createCompositeKey } from '../types/panel';
 
 interface TerminalPaneProps {
-  panelId: string;
-  selectedClusterContext: ClusterContext | undefined;
+  activeTabId: string | undefined;
   allTerminalSessions: Map<string, TerminalSession>;
 }
 
@@ -27,7 +25,7 @@ export interface TerminalSession {
   sessionId: string;
   unlisten: () => void;
   fitAddon: FitAddon;
-  compositeKey: string;
+  tabId: string;
   mounted: boolean;
   clusterContext: ClusterContext;
 }
@@ -42,7 +40,7 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
   useEffect(() => {
     if (!terminalRef.current || session.mounted || !isVisible) return;
 
-    debug(`TerminalInstance: Mounting terminal for ${session.compositeKey}`);
+    debug(`TerminalInstance: Mounting terminal for tab ${session.tabId}`);
     session.terminal.open(terminalRef.current);
     session.fitAddon.fit();
     session.mounted = true;
@@ -73,17 +71,16 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
 /**
  * Terminal pane component with real terminal functionality
  */
-function TerminalPane({ panelId, selectedClusterContext, allTerminalSessions }: TerminalPaneProps) {
+function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Handle terminal pane resize
   useEffect(() => {
-    if (!containerRef.current || !selectedClusterContext) return;
+    if (!containerRef.current || !activeTabId) return;
 
-    const compositeKey = createCompositeKey(panelId, selectedClusterContext.id);
     const resizeObserver = new ResizeObserver(() => {
       // Fit the currently visible terminal
-      const visibleSession = allTerminalSessions.get(compositeKey);
+      const visibleSession = allTerminalSessions.get(activeTabId);
       if (visibleSession) {
         visibleSession.fitAddon.fit();
       }
@@ -94,24 +91,24 @@ function TerminalPane({ panelId, selectedClusterContext, allTerminalSessions }: 
     return () => {
       resizeObserver.disconnect();
     };
-  }, [panelId, selectedClusterContext, allTerminalSessions]);
+  }, [activeTabId, allTerminalSessions]);
+
+  const activeSession = activeTabId ? allTerminalSessions.get(activeTabId) : undefined;
 
   return (
     <div className="terminal-pane">
       <div className="terminal-header">
         <span>Terminal</span>
         <span>
-          {selectedClusterContext
-            ? `Context: ${selectedClusterContext.clusterName}`
+          {activeSession
+            ? `Context: ${activeSession.clusterContext.clusterName}`
             : 'No context selected'}
         </span>
       </div>
       <div className="terminal-container" ref={containerRef}>
-        {Array.from(allTerminalSessions.entries()).map(([compositeKey, session]) => {
-          const isVisible =
-            selectedClusterContext &&
-            compositeKey === createCompositeKey(panelId, selectedClusterContext.id);
-          return <TerminalInstance key={compositeKey} session={session} isVisible={!!isVisible} />;
+        {Array.from(allTerminalSessions.entries()).map(([tabId, session]) => {
+          const isVisible = tabId === activeTabId;
+          return <TerminalInstance key={tabId} session={session} isVisible={isVisible} />;
         })}
       </div>
     </div>
@@ -120,7 +117,7 @@ function TerminalPane({ panelId, selectedClusterContext, allTerminalSessions }: 
 
 export const createTerminalSession = async (
   clusterContext: ClusterContext,
-  compositeKey: string
+  tabId: string
 ): Promise<TerminalSession> => {
   const preferences = await loadPreferences();
 
@@ -165,7 +162,7 @@ export const createTerminalSession = async (
     sessionId,
     unlisten,
     fitAddon: fit,
-    compositeKey,
+    tabId,
     mounted: false,
     clusterContext,
   };

@@ -13,7 +13,6 @@ import { usePreferences } from '../contexts/PreferencesContext';
 import {
   ClusterOperationPanel,
   ClusterContextTab,
-  createCompositeKey,
   createDefaultPanel,
 } from '../cluster/types/panel';
 import { resourceGroups } from '../cluster/components/ResourceKindSidebar';
@@ -47,10 +46,10 @@ function MainLayout() {
   const [panels, setPanels] = useState<ClusterOperationPanel[]>(() => [createDefaultPanel()]);
   const [activePanelId, setActivePanelId] = useState<string>(panels[0].id);
 
-  // Terminal sessions keyed by composite key (panelId:contextId)
+  // Terminal sessions keyed by tab id
   const [terminalSessions, setTerminalSessions] = useState<Map<string, TerminalSession>>(new Map());
 
-  // Cluster view states keyed by composite key (panelId:contextId)
+  // Cluster view states keyed by tab id
   const [clusterViewStates, setClusterViewStates] = useState<Map<string, ClusterViewState>>(
     new Map()
   );
@@ -97,25 +96,28 @@ function MainLayout() {
     // Handle side effects (terminal session, cluster view state)
     if (contextNode.type === NodeType.Context && contextNode.clusterContext) {
       const contextId = contextNode.clusterContext.id;
-      const compositeKey = createCompositeKey(newState.activePanelId, contextId);
+      const activePanel = newState.panels.find(p => p.id === newState.activePanelId);
+      const activeTab = activePanel?.tabs.find(t => t.clusterContext.id === contextId);
 
-      // Get or create terminal session
-      if (!terminalSessions.has(compositeKey)) {
-        debug(`MainLayout: Creating new session for ${compositeKey}`);
-        try {
-          const session = await createTerminalSession(contextNode.clusterContext, compositeKey);
-          setTerminalSessions(prev => new Map(prev).set(compositeKey, session));
-        } catch (error) {
-          console.error('Failed to create terminal session:', error);
+      if (activeTab) {
+        // Get or create terminal session
+        if (!terminalSessions.has(activeTab.id)) {
+          debug(`MainLayout: Creating new session for tab ${activeTab.id}`);
+          try {
+            const session = await createTerminalSession(contextNode.clusterContext, activeTab.id);
+            setTerminalSessions(prev => new Map(prev).set(activeTab.id, session));
+          } catch (error) {
+            console.error('Failed to create terminal session:', error);
+          }
         }
-      }
 
-      // Get or create cluster view state
-      if (!clusterViewStates.has(compositeKey)) {
-        debug(`MainLayout: Creating new cluster view state for ${compositeKey}`);
-        setClusterViewStates(prev =>
-          new Map(prev).set(compositeKey, createDefaultClusterViewState())
-        );
+        // Get or create cluster view state
+        if (!clusterViewStates.has(activeTab.id)) {
+          debug(`MainLayout: Creating new cluster view state for tab ${activeTab.id}`);
+          setClusterViewStates(prev =>
+            new Map(prev).set(activeTab.id, createDefaultClusterViewState())
+          );
+        }
       }
     }
   };
@@ -142,19 +144,18 @@ function MainLayout() {
     );
   };
 
-  const handleClusterViewStateChange = (compositeKey: string, state: ClusterViewState) => {
-    setClusterViewStates(prev => new Map(prev).set(compositeKey, state));
+  const handleClusterViewStateChange = (tabId: string, state: ClusterViewState) => {
+    setClusterViewStates(prev => new Map(prev).set(tabId, state));
   };
 
   const handleReloadCluster = async (tab: ClusterContextTab) => {
-    const compositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
-    debug(`MainLayout: Reloading cluster ${compositeKey}`);
+    debug(`MainLayout: Reloading cluster tab ${tab.id}`);
 
     // Reset cluster view state to default
-    setClusterViewStates(prev => new Map(prev).set(compositeKey, createDefaultClusterViewState()));
+    setClusterViewStates(prev => new Map(prev).set(tab.id, createDefaultClusterViewState()));
 
     // Close and recreate terminal session
-    const session = terminalSessions.get(compositeKey);
+    const session = terminalSessions.get(tab.id);
     if (session) {
       try {
         await invoke('close_terminal_session', { sessionId: session.sessionId });
@@ -162,8 +163,8 @@ function MainLayout() {
         session.terminal.dispose();
 
         // Create new session
-        const newSession = await createTerminalSession(tab.clusterContext, compositeKey);
-        setTerminalSessions(prev => new Map(prev).set(compositeKey, newSession));
+        const newSession = await createTerminalSession(tab.clusterContext, tab.id);
+        setTerminalSessions(prev => new Map(prev).set(tab.id, newSession));
       } catch (error) {
         console.error('Failed to reload terminal session:', error);
       }
@@ -171,19 +172,17 @@ function MainLayout() {
   };
 
   const handleContextNodeClose = async (tab: ClusterContextTab) => {
-    const compositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
-
     // Close terminal session
-    const session = terminalSessions.get(compositeKey);
+    const session = terminalSessions.get(tab.id);
     if (session) {
-      debug(`MainLayout: Closing terminal session for ${compositeKey}`);
+      debug(`MainLayout: Closing terminal session for tab ${tab.id}`);
       try {
         await invoke('close_terminal_session', { sessionId: session.sessionId });
         session.unlisten();
         session.terminal.dispose();
         setTerminalSessions(prev => {
           const next = new Map(prev);
-          next.delete(compositeKey);
+          next.delete(tab.id);
           return next;
         });
       } catch (error) {
@@ -194,7 +193,7 @@ function MainLayout() {
     // Remove cluster view state
     setClusterViewStates(prev => {
       const next = new Map(prev);
-      next.delete(compositeKey);
+      next.delete(tab.id);
       return next;
     });
 
@@ -222,31 +221,28 @@ function MainLayout() {
 
     debug(`MainLayout: Splitting panel. New panel ID: ${result.newPanelId}`);
 
-    // Copy terminal session state
-    const sourceCompositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
-    const newCompositeKey = createCompositeKey(result.newPanelId, tab.clusterContext.id);
-
-    debug(`MainLayout: Creating terminal session for ${newCompositeKey}`);
+    // Create terminal session for new tab
+    debug(`MainLayout: Creating terminal session for new tab ${result.newTab.id}`);
     try {
-      const newSession = await createTerminalSession(tab.clusterContext, newCompositeKey);
-      setTerminalSessions(prev => new Map(prev).set(newCompositeKey, newSession));
-      debug(`MainLayout: Terminal session created successfully for ${newCompositeKey}`);
+      const newSession = await createTerminalSession(tab.clusterContext, result.newTab.id);
+      setTerminalSessions(prev => new Map(prev).set(result.newTab.id, newSession));
+      debug(`MainLayout: Terminal session created successfully for tab ${result.newTab.id}`);
     } catch (error) {
       console.error('Failed to create terminal session for split panel:', error);
     }
 
-    // Copy cluster view state
-    const sourceViewState = clusterViewStates.get(sourceCompositeKey);
+    // Copy cluster view state from source tab
+    const sourceViewState = clusterViewStates.get(tab.id);
     if (sourceViewState) {
       setClusterViewStates(prev =>
-        new Map(prev).set(newCompositeKey, {
+        new Map(prev).set(result.newTab.id, {
           ...sourceViewState,
           expandedGroups: new Set(sourceViewState.expandedGroups),
         })
       );
     } else {
       setClusterViewStates(prev =>
-        new Map(prev).set(newCompositeKey, createDefaultClusterViewState())
+        new Map(prev).set(result.newTab.id, createDefaultClusterViewState())
       );
     }
 

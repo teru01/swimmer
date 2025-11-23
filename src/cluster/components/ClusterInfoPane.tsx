@@ -5,7 +5,6 @@ import ResourceList, { KubeResource } from './ResourceList';
 import ResourceDetailPane from './ResourceDetailPane';
 import './ClusterInfoPane.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { createCompositeKey } from '../types/panel';
 
 export interface ClusterViewState {
   selectedKind: string | undefined;
@@ -93,14 +92,13 @@ const fetchResourceDetail = async (
 // --- End Dummy Fetch ---
 
 interface ClusterInfoPaneProps {
-  panelId: string;
-  selectedClusterContext: ClusterContext | undefined;
+  activeTabId: string | undefined;
   allViewStates: Map<string, ClusterViewState>;
-  onViewStateChange: (compositeKey: string, state: ClusterViewState) => void;
+  onViewStateChange: (tabId: string, state: ClusterViewState) => void;
 }
 
 interface ClusterViewInstanceProps {
-  compositeKey: string;
+  tabId: string;
   isVisible: boolean;
   viewState: ClusterViewState;
   onViewStateChange: (state: ClusterViewState) => void;
@@ -226,25 +224,19 @@ function ClusterViewInstance({
 /**
  * Center Pane: Component to display cluster information with sidebar, list, and detail views.
  */
-function ClusterInfoPane({
-  panelId,
-  selectedClusterContext,
-  allViewStates,
-  onViewStateChange,
-}: ClusterInfoPaneProps) {
+function ClusterInfoPane({ activeTabId, allViewStates, onViewStateChange }: ClusterInfoPaneProps) {
   return (
     <div className="cluster-info-pane-container">
-      {selectedClusterContext ? (
+      {activeTabId ? (
         <>
-          {Array.from(allViewStates.entries()).map(([compositeKey, viewState]) => {
-            const currentCompositeKey = createCompositeKey(panelId, selectedClusterContext.id);
+          {Array.from(allViewStates.entries()).map(([tabId, viewState]) => {
             return (
               <ClusterViewInstance
-                key={compositeKey}
-                compositeKey={compositeKey}
-                isVisible={compositeKey === currentCompositeKey}
+                key={tabId}
+                tabId={tabId}
+                isVisible={tabId === activeTabId}
                 viewState={viewState}
-                onViewStateChange={state => onViewStateChange(compositeKey, state)}
+                onViewStateChange={state => onViewStateChange(tabId, state)}
               />
             );
           })}
