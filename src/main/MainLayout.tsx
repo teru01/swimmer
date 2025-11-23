@@ -89,7 +89,7 @@ function MainLayout() {
       if (!terminalSessions.has(compositeKey)) {
         debug(`MainLayout: Creating new session for ${compositeKey}`);
         try {
-          const session = await createTerminalSession(contextNode, compositeKey);
+          const session = await createTerminalSession(contextNode.clusterContext, compositeKey);
           setTerminalSessions(prev => new Map(prev).set(compositeKey, session));
         } catch (error) {
           console.error('Failed to create terminal session:', error);
@@ -151,16 +151,8 @@ function MainLayout() {
         session.unlisten();
         session.terminal.dispose();
 
-        // Reconstruct ContextNode for createTerminalSession
-        const contextNode: ContextNode = {
-          id: `context-${tab.clusterContext.id}`,
-          name: tab.clusterContext.clusterName,
-          type: NodeType.Context,
-          clusterContext: tab.clusterContext,
-        };
-
         // Create new session
-        const newSession = await createTerminalSession(contextNode, compositeKey);
+        const newSession = await createTerminalSession(tab.clusterContext, compositeKey);
         setTerminalSessions(prev => new Map(prev).set(compositeKey, newSession));
       } catch (error) {
         console.error('Failed to reload terminal session:', error);
@@ -260,16 +252,8 @@ function MainLayout() {
     const sourceCompositeKey = createCompositeKey(tab.panelId, tab.clusterContext.id);
     const newCompositeKey = createCompositeKey(newPanelId, tab.clusterContext.id);
 
-    // Reconstruct ContextNode for createTerminalSession
-    const contextNode: ContextNode = {
-      id: `context-${tab.clusterContext.id}`,
-      name: tab.clusterContext.clusterName,
-      type: NodeType.Context,
-      clusterContext: tab.clusterContext,
-    };
-
     try {
-      const newSession = await createTerminalSession(contextNode, newCompositeKey);
+      const newSession = await createTerminalSession(tab.clusterContext, newCompositeKey);
       setTerminalSessions(prev => new Map(prev).set(newCompositeKey, newSession));
     } catch (error) {
       console.error('Failed to create terminal session for split panel:', error);

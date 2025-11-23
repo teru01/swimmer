@@ -6,7 +6,7 @@ import '@xterm/xterm/css/xterm.css';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { debug } from '@tauri-apps/plugin-log';
-import { ContextNode } from '../../lib/contextTree';
+import { ContextNode, ClusterContext } from '../../lib/contextTree';
 import { loadPreferences } from '../../lib/fs';
 import { createCompositeKey } from '../types/panel';
 
@@ -114,7 +114,7 @@ function TerminalPane({ panelId, selectedContext, allTerminalSessions }: Termina
 }
 
 export const createTerminalSession = async (
-  selectedContext: ContextNode,
+  clusterContext: ClusterContext,
   compositeKey: string
 ): Promise<TerminalSession> => {
   const preferences = await loadPreferences();
@@ -135,7 +135,7 @@ export const createTerminalSession = async (
   term.loadAddon(fit);
   term.loadAddon(webLinks);
 
-  debug(`createTerminalSession: Creating session for ${selectedContext.name} (${compositeKey})`);
+  debug(`createTerminalSession: Creating session for ${clusterContext.id}`);
 
   // Create terminal session on backend
   const sessionId = (await invoke('create_terminal_session', {
@@ -155,7 +155,7 @@ export const createTerminalSession = async (
     }
   });
 
-  term.writeln(`Context: ${selectedContext.name}`);
+  term.writeln(`Context: ${clusterContext.id}`);
 
   return {
     terminal: term,
