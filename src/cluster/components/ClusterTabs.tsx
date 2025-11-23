@@ -44,14 +44,15 @@ function ClusterTabs({
             onClick={() => onClusterSelect(tab)}
             onContextMenu={e => handleContextMenu(e, tab)}
           >
-            {tab.clusterContext.clusterName}
+            <span className="tab-label">{tab.clusterContext.clusterName}</span>
             <button
+              className="close-button"
               onClick={e => {
                 e.stopPropagation();
                 onCloseCluster(tab);
               }}
             >
-              x
+              ×
             </button>
           </div>
         );

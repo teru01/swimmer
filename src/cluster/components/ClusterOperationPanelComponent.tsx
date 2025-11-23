@@ -50,7 +50,7 @@ function ClusterOperationPanelComponent({
 
         <PanelGroup direction="vertical">
           {/* Cluster information */}
-          <Panel defaultSize={50} minSize={20}>
+          <Panel defaultSize={70} minSize={20}>
             <div className="cluster-info-pane-container">
               <ClusterInfoPane
                 activeTabId={activeTab?.id}
@@ -63,7 +63,7 @@ function ClusterOperationPanelComponent({
           <PanelResizeHandle className="resize-handle horizontal" />
 
           {/* Terminal */}
-          <Panel defaultSize={50} minSize={20}>
+          <Panel defaultSize={30} minSize={10}>
             <TerminalPane activeTabId={activeTab?.id} allTerminalSessions={allTerminalSessions} />
           </Panel>
         </PanelGroup>

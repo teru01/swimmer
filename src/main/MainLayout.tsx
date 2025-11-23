@@ -23,7 +23,7 @@ import {
 } from './panelLogic';
 
 const createDefaultClusterViewState = (): ClusterViewState => ({
-  selectedKind: undefined,
+  selectedKind: 'Overview',
   selectedResourceDetail: undefined,
   isDetailLoading: false,
   showDetailPane: false,

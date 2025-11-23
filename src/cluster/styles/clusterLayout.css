@@ -21,20 +21,23 @@
 /* クラスタタブ */
 .cluster-tabs {
   display: flex;
-  padding: 3px 3px 0 3px;
-  margin-bottom: 4px;
+  padding: 2px 2px 0 2px;
+  margin-bottom: 3px;
 }
 
 .cluster-tab {
-  padding: 6px 12px;
+  padding: 4px 10px;
   cursor: pointer;
-  border: 1px solid #ddd;
-  border-bottom: 1px solid #ddd;
+  border: 1.5px solid #ddd;
+  border-bottom: 1.5px solid #ddd;
   border-radius: 6px 6px 0 0;
   margin-right: 2px;
   background-color: #f8f9fa;
   font-size: 12px;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .cluster-tab:hover {
@@ -73,6 +76,35 @@
 
 .cluster-tab.dimmed {
   opacity: 0.5;
+}
+
+.cluster-tab .close-button {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  margin: 0;
+  font-size: 16px;
+  color: #666;
+  transition: all 0.2s;
+  border-radius: 3px;
+  opacity: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cluster-tab.active:not(.dimmed) .close-button {
+  opacity: 1;
+}
+
+.cluster-tab:hover .close-button {
+  opacity: 1;
+}
+
+.cluster-tab .close-button:hover {
+  color: #333;
+  background-color: #ddd;
 }
 
 /* 中央中部：クラスタ情報 */

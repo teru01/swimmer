@@ -98,11 +98,8 @@ function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
   return (
     <div className="terminal-pane">
       <div className="terminal-header">
-        <span>Terminal</span>
         <span>
-          {activeSession
-            ? `Context: ${activeSession.clusterContext.clusterName}`
-            : 'No context selected'}
+          {activeSession ? `Context: ${activeSession.clusterContext.id}` : 'No context selected'}
         </span>
       </div>
       <div className="terminal-container" ref={containerRef}>
