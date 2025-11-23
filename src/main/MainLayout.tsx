@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import ContextsPane from '../kubeContexts/components/ContextsPane';
 import ClusterOperationPanelComponent from '../cluster/components/ClusterOperationPanelComponent';
 import { ClusterViewState } from '../cluster/components/ClusterInfoPane';
@@ -57,6 +57,24 @@ function MainLayout() {
     new Map()
   );
 
+  // Tab activation history (stored for future use)
+  const tabHistoryRef = useRef<string[]>([]);
+
+  // Add tab to history
+  const addToTabHistory = (tabId: string) => {
+    tabHistoryRef.current.push(tabId);
+    const maxSize = preferences.tabHistory.maxSize;
+
+    // Keep only the last maxSize entries
+    if (tabHistoryRef.current.length > maxSize) {
+      tabHistoryRef.current = tabHistoryRef.current.slice(tabHistoryRef.current.length - maxSize);
+    }
+
+    debug(
+      `MainLayout: Tab history updated. Added: ${tabId}, History length: ${tabHistoryRef.current.length}/${maxSize}`
+    );
+  };
+
   // Context selection handler
   const handleContextNodeSelect = async (contextNode: ContextNode) => {
     setSelectedContext(contextNode);
@@ -65,6 +83,9 @@ function MainLayout() {
       if (!currentPanel) return;
 
       const clusterContextTab = newClusterContextTab(activePanelId, contextNode.clusterContext);
+
+      // Add to tab history
+      addToTabHistory(clusterContextTab.id);
 
       // Update panel's tabs and active context
       setPanels(prev =>
@@ -110,6 +131,9 @@ function MainLayout() {
   const handleContextSelectOnTab = (tab: ClusterContextTab) => {
     setSelectedContext(newClusterContextNode(tab.clusterContext, undefined));
     setActivePanelId(tab.panelId);
+
+    // Add to tab history
+    addToTabHistory(tab.id);
 
     // Update panel's active context
     setPanels(prev =>
@@ -224,6 +248,9 @@ function MainLayout() {
     const newPanelId = generatePanelId();
 
     const clusterContextTab = newClusterContextTab(newPanelId, tab.clusterContext);
+
+    // Add to tab history
+    addToTabHistory(clusterContextTab.id);
 
     // Create new panel with the same context
     setPanels(prev => [

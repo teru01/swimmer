@@ -35,6 +35,10 @@ export const PreferencesSchema = z.object({
     fontSize: z.number().default(12),
     fontFamily: z.string().default('Menlo, Monaco, "Courier New", monospace'),
   }),
+  // タブ履歴設定
+  tabHistory: z.object({
+    maxSize: z.number().default(100),
+  }),
 });
 
 export type Preferences = z.infer<typeof PreferencesSchema>;
@@ -71,5 +75,8 @@ export const defaultPreferences: Preferences = {
     },
     fontSize: 12,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+  },
+  tabHistory: {
+    maxSize: 100,
   },
 };
