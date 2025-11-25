@@ -11,6 +11,7 @@ interface ClusterOperationPanelComponentProps {
   allClusterViewStates: Map<string, ClusterViewState>;
   onSelectCluster: (tab: ClusterContextTab) => void;
   onCloseCluster: (tab: ClusterContextTab) => void;
+  onCloseOtherTabs?: (tab: ClusterContextTab) => void;
   onReloadCluster: (tab: ClusterContextTab) => void;
   onSplitRight: (tab: ClusterContextTab) => void;
   onViewStateChange: (tabId: string, state: ClusterViewState) => void;
@@ -26,6 +27,7 @@ function ClusterOperationPanelComponent({
   allClusterViewStates,
   onSelectCluster,
   onCloseCluster,
+  onCloseOtherTabs,
   onReloadCluster,
   onSplitRight,
   onViewStateChange,
@@ -43,6 +45,7 @@ function ClusterOperationPanelComponent({
             activePanelId={activePanelId}
             onSelectCluster={onSelectCluster}
             onCloseCluster={onCloseCluster}
+            onCloseOtherTabs={onCloseOtherTabs}
             onReloadCluster={onReloadCluster}
             onSplitRight={onSplitRight}
           />

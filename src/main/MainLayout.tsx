@@ -211,6 +211,55 @@ function MainLayout() {
     tabHistoryRef.current = result.newTabHistory;
   };
 
+  const handleCloseOtherTabs = async (tab: ClusterContextTab) => {
+    const tabsToClose = panels
+      .flatMap(panel => panel.tabs)
+      .filter(t => t.id !== tab.id && t.panelId === tab.panelId);
+
+    // Close all terminal sessions and view states
+    for (const t of tabsToClose) {
+      const session = terminalSessions.get(t.id);
+      if (session) {
+        try {
+          await invoke('close_terminal_session', { sessionId: session.sessionId });
+          session.unlisten();
+          session.terminal.dispose();
+        } catch (error) {
+          console.error('Failed to close terminal session:', error);
+        }
+      }
+    }
+
+    // Update all state at once
+    setTerminalSessions(prev => {
+      const next = new Map(prev);
+      tabsToClose.forEach(t => next.delete(t.id));
+      return next;
+    });
+
+    setClusterViewStates(prev => {
+      const next = new Map(prev);
+      tabsToClose.forEach(t => next.delete(t.id));
+      return next;
+    });
+
+    // Apply close logic for all tabs
+    let currentState = { panels, activePanelId, selectedContext };
+    let currentHistory = tabHistoryRef.current;
+
+    for (const t of tabsToClose) {
+      const result = handleContextNodeCloseLogic(currentState, t, currentHistory);
+      currentState = result.state;
+      currentHistory = result.newTabHistory;
+    }
+
+    // Update state
+    setSelectedContext(currentState.selectedContext);
+    setActivePanelId(currentState.activePanelId);
+    setPanels(currentState.panels);
+    tabHistoryRef.current = currentHistory;
+  };
+
   const handleSplitRight = async (tab: ClusterContextTab) => {
     const result = handleSplitRightLogic({ panels, activePanelId, selectedContext }, tab);
 
@@ -283,6 +332,7 @@ function MainLayout() {
                       allClusterViewStates={clusterViewStates}
                       onSelectCluster={handleContextSelectOnTab}
                       onCloseCluster={handleContextNodeClose}
+                      onCloseOtherTabs={handleCloseOtherTabs}
                       onReloadCluster={handleReloadCluster}
                       onSplitRight={handleSplitRight}
                       onViewStateChange={handleClusterViewStateChange}

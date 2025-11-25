@@ -4,6 +4,7 @@ import { ClusterContextTab } from '../types/panel';
 interface UseTabContextMenuProps {
   tabs: ClusterContextTab[];
   onCloseTab: (tab: ClusterContextTab) => void;
+  onCloseOtherTabs?: (tab: ClusterContextTab) => void;
   onReloadTab?: (tab: ClusterContextTab) => void;
   onSplitRight?: (tab: ClusterContextTab) => void;
 }
@@ -11,6 +12,7 @@ interface UseTabContextMenuProps {
 export const useTabContextMenu = ({
   tabs,
   onCloseTab,
+  onCloseOtherTabs,
   onReloadTab,
   onSplitRight,
 }: UseTabContextMenuProps) => {
@@ -28,11 +30,9 @@ export const useTabContextMenu = ({
           id: 'close-others',
           text: 'Close Others',
           action: () => {
-            tabs.forEach(t => {
-              if (t.id !== tab.id) {
-                onCloseTab(t);
-              }
-            });
+            if (onCloseOtherTabs) {
+              onCloseOtherTabs(tab);
+            }
           },
         },
         {

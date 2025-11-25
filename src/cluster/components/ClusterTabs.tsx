@@ -7,6 +7,7 @@ interface ClusterTabsProps {
   activePanelId: string;
   onSelectCluster: (tab: ClusterContextTab) => void;
   onCloseCluster: (tab: ClusterContextTab) => void;
+  onCloseOtherTabs?: (tab: ClusterContextTab) => void;
   onReloadCluster?: (tab: ClusterContextTab) => void;
   onSplitRight?: (tab: ClusterContextTab) => void;
 }
@@ -20,12 +21,14 @@ function ClusterTabs({
   activePanelId,
   onSelectCluster: onClusterSelect,
   onCloseCluster: onCloseCluster,
+  onCloseOtherTabs,
   onReloadCluster,
   onSplitRight,
 }: ClusterTabsProps) {
   const { handleContextMenu } = useTabContextMenu({
     tabs,
     onCloseTab: onCloseCluster,
+    onCloseOtherTabs,
     onReloadTab: onReloadCluster,
     onSplitRight,
   });
