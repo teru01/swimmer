@@ -15,6 +15,7 @@ import {
 export const gkeProvider: ContextProvider = {
   name: 'GKE',
   pattern: /^gke_([^_]+)_([^_]+)_(.+)$/,
+  resourceContainerLabel: 'Project',
 
   parse: (context: string) => {
     const match = context.match(gkeProvider.pattern);

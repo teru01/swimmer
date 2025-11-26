@@ -15,6 +15,7 @@ import {
 export const eksProvider: ContextProvider = {
   name: 'AWS',
   pattern: /^arn:aws:eks:([^:]+):(\d+):cluster\/(.+)$/,
+  resourceContainerLabel: 'Account ID',
 
   parse: (context: string) => {
     const match = context.match(eksProvider.pattern);

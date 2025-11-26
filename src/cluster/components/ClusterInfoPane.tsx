@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { ClusterContext } from '../../lib/contextTree';
 import ResourceKindSidebar from './ResourceKindSidebar';
 import ResourceList, { KubeResource } from './ResourceList';
 import ResourceDetailPane from './ResourceDetailPane';

@@ -10,7 +10,6 @@ interface UseTabContextMenuProps {
 }
 
 export const useTabContextMenu = ({
-  tabs,
   onCloseTab,
   onCloseOtherTabs,
   onReloadTab,

@@ -14,6 +14,7 @@ export const othersProvider: ContextProvider = {
   name: 'Others',
   // すべてにマッチする正規表現（実際には他のプロバイダーでマッチしなかったものを受け取る）
   pattern: /.+/,
+  resourceContainerLabel: 'Project/Account',
 
   parse: (context: string) => {
     return {

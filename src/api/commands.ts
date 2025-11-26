@@ -4,6 +4,41 @@
 
 import { invoke } from '@tauri-apps/api/core';
 
+export interface ClusterOverviewInfo {
+  provider: string;
+  projectOrAccount: string;
+  region: string;
+  clusterName: string;
+  clusterVersion: string;
+}
+
+export interface ClusterStats {
+  totalNodes: number;
+  readyNodes: number;
+  totalPods: number;
+  runningPods: number;
+  namespaceCount: number;
+  cpuUsage: string;
+  memoryUsage: string;
+}
+
+export interface NodeInfo {
+  name: string;
+  status: string;
+  version: string;
+  osImage: string;
+  cpu: string;
+  memory: string;
+}
+
+export interface PodInfo {
+  name: string;
+  namespace: string;
+  status: string;
+  node: string;
+  restarts: number;
+}
+
 /**
  * 環境設定
  * - USE_MOCK: モックデータを使用するかどうか（"true"の場合モックデータを使用）
@@ -56,5 +91,130 @@ export const commands = {
       'custom-context-1',
       'custom-context-2',
     ]);
+  },
+
+  /**
+   * クラスタ概要情報を取得します
+   */
+  getClusterOverviewInfo: async (contextId: string): Promise<ClusterOverviewInfo> => {
+    if (!useMocks) {
+      console.info('Using real Tauri API for getClusterOverviewInfo');
+      return invoke('get_cluster_overview_info', { contextId });
+    }
+
+    console.info('Using mock data for getClusterOverviewInfo (DEV mode)');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return {
+      provider: 'GKE',
+      projectOrAccount: 'my-gcp-project',
+      region: 'asia-northeast1',
+      clusterName: 'production-cluster',
+      clusterVersion: 'v1.28.5-gke.1217000',
+    };
+  },
+
+  /**
+   * クラスタ統計情報を取得します
+   */
+  getClusterStats: async (contextId: string): Promise<ClusterStats> => {
+    if (!useMocks) {
+      console.info('Using real Tauri API for getClusterStats');
+      return invoke('get_cluster_stats', { contextId });
+    }
+
+    console.info('Using mock data for getClusterStats (DEV mode)');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return {
+      totalNodes: 5,
+      readyNodes: 5,
+      totalPods: 42,
+      runningPods: 38,
+      namespaceCount: 8,
+      cpuUsage: '45%',
+      memoryUsage: '62%',
+    };
+  },
+
+  /**
+   * ノード一覧を取得します
+   */
+  getNodes: async (contextId: string): Promise<NodeInfo[]> => {
+    if (!useMocks) {
+      console.info('Using real Tauri API for getNodes');
+      return invoke('get_nodes', { contextId });
+    }
+
+    console.info('Using mock data for getNodes (DEV mode)');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return [
+      {
+        name: 'node-1',
+        status: 'Ready',
+        version: 'v1.28.5',
+        osImage: 'Ubuntu 22.04',
+        cpu: '4 cores',
+        memory: '16Gi',
+      },
+      {
+        name: 'node-2',
+        status: 'Ready',
+        version: 'v1.28.5',
+        osImage: 'Ubuntu 22.04',
+        cpu: '4 cores',
+        memory: '16Gi',
+      },
+      {
+        name: 'node-3',
+        status: 'Ready',
+        version: 'v1.28.5',
+        osImage: 'Ubuntu 22.04',
+        cpu: '8 cores',
+        memory: '32Gi',
+      },
+      {
+        name: 'node-4',
+        status: 'Ready',
+        version: 'v1.28.5',
+        osImage: 'Ubuntu 22.04',
+        cpu: '4 cores',
+        memory: '16Gi',
+      },
+      {
+        name: 'node-5',
+        status: 'Ready',
+        version: 'v1.28.5',
+        osImage: 'Ubuntu 22.04',
+        cpu: '4 cores',
+        memory: '16Gi',
+      },
+    ];
+  },
+
+  /**
+   * Pod一覧を取得します
+   */
+  getPods: async (contextId: string): Promise<PodInfo[]> => {
+    if (!useMocks) {
+      console.info('Using real Tauri API for getPods');
+      return invoke('get_pods', { contextId });
+    }
+
+    console.info('Using mock data for getPods (DEV mode)');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const statuses = ['Running', 'Running', 'Running', 'Running', 'Pending', 'Failed'];
+    const namespaces = ['default', 'kube-system', 'production', 'development'];
+    const pods: PodInfo[] = [];
+
+    for (let i = 0; i < 15; i++) {
+      pods.push({
+        name: `pod-${i + 1}-${Math.random().toString(36).substring(7)}`,
+        namespace: namespaces[i % namespaces.length],
+        status: statuses[i % statuses.length],
+        node: `node-${(i % 5) + 1}`,
+        restarts: Math.floor(Math.random() * 3),
+      });
+    }
+
+    return pods;
   },
 };

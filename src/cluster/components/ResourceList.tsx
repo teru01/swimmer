@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './ClusterInfoPane.css';
 import { formatAge } from '../../lib/utils'; // Import the utility
+import ClusterOverview from './ClusterOverview';
 
 // --- Dummy Data & Fetch Functions (Replace with actual API calls) ---
 export interface KubeResource {
@@ -229,6 +230,10 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
         return '-';
     }
   };
+
+  if (selectedKind === 'Overview') {
+    return <ClusterOverview contextId="dummy-context-id" />;
+  }
 
   return (
     <div className="resource-list-pane">

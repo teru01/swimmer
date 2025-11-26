@@ -36,6 +36,7 @@ export interface ContextNode {
 export interface ContextProvider {
   name: string;
   pattern: RegExp;
+  resourceContainerLabel?: string;
   parse: (context: string) => { provider: string; [key: string]: string } | undefined;
   buildTree: (contexts: string[], rootId: string) => ContextNode;
 }
