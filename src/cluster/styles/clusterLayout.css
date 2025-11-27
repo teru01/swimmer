@@ -23,6 +23,28 @@
   display: flex;
   padding: 2px 2px 0 2px;
   margin-bottom: 3px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.cluster-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.cluster-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cluster-tabs::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.cluster-tabs::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
 .cluster-tab {
@@ -38,6 +60,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .cluster-tab:hover {
