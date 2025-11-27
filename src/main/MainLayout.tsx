@@ -303,6 +303,10 @@ function MainLayout() {
     addToTabHistory(result.newTab.id);
   };
 
+  const handlePanelClick = (panelId: string) => {
+    setActivePanelId(panelId);
+  };
+
   return (
     <div className="layout-container">
       <div className="main-content">
@@ -336,6 +340,7 @@ function MainLayout() {
                       onReloadCluster={handleReloadCluster}
                       onSplitRight={handleSplitRight}
                       onViewStateChange={handleClusterViewStateChange}
+                      onPanelClick={handlePanelClick}
                     />
                   </Panel>
                   {index < panels.length - 1 && (
