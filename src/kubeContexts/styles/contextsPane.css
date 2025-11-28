@@ -298,17 +298,14 @@
 }
 
 .node-actions {
+  position: relative;
   display: flex;
   gap: 4px;
   align-items: center;
-  pointer-events: auto; /* クリックを可能にする */
-  margin-left: 4px; /* コンテンツとの間隔 */
-  flex-shrink: 0; /* アクションが縮小されないように */
-}
-
-/* VSCodeスタイル: ノードにホバーしたときのみドラッグハンドルを表示 */
-.node-actions {
-  visibility: visible; /* 常に表示するが透明に */
+  pointer-events: auto;
+  margin-left: 4px;
+  flex-shrink: 0;
+  visibility: visible;
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -401,4 +398,26 @@
 
 .primary-button:hover {
   background-color: #0356b6;
+}
+
+.menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 16px;
+  line-height: 1;
+  transition: background-color 0.2s;
+}
+
+.menu-button:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }

@@ -6,6 +6,7 @@ import { gkeProvider } from '../../lib/providers/gke';
 import { eksProvider } from '../../lib/providers/eks';
 import { othersProvider } from '../../lib/providers/others';
 import { commands } from '../../api';
+import { Menu } from '@tauri-apps/api/menu';
 
 interface ContextsPaneProps {
   selectedContext: ContextNode | undefined;
@@ -109,6 +110,25 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
     return nodes.map(filterNode).filter(Boolean) as ContextNode[];
   };
 
+  const handleContextMenu = async (node: ContextNode, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const menu = await Menu.new({
+      items: [
+        {
+          id: 'dummy',
+          text: 'Dummy',
+          action: () => {
+            // Do nothing for now
+          },
+        },
+      ],
+    });
+
+    await menu.popup();
+  };
+
   /**
    * ツリーノードをレンダリング
    */
@@ -131,12 +151,24 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
               onContextNodeSelect?.(node);
             }
           }}
+          onContextMenu={isContext ? e => handleContextMenu(node, e) : undefined}
         >
           <div className="node-content">
             {isFolder && <span className="folder-icon">{isExpanded ? '▼' : '▶'}</span>}
             {isContext && <span className="context-icon">⚙️</span>}
             <span className="node-name">{node.name}</span>
           </div>
+          {isContext && (
+            <div className="node-actions">
+              <button
+                className="menu-button"
+                onClick={e => handleContextMenu(node, e)}
+                aria-label="Menu"
+              >
+                ⋮
+              </button>
+            </div>
+          )}
         </div>
         {isFolder && isExpanded && node.children && (
           <div className="node-children">
