@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { usePreferences } from '../contexts/PreferencesContext';
 import './preferencesPage.css';
+import { loadTags, addTag, deleteTag, createTag, Tag } from '../lib/tag';
 
 interface PreferencesPageProps {
   onBack?: () => void;
 }
 
-type Section = 'general' | 'ai-chat' | 'terminal';
+type Section = 'general' | 'ai-chat' | 'terminal' | 'tags';
 
 const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
   const { preferences, updatePreferences } = usePreferences();
   const [activeSection, setActiveSection] = useState<Section>('general');
+  const [tags, setTags] = useState<Tag[]>(loadTags());
+  const [newTagName, setNewTagName] = useState('');
 
   const handleToggleAiChat = async (enabled: boolean) => {
     await updatePreferences({
@@ -30,6 +33,21 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
         shellPath,
       },
     });
+  };
+
+  const handleAddTag = () => {
+    if (!newTagName.trim()) return;
+    const tag = createTag(newTagName.trim());
+    addTag(tag);
+    setTags(loadTags());
+    setNewTagName('');
+  };
+
+  const handleDeleteTag = (tagId: string) => {
+    if (confirm('Are you sure you want to delete this tag?')) {
+      deleteTag(tagId);
+      setTags(loadTags());
+    }
   };
 
   return (
@@ -60,6 +78,12 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
             onClick={() => setActiveSection('terminal')}
           >
             Terminal
+          </button>
+          <button
+            className={`sidebar-item ${activeSection === 'tags' ? 'active' : ''}`}
+            onClick={() => setActiveSection('tags')}
+          >
+            Tags
           </button>
         </aside>
 
@@ -116,6 +140,51 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
                   placeholder="/bin/zsh"
                   className="text-input"
                 />
+              </div>
+            </section>
+          )}
+
+          {activeSection === 'tags' && (
+            <section className="preferences-section">
+              <h2>Tags</h2>
+              <p className="section-description">
+                Manage tags for organizing your Kubernetes contexts.
+              </p>
+
+              <div className="tags-section">
+                <div className="add-tag-row">
+                  <input
+                    type="text"
+                    value={newTagName}
+                    onChange={e => setNewTagName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddTag()}
+                    placeholder="Enter tag name"
+                    className="text-input"
+                  />
+                  <button onClick={handleAddTag} className="add-button">
+                    Add Tag
+                  </button>
+                </div>
+
+                <div className="tags-list">
+                  {tags.length === 0 ? (
+                    <p className="no-tags">No tags created yet.</p>
+                  ) : (
+                    tags.map(tag => (
+                      <div key={tag.id} className="tag-row">
+                        <span className="tag-color-dot" style={{ backgroundColor: tag.color }} />
+                        <span className="tag-name-text">{tag.name}</span>
+                        <button
+                          onClick={() => handleDeleteTag(tag.id)}
+                          className="delete-button"
+                          aria-label="Delete tag"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </section>
           )}

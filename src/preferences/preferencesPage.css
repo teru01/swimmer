@@ -184,3 +184,90 @@ input:checked + .slider:before {
   outline: none;
   border-color: var(--color-primary);
 }
+
+/* Tags section */
+.tags-section {
+  margin-top: 16px;
+}
+
+.add-tag-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.add-tag-row .text-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.add-button {
+  padding: 6px 16px;
+  font-size: 13px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--color-primary);
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.add-button:hover {
+  background-color: #0356b6;
+}
+
+.tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tag-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.tag-color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tag-name-text {
+  flex: 1;
+  font-size: 13px;
+}
+
+.delete-button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.delete-button:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--color-error);
+}
+
+.no-tags {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 24px;
+  font-size: 13px;
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button, Input } from '../../main/ui';
 import '../styles/contextsPane.css';
 import { ContextNode, NodeType, buildTreeFromContexts } from '../../lib/contextTree';
@@ -6,7 +6,13 @@ import { gkeProvider } from '../../lib/providers/gke';
 import { eksProvider } from '../../lib/providers/eks';
 import { othersProvider } from '../../lib/providers/others';
 import { commands } from '../../api';
-import { Menu } from '@tauri-apps/api/menu';
+import {
+  loadTags,
+  getContextTags,
+  attachTagToContext,
+  detachTagFromContext,
+  MAX_TAGS_PER_CONTEXT,
+} from '../../lib/tag';
 
 interface ContextsPaneProps {
   selectedContext: ContextNode | undefined;
@@ -19,11 +25,21 @@ const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
 /**
  * Kubernetes contexts tree view component with static hierarchical structure.
  */
+interface ContextMenuState {
+  node: ContextNode;
+  x: number;
+  y: number;
+}
+
 function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProps) {
   const [contextTree, setContextTree] = useState<ContextNode[]>([]);
   const [searchText, setSearchText] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | undefined>(undefined);
+  const [showTagSubmenu, setShowTagSubmenu] = useState(false);
+  const [attachedTags, setAttachedTags] = useState<string[]>([]);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadContexts() {
@@ -42,6 +58,26 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
     loadContexts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setContextMenu(undefined);
+        setShowTagSubmenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (contextMenu?.node.clusterContext) {
+      setAttachedTags(getContextTags(contextMenu.node.clusterContext.id));
+    }
+  }, [contextMenu]);
 
   /**
    * すべてのフォルダIDを取得
@@ -110,23 +146,37 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
     return nodes.map(filterNode).filter(Boolean) as ContextNode[];
   };
 
-  const handleContextMenu = async (node: ContextNode, event: React.MouseEvent) => {
+  const handleContextMenu = (node: ContextNode, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
 
-    const menu = await Menu.new({
-      items: [
-        {
-          id: 'dummy',
-          text: 'Dummy',
-          action: () => {
-            // Do nothing for now
-          },
-        },
-      ],
-    });
+    if (!node.clusterContext) return;
 
-    await menu.popup();
+    setContextMenu({
+      node,
+      x: event.clientX,
+      y: event.clientY,
+    });
+    setShowTagSubmenu(false);
+  };
+
+  const handleToggleTag = (tagId: string) => {
+    if (!contextMenu?.node.clusterContext) return;
+
+    const contextId = contextMenu.node.clusterContext.id;
+    const isAttached = attachedTags.includes(tagId);
+
+    if (isAttached) {
+      detachTagFromContext(contextId, tagId);
+      setAttachedTags(prev => prev.filter(id => id !== tagId));
+    } else {
+      if (attachedTags.length >= MAX_TAGS_PER_CONTEXT) {
+        alert(`Maximum ${MAX_TAGS_PER_CONTEXT} tags per context`);
+        return;
+      }
+      attachTagToContext(contextId, tagId);
+      setAttachedTags(prev => [...prev, tagId]);
+    }
   };
 
   /**
@@ -213,6 +263,57 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
       <div className="context-tree-container">
         {filterNodes(contextTree).map(node => renderNode(node))}
       </div>
+
+      {contextMenu && (
+        <div
+          ref={menuRef}
+          className="context-menu-container"
+          style={{
+            position: 'fixed',
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+          }}
+        >
+          <div className="context-menu-main">
+            <div
+              className="context-menu-item"
+              onClick={() => {}}
+              onMouseEnter={() => setShowTagSubmenu(false)}
+            >
+              Dummy
+            </div>
+            <div
+              className="context-menu-item has-submenu"
+              onMouseEnter={() => setShowTagSubmenu(true)}
+            >
+              <span>Attach Tags</span>
+              <span className="submenu-arrow">▶</span>
+            </div>
+          </div>
+
+          {showTagSubmenu && (
+            <div className="context-menu-submenu" onMouseEnter={() => setShowTagSubmenu(true)}>
+              {loadTags().length === 0 ? (
+                <div className="context-menu-item disabled">No tags available</div>
+              ) : (
+                loadTags().map(tag => {
+                  const isAttached = attachedTags.includes(tag.id);
+                  return (
+                    <div
+                      key={tag.id}
+                      className="context-menu-item"
+                      onClick={() => handleToggleTag(tag.id)}
+                    >
+                      <span className="tag-check">{isAttached ? '✓' : ''}</span>
+                      <span className="tag-text">{tag.name}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
