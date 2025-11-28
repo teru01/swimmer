@@ -14,6 +14,7 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
   const [activeSection, setActiveSection] = useState<Section>('general');
   const [tags, setTags] = useState<Tag[]>(loadTags());
   const [newTagName, setNewTagName] = useState('');
+  const [tagToDelete, setTagToDelete] = useState<Tag | undefined>(undefined);
 
   const handleToggleAiChat = async (enabled: boolean) => {
     await updatePreferences({
@@ -43,11 +44,20 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
     setNewTagName('');
   };
 
-  const handleDeleteTag = (tagId: string) => {
-    if (confirm('Are you sure you want to delete this tag?')) {
-      deleteTag(tagId);
+  const handleDeleteTag = (tag: Tag) => {
+    setTagToDelete(tag);
+  };
+
+  const confirmDeleteTag = () => {
+    if (tagToDelete) {
+      deleteTag(tagToDelete.id);
       setTags(loadTags());
+      setTagToDelete(undefined);
     }
+  };
+
+  const cancelDeleteTag = () => {
+    setTagToDelete(undefined);
   };
 
   return (
@@ -160,6 +170,10 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
                     onKeyDown={e => e.key === 'Enter' && handleAddTag()}
                     placeholder="Enter tag name"
                     className="text-input"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
                   />
                   <button onClick={handleAddTag} className="add-button">
                     Add Tag
@@ -175,7 +189,7 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
                         <span className="tag-color-dot" style={{ backgroundColor: tag.color }} />
                         <span className="tag-name-text">{tag.name}</span>
                         <button
-                          onClick={() => handleDeleteTag(tag.id)}
+                          onClick={() => handleDeleteTag(tag)}
                           className="delete-button"
                           aria-label="Delete tag"
                         >
@@ -190,6 +204,24 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
           )}
         </main>
       </div>
+
+      {tagToDelete && (
+        <div className="modal-overlay" onClick={cancelDeleteTag}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2>Delete Tag</h2>
+            <p>
+              Are you sure you want to delete the tag "{tagToDelete.name}"? This tag will be
+              detached from all contexts.
+            </p>
+            <div className="modal-actions">
+              <button onClick={cancelDeleteTag}>Cancel</button>
+              <button onClick={confirmDeleteTag} className="primary-button">
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
