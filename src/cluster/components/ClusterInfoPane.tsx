@@ -190,7 +190,7 @@ function ClusterViewInstance({
         <PanelResizeHandle className="resize-handle-vertical" />
         <Panel minSize={30} id="main-area">
           <PanelGroup direction="vertical">
-            <Panel defaultSize={viewState.showDetailPane ? 70 : 100} minSize={20} id="list">
+            <Panel defaultSize={viewState.showDetailPane ? 30 : 100} minSize={20} id="list">
               <ResourceList
                 selectedKind={viewState.selectedKind}
                 onResourceSelect={handleResourceSelect}
@@ -201,7 +201,7 @@ function ClusterViewInstance({
               <>
                 <PanelResizeHandle className="resize-handle-horizontal" />
                 <Panel
-                  defaultSize={30}
+                  defaultSize={70}
                   minSize={5}
                   maxSize={80}
                   id="detail"
