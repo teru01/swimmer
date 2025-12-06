@@ -9,8 +9,8 @@ use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, Role, RoleBind
 use k8s_openapi::api::storage::v1::StorageClass;
 use kube::{
     api::{Api, ListParams, ObjectList},
-    config::InferConfigError,
-    Client, Config,
+    config::{Config, InferConfigError},
+    Client,
 };
 use serde_json::Value;
 use thiserror::Error;
@@ -38,7 +38,7 @@ type Result<T> = std::result::Result<T, K8sError>;
 
 pub async fn create_client(context: Option<String>) -> Result<Client> {
     let mut config = Config::infer().await?;
-    if let Some(ctx) = context {
+    if let Some(_ctx) = context {
         config.cluster_url = config.cluster_url; // TODO: switch context
     }
     let client = Client::try_from(config)?;
