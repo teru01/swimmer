@@ -277,25 +277,32 @@ function ContextsPane({
           />
         </div>
         {tags.length > 0 && (
-          <div className="tags-filter-container">
-            {tags.map(tag => {
-              const isSelected = selectedTagIds.has(tag.id);
-              return (
-                <button
-                  key={tag.id}
-                  className={`tag-filter-button ${isSelected ? 'selected' : ''}`}
-                  onClick={() => handleTagFilterClick(tag.id)}
-                  style={{
-                    borderColor: tag.color,
-                    backgroundColor: isSelected ? tag.color : 'transparent',
-                    color: isSelected ? '#ffffff' : tag.color,
-                  }}
-                >
-                  <span className="tag-filter-dot" style={{ backgroundColor: tag.color }} />
-                  <span className="tag-filter-name">{tag.name}</span>
-                </button>
-              );
-            })}
+          <div className="tags-filter-wrapper">
+            <span className="tags-filter-label">Filter by tag</span>
+            <div className="tags-filter-container">
+              {tags.map(tag => {
+                const isSelected = selectedTagIds.has(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    className={`tag-filter-button ${isSelected ? 'selected' : ''}`}
+                    onClick={() => handleTagFilterClick(tag.id)}
+                    style={{
+                      borderColor: isSelected ? tag.color : '#000000',
+                      backgroundColor: isSelected ? tag.color : 'transparent',
+                      color: isSelected ? '#ffffff' : '#000000',
+                    }}
+                  >
+                    <span
+                      className="tag-filter-dot"
+                      style={{ backgroundColor: isSelected ? '#ffffff' : tag.color }}
+                    />
+                    <span className="tag-filter-name">{tag.name}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

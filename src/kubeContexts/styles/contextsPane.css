@@ -422,11 +422,67 @@
   color: var(--text-primary);
 }
 
+.tags-filter-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tags-filter-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .tags-filter-container {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
   gap: 6px;
-  margin-top: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tags-filter-container::-webkit-scrollbar {
+  display: none;
+}
+
+.tags-filter-container:hover {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) var(--bg-secondary);
+}
+
+.tags-filter-container:hover::-webkit-scrollbar {
+  display: block;
+  height: 6px;
+}
+
+.tags-filter-container:hover::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 3px;
+}
+
+.tags-filter-container:hover::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.tags-filter-container:hover::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+.tags-filter-container:active {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) var(--bg-secondary);
+}
+
+.tags-filter-container:active::-webkit-scrollbar {
+  display: block;
+  height: 6px;
 }
 
 .tag-filter-button {
@@ -441,6 +497,7 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tag-filter-button:hover {
