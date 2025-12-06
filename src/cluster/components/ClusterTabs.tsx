@@ -32,6 +32,7 @@ function ClusterTabs({
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const activeTabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [contextMenu, setContextMenu] = useState<TabContextMenuState | undefined>(undefined);
+  const [closingTabs, setClosingTabs] = useState<Set<string>>(new Set());
 
   const handleContextMenu = (e: React.MouseEvent, tab: ClusterContextTab) => {
     e.preventDefault();
@@ -46,12 +47,24 @@ function ClusterTabs({
 
   const closeMenu = () => setContextMenu(undefined);
 
+  const handleCloseTab = (tab: ClusterContextTab) => {
+    setClosingTabs(prev => new Set(prev).add(tab.id));
+    setTimeout(() => {
+      onCloseCluster(tab);
+      setClosingTabs(prev => {
+        const next = new Set(prev);
+        next.delete(tab.id);
+        return next;
+      });
+    }, 200);
+  };
+
   const getMenuItems = (tab: ClusterContextTab): MenuItem[] => {
     const menuItems: MenuItem[] = [
       {
         id: 'close',
         label: 'Close',
-        onClick: () => onCloseCluster(tab),
+        onClick: () => handleCloseTab(tab),
       },
     ];
 
@@ -123,11 +136,13 @@ function ClusterTabs({
           const isPanelActive = tab.panelId === activePanelId;
           const shouldDim = !isPanelActive || (isPanelActive && !isActive);
 
+          const isClosing = closingTabs.has(tab.id);
+
           return (
             <div
               key={tab.id}
               ref={el => setTabRef(tab.clusterContext.id, el)}
-              className={`cluster-tab ${isActive ? 'active' : ''} ${shouldDim ? 'dimmed' : ''}`}
+              className={`cluster-tab ${isActive ? 'active' : ''} ${shouldDim ? 'dimmed' : ''} ${isClosing ? 'closing' : ''}`}
               onClick={() => onClusterSelect(tab)}
               onContextMenu={e => handleContextMenu(e, tab)}
             >
@@ -136,7 +151,7 @@ function ClusterTabs({
                 className="close-button"
                 onClick={e => {
                   e.stopPropagation();
-                  onCloseCluster(tab);
+                  handleCloseTab(tab);
                 }}
               >
                 ×

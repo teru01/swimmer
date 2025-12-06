@@ -102,6 +102,27 @@
   opacity: 0.5;
 }
 
+.cluster-tab.closing {
+  animation: slideOutAndFade 0.2s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes slideOutAndFade {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-width: 200px;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+    max-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    margin-right: 0;
+  }
+}
+
 .cluster-tab .close-button {
   background: none;
   border: none;
