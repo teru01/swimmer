@@ -12,15 +12,27 @@ const TAGS_STORAGE_KEY = 'swimmer_tags';
 const CONTEXT_TAGS_STORAGE_KEY = 'swimmer_context_tags';
 export const MAX_TAGS_PER_CONTEXT = 20;
 
-const DEFAULT_COLORS = [
-  '#3b82f6',
-  '#8b5cf6',
-  '#ec4899',
-  '#f97316',
-  '#eab308',
-  '#22c55e',
-  '#14b8a6',
-  '#06b6d4',
+export const TAG_COLORS = [
+  '#ef4444', // red
+  '#f97316', // orange
+  '#f59e0b', // amber
+  '#eab308', // yellow
+  '#84cc16', // lime
+  '#22c55e', // green
+  '#10b981', // emerald
+  '#14b8a6', // teal
+  '#06b6d4', // cyan
+  '#0ea5e9', // sky
+  '#3b82f6', // blue
+  '#6366f1', // indigo
+  '#8b5cf6', // violet
+  '#a855f7', // purple
+  '#d946ef', // fuchsia
+  '#ec4899', // pink
+  '#f43f5e', // rose
+  '#64748b', // slate
+  '#6b7280', // gray
+  '#78716c', // stone
 ];
 
 export function loadTags(): Tag[] {
@@ -61,14 +73,23 @@ export function saveContextTags(contextTags: ContextTags): void {
   }
 }
 
-export function createTag(name: string): Tag {
+export function createTag(name: string, color?: string): Tag {
   const existingTags = loadTags();
-  const color = DEFAULT_COLORS[existingTags.length % DEFAULT_COLORS.length];
+  const defaultColor = TAG_COLORS[existingTags.length % TAG_COLORS.length];
   return {
     id: `tag_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
     name,
-    color,
+    color: color || defaultColor,
   };
+}
+
+export function updateTag(tagId: string, updates: Partial<Omit<Tag, 'id'>>): void {
+  const tags = loadTags();
+  const index = tags.findIndex(t => t.id === tagId);
+  if (index !== -1) {
+    tags[index] = { ...tags[index], ...updates };
+    saveTags(tags);
+  }
 }
 
 export function addTag(tag: Tag): void {

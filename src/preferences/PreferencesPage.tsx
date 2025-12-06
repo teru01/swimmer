@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { usePreferences } from '../contexts/PreferencesContext';
 import './preferencesPage.css';
-import { loadTags, addTag, deleteTag, createTag, Tag } from '../lib/tag';
+import { loadTags, addTag, deleteTag, createTag, updateTag, Tag, TAG_COLORS } from '../lib/tag';
 
 export type PreferencesSection = 'general' | 'ai-chat' | 'terminal' | 'tags';
 
 interface PreferencesPageProps {
   onBack?: () => void;
   initialSection?: PreferencesSection;
+}
+
+// Get random color from TAG_COLORS
+function getRandomColor(): string {
+  return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
 }
 
 const PreferencesPage: React.FC<PreferencesPageProps> = ({
@@ -18,7 +23,12 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
   const [activeSection, setActiveSection] = useState<PreferencesSection>(initialSection);
   const [tags, setTags] = useState<Tag[]>(loadTags());
   const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState(getRandomColor());
   const [tagToDelete, setTagToDelete] = useState<Tag | undefined>(undefined);
+  const [newTagColorDropdownOpen, setNewTagColorDropdownOpen] = useState(false);
+  const [editingTagId, setEditingTagId] = useState<string | undefined>(undefined);
+  const newTagColorDropdownRef = useRef<HTMLDivElement>(null);
+  const editingTagDropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const handleToggleAiChat = async (enabled: boolean) => {
     await updatePreferences({
@@ -40,12 +50,36 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
     });
   };
 
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        newTagColorDropdownRef.current &&
+        !newTagColorDropdownRef.current.contains(event.target as Node)
+      ) {
+        setNewTagColorDropdownOpen(false);
+      }
+      Object.values(editingTagDropdownRefs.current).forEach(ref => {
+        if (ref && !ref.contains(event.target as Node)) {
+          setEditingTagId(undefined);
+        }
+      });
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleAddTag = () => {
     if (!newTagName.trim()) return;
-    const tag = createTag(newTagName.trim());
+    const tag = createTag(newTagName.trim(), newTagColor);
     addTag(tag);
     setTags(loadTags());
     setNewTagName('');
+    setNewTagColor(getRandomColor());
+    setNewTagColorDropdownOpen(false);
   };
 
   const handleDeleteTag = (tag: Tag) => {
@@ -62,6 +96,16 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
 
   const cancelDeleteTag = () => {
     setTagToDelete(undefined);
+  };
+
+  const handleTagColorChange = (tagId: string, color: string) => {
+    updateTag(tagId, { color });
+    const updatedTags = loadTags();
+    setTags(updatedTags);
+    // Close dropdown after state update
+    setTimeout(() => {
+      setEditingTagId(undefined);
+    }, 0);
   };
 
   return (
@@ -179,6 +223,34 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
                     autoCapitalize="off"
                     spellCheck="false"
                   />
+                  <div className="color-dropdown-wrapper" ref={newTagColorDropdownRef}>
+                    <button
+                      type="button"
+                      className="color-marker-button"
+                      onClick={() => setNewTagColorDropdownOpen(!newTagColorDropdownOpen)}
+                      aria-label="Select color"
+                    >
+                      <span className="tag-color-dot" style={{ backgroundColor: newTagColor }} />
+                    </button>
+                    {newTagColorDropdownOpen && (
+                      <div className="color-dropdown">
+                        {TAG_COLORS.map(color => (
+                          <button
+                            key={color}
+                            type="button"
+                            className={`color-dropdown-item ${newTagColor === color ? 'selected' : ''}`}
+                            onClick={() => {
+                              setNewTagColor(color);
+                              setNewTagColorDropdownOpen(false);
+                            }}
+                            aria-label={`Select ${color}`}
+                          >
+                            <span className="tag-color-dot" style={{ backgroundColor: color }} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button onClick={handleAddTag} className="add-button">
                     Add Tag
                   </button>
@@ -190,7 +262,52 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
                   ) : (
                     tags.map(tag => (
                       <div key={tag.id} className="tag-row">
-                        <span className="tag-color-dot" style={{ backgroundColor: tag.color }} />
+                        <div
+                          className="color-dropdown-wrapper"
+                          ref={el => {
+                            editingTagDropdownRefs.current[tag.id] = el;
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className="color-marker-button"
+                            onClick={() =>
+                              setEditingTagId(editingTagId === tag.id ? undefined : tag.id)
+                            }
+                            aria-label="Change tag color"
+                          >
+                            <span
+                              className="tag-color-dot"
+                              style={{ backgroundColor: tag.color }}
+                            />
+                          </button>
+                          {editingTagId === tag.id && (
+                            <div
+                              className="color-dropdown"
+                              onClick={e => e.stopPropagation()}
+                              onMouseDown={e => e.stopPropagation()}
+                            >
+                              {TAG_COLORS.map(color => (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  className={`color-dropdown-item ${tag.color === color ? 'selected' : ''}`}
+                                  onMouseDown={e => e.stopPropagation()}
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    handleTagColorChange(tag.id, color);
+                                  }}
+                                  aria-label={`Select ${color}`}
+                                >
+                                  <span
+                                    className="tag-color-dot"
+                                    style={{ backgroundColor: color }}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <span className="tag-name-text">{tag.name}</span>
                         <button
                           onClick={() => handleDeleteTag(tag)}
