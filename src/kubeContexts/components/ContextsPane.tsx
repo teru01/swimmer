@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PreferencesSection } from '../../preferences/PreferencesPage';
-import { Button, Input } from '../../main/ui';
+import { Input } from '../../main/ui';
 import '../styles/contextsPane.css';
 import { ContextNode, NodeType, buildTreeFromContexts } from '../../lib/contextTree';
 import { gkeProvider } from '../../lib/providers/gke';
@@ -219,10 +219,6 @@ function ContextsPane({
     );
   };
 
-  const clearSearch = () => {
-    setSearchText('');
-  };
-
   if (loading) {
     return (
       <div className="contexts-pane">
@@ -239,13 +235,10 @@ function ContextsPane({
             placeholder="Search contexts..."
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
-            suffix={
-              searchText && (
-                <Button size="small" onClick={clearSearch}>
-                  ×
-                </Button>
-              )
-            }
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
           />
         </div>
       </div>
