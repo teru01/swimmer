@@ -262,8 +262,8 @@ function ContextsPane({
             {
               id: 'attach-tags',
               label: 'Attach Tags',
-              children:
-                loadTags().length === 0
+              children: [
+                ...(loadTags().length === 0
                   ? [
                       {
                         id: 'no-tags',
@@ -277,18 +277,19 @@ function ContextsPane({
                       label: tag.name,
                       onClick: () => handleToggleTag(tag.id),
                       checked: attachedTags.includes(tag.id),
-                    })),
-            },
-            {
-              id: 'separator-after-tags',
-              type: 'separator',
-            },
-            {
-              id: 'add-tags',
-              label: 'Add Tags',
-              onClick: () => {
-                onNavigateToPreferences?.('tags');
-              },
+                    }))),
+                {
+                  id: 'separator-in-submenu',
+                  type: 'separator' as const,
+                },
+                {
+                  id: 'add-tags',
+                  label: 'Add Tags',
+                  onClick: () => {
+                    onNavigateToPreferences?.('tags');
+                  },
+                },
+              ],
             },
           ]}
           onClose={() => setContextMenu(undefined)}

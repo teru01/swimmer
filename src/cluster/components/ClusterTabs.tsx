@@ -1,6 +1,6 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { ClusterContextTab } from '../types/panel';
-import { useTabContextMenu } from './useTabContextMenu';
+import { Menu, MenuItem } from '../../components/ui/Menu';
 
 interface ClusterTabsProps {
   tabs: ClusterContextTab[];
@@ -13,9 +13,12 @@ interface ClusterTabsProps {
   onSplitRight?: (tab: ClusterContextTab) => void;
 }
 
-/**
- * Component to display cluster tabs at the top
- */
+interface TabContextMenuState {
+  tab: ClusterContextTab;
+  x: number;
+  y: number;
+}
+
 function ClusterTabs({
   tabs,
   activeContextId,
@@ -28,14 +31,60 @@ function ClusterTabs({
 }: ClusterTabsProps) {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const activeTabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [contextMenu, setContextMenu] = useState<TabContextMenuState | undefined>(undefined);
 
-  const { handleContextMenu, renderMenu } = useTabContextMenu({
-    tabs,
-    onCloseTab: onCloseCluster,
-    onCloseOtherTabs,
-    onReloadTab: onReloadCluster,
-    onSplitRight,
-  });
+  const handleContextMenu = (e: React.MouseEvent, tab: ClusterContextTab) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setContextMenu({
+      tab,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  const closeMenu = () => setContextMenu(undefined);
+
+  const getMenuItems = (tab: ClusterContextTab): MenuItem[] => {
+    const menuItems: MenuItem[] = [
+      {
+        id: 'close',
+        label: 'Close',
+        onClick: () => onCloseCluster(tab),
+      },
+    ];
+
+    if (onCloseOtherTabs) {
+      menuItems.push({
+        id: 'close-others',
+        label: 'Close Others',
+        onClick: () => onCloseOtherTabs(tab),
+      });
+    }
+
+    menuItems.push({ id: 'separator1', type: 'separator' });
+
+    if (onSplitRight) {
+      menuItems.push({
+        id: 'split-right',
+        label: 'Split Right',
+        onClick: () => onSplitRight(tab),
+      });
+    }
+
+    menuItems.push({ id: 'separator2', type: 'separator' });
+
+    if (onReloadCluster) {
+      menuItems.push({
+        id: 'reload',
+        label: 'Reload',
+        onClick: () => onReloadCluster(tab),
+      });
+    }
+
+    return menuItems;
+  };
 
   useEffect(() => {
     if (!activeContextId || !tabsContainerRef.current) return;
@@ -96,7 +145,14 @@ function ClusterTabs({
           );
         })}
       </div>
-      {renderMenu()}
+      {contextMenu && (
+        <Menu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={getMenuItems(contextMenu.tab)}
+          onClose={closeMenu}
+        />
+      )}
     </>
   );
 }
