@@ -66,54 +66,33 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
     return undefined;
   }
 
-  // Determine resource kind from name or add kind field to KubeResource
-  const getResourceKind = (resource: KubeResource): string => {
-    const name = resource.metadata.name;
-    if (name.startsWith('pod-')) return 'Pod';
-    if (name.startsWith('deployment-')) return 'Deployment';
-    if (name.startsWith('service-')) return 'Service';
-    if (name.startsWith('node-')) return 'Node';
-    return 'Unknown';
-  };
+  const resourceKind = resource.kind || 'Unknown';
 
-  const resourceKind = getResourceKind(resource);
-
-  // --- Specific Renderer for Pod ---
-  // Add renderers for other kinds as needed
-  const renderPodDetails = (pod: KubeResource) => {
-    const { metadata, spec, status } = pod;
+  const renderDeploymentDetails = (deployment: KubeResource) => {
+    const { metadata, spec, status } = deployment;
     return (
       <>
-        {/* --- Summary Section --- */}
         <section className="detail-section">
           <h4>Summary</h4>
           <DetailItem label="Name">{metadata.name}</DetailItem>
           <DetailItem label="Namespace">{metadata.namespace}</DetailItem>
-          <DetailItem label="Node">{spec?.nodeName}</DetailItem>
-          <DetailItem label="Service Account">{spec?.serviceAccountName}</DetailItem>
-          <DetailItem label="Status">{status?.phase}</DetailItem>
-          <DetailItem label="IP">{status?.podIP}</DetailItem>
-          <DetailItem label="Controlled By">
-            {metadata.ownerReferences?.[0]?.kind}/{metadata.ownerReferences?.[0]?.name}
-          </DetailItem>{' '}
-          {/* Example owner */}
-          <DetailItem label="Start Time">
-            {status?.startTime ? new Date(status.startTime).toLocaleString() : '-'}
-          </DetailItem>
+          <DetailItem label="Replicas">{spec?.replicas ?? 0}</DetailItem>
+          <DetailItem label="Ready">{`${status?.readyReplicas ?? 0}/${spec?.replicas ?? 0}`}</DetailItem>
+          <DetailItem label="Up-to-date">{status?.updatedReplicas ?? 0}</DetailItem>
+          <DetailItem label="Available">{status?.availableReplicas ?? 0}</DetailItem>
           <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
         </section>
 
-        {/* --- Labels & Annotations --- */}
         <section className="detail-section">
           <h4>Labels</h4>
           {renderMetadataMap(metadata.labels)}
         </section>
+
         <section className="detail-section">
-          <h4>Annotations</h4>
-          {renderMetadataMap(metadata.annotations)}
+          <h4>Selector</h4>
+          {renderMetadataMap(spec?.selector?.matchLabels)}
         </section>
 
-        {/* --- Conditions --- */}
         <section className="detail-section">
           <h4>Conditions</h4>
           <table className="detail-table">
@@ -121,7 +100,8 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
               <tr>
                 <th>Type</th>
                 <th>Status</th>
-                <th>Last Transition</th>
+                <th>Reason</th>
+                <th>Message</th>
               </tr>
             </thead>
             <tbody>
@@ -129,58 +109,752 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
                 <tr key={c.type}>
                   <td>{c.type}</td>
                   <td>{c.status}</td>
-                  <td>{formatAge(c.lastTransitionTime)}</td>
+                  <td>{c.reason || '-'}</td>
+                  <td>{c.message || '-'}</td>
                 </tr>
               )) ?? (
                 <tr>
-                  <td colSpan={3}>-</td>
+                  <td colSpan={4}>-</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+      </>
+    );
+  };
+
+  const renderServiceDetails = (service: KubeResource) => {
+    const { metadata, spec, status } = service;
+    return (
+      <>
+        <section className="detail-section">
+          <h4>Summary</h4>
+          <DetailItem label="Name">{metadata.name}</DetailItem>
+          <DetailItem label="Namespace">{metadata.namespace}</DetailItem>
+          <DetailItem label="Type">{spec?.type || 'ClusterIP'}</DetailItem>
+          <DetailItem label="Cluster IP">{spec?.clusterIP || '-'}</DetailItem>
+          <DetailItem label="External IP">
+            {spec?.externalIPs?.join(', ') ||
+              status?.loadBalancer?.ingress?.map(i => i.ip || i.hostname).join(', ') ||
+              '<none>'}
+          </DetailItem>
+          <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
+        </section>
+
+        <section className="detail-section">
+          <h4>Labels</h4>
+          {renderMetadataMap(metadata.labels)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Selector</h4>
+          {renderMetadataMap(spec?.selector?.matchLabels)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Ports</h4>
+          <table className="detail-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Protocol</th>
+                <th>Port</th>
+                <th>Target Port</th>
+                <th>Node Port</th>
+              </tr>
+            </thead>
+            <tbody>
+              {spec?.ports?.map((p, idx) => (
+                <tr key={idx}>
+                  <td>{p.name || '-'}</td>
+                  <td>{p.protocol || 'TCP'}</td>
+                  <td>{p.port}</td>
+                  <td>{p.targetPort || '-'}</td>
+                  <td>{p.nodePort || '-'}</td>
+                </tr>
+              )) ?? (
+                <tr>
+                  <td colSpan={5}>-</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+      </>
+    );
+  };
+
+  const renderNodeDetails = (node: KubeResource) => {
+    const { metadata, status } = node;
+    return (
+      <>
+        <section className="detail-section">
+          <h4>Summary</h4>
+          <DetailItem label="Name">{metadata.name}</DetailItem>
+          <DetailItem label="Roles">
+            {Object.keys(metadata.labels || {})
+              .filter(k => k.startsWith('node-role.kubernetes.io/'))
+              .map(k => k.replace('node-role.kubernetes.io/', ''))
+              .join(', ') || '<none>'}
+          </DetailItem>
+          <DetailItem label="Kubelet Version">{status?.nodeInfo?.kubeletVersion || '-'}</DetailItem>
+          <DetailItem label="Container Runtime">
+            {status?.nodeInfo?.containerRuntimeVersion || '-'}
+          </DetailItem>
+          <DetailItem label="OS Image">{status?.nodeInfo?.osImage || '-'}</DetailItem>
+          <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
+        </section>
+
+        <section className="detail-section">
+          <h4>Addresses</h4>
+          <table className="detail-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Address</th>
+              </tr>
+            </thead>
+            <tbody>
+              {status?.addresses?.map((addr, idx) => (
+                <tr key={idx}>
+                  <td>{addr.type}</td>
+                  <td>{addr.address}</td>
+                </tr>
+              )) ?? (
+                <tr>
+                  <td colSpan={2}>-</td>
                 </tr>
               )}
             </tbody>
           </table>
         </section>
 
-        {/* --- Containers --- */}
+        <section className="detail-section">
+          <h4>Capacity</h4>
+          {renderMetadataMap(status?.capacity)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Allocatable</h4>
+          {renderMetadataMap(status?.allocatable)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Conditions</h4>
+          <table className="detail-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Reason</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody>
+              {status?.conditions?.map(c => (
+                <tr key={c.type}>
+                  <td>{c.type}</td>
+                  <td>{c.status}</td>
+                  <td>{c.reason || '-'}</td>
+                  <td>{c.message || '-'}</td>
+                </tr>
+              )) ?? (
+                <tr>
+                  <td colSpan={4}>-</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+
+        <section className="detail-section">
+          <h4>Labels</h4>
+          {renderMetadataMap(metadata.labels)}
+        </section>
+      </>
+    );
+  };
+
+  const renderReplicaSetDetails = (rs: KubeResource) => {
+    const { metadata, spec, status } = rs;
+    return (
+      <>
+        <section className="detail-section">
+          <h4>Summary</h4>
+          <DetailItem label="Name">{metadata.name}</DetailItem>
+          <DetailItem label="Namespace">{metadata.namespace}</DetailItem>
+          <DetailItem label="Controlled By">
+            {metadata.ownerReferences?.[0]
+              ? `${metadata.ownerReferences[0].kind}/${metadata.ownerReferences[0].name}`
+              : '-'}
+          </DetailItem>
+          <DetailItem label="Replicas">{spec?.replicas ?? 0}</DetailItem>
+          <DetailItem label="Current">{status?.replicas ?? 0}</DetailItem>
+          <DetailItem label="Ready">{status?.readyReplicas ?? 0}</DetailItem>
+          <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
+        </section>
+
+        <section className="detail-section">
+          <h4>Labels</h4>
+          {renderMetadataMap(metadata.labels)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Selector</h4>
+          {renderMetadataMap(spec?.selector?.matchLabels)}
+        </section>
+
+        {status?.conditions && status.conditions.length > 0 && (
+          <section className="detail-section">
+            <h4>Conditions</h4>
+            <table className="detail-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Reason</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody>
+                {status.conditions.map(c => (
+                  <tr key={c.type}>
+                    <td>{c.type}</td>
+                    <td>{c.status}</td>
+                    <td>{c.reason || '-'}</td>
+                    <td>{c.message || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+      </>
+    );
+  };
+
+  const renderStatefulSetDetails = (sts: KubeResource) => {
+    const { metadata, spec, status } = sts;
+    return (
+      <>
+        <section className="detail-section">
+          <h4>Summary</h4>
+          <DetailItem label="Name">{metadata.name}</DetailItem>
+          <DetailItem label="Namespace">{metadata.namespace}</DetailItem>
+          <DetailItem label="Replicas">{spec?.replicas ?? 0}</DetailItem>
+          <DetailItem label="Ready">{`${status?.readyReplicas ?? 0}/${spec?.replicas ?? 0}`}</DetailItem>
+          <DetailItem label="Current">{status?.currentReplicas ?? 0}</DetailItem>
+          <DetailItem label="Updated">{status?.updatedReplicas ?? 0}</DetailItem>
+          <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
+        </section>
+
+        <section className="detail-section">
+          <h4>Labels</h4>
+          {renderMetadataMap(metadata.labels)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Selector</h4>
+          {renderMetadataMap(spec?.selector?.matchLabels)}
+        </section>
+
+        {status?.conditions && status.conditions.length > 0 && (
+          <section className="detail-section">
+            <h4>Conditions</h4>
+            <table className="detail-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Reason</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody>
+                {status.conditions.map(c => (
+                  <tr key={c.type}>
+                    <td>{c.type}</td>
+                    <td>{c.status}</td>
+                    <td>{c.reason || '-'}</td>
+                    <td>{c.message || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+      </>
+    );
+  };
+
+  const renderDaemonSetDetails = (ds: KubeResource) => {
+    const { metadata, spec, status } = ds;
+    return (
+      <>
+        <section className="detail-section">
+          <h4>Summary</h4>
+          <DetailItem label="Name">{metadata.name}</DetailItem>
+          <DetailItem label="Namespace">{metadata.namespace}</DetailItem>
+          <DetailItem label="Desired">{status?.desiredNumberScheduled ?? 0}</DetailItem>
+          <DetailItem label="Current">{status?.currentNumberScheduled ?? 0}</DetailItem>
+          <DetailItem label="Ready">{status?.numberReady ?? 0}</DetailItem>
+          <DetailItem label="Available">{status?.numberAvailable ?? 0}</DetailItem>
+          <DetailItem label="Up-to-date">{status?.updatedNumberScheduled ?? 0}</DetailItem>
+          <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
+        </section>
+
+        <section className="detail-section">
+          <h4>Labels</h4>
+          {renderMetadataMap(metadata.labels)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Selector</h4>
+          {renderMetadataMap(spec?.selector?.matchLabels)}
+        </section>
+
+        {status?.conditions && status.conditions.length > 0 && (
+          <section className="detail-section">
+            <h4>Conditions</h4>
+            <table className="detail-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Reason</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody>
+                {status.conditions.map(c => (
+                  <tr key={c.type}>
+                    <td>{c.type}</td>
+                    <td>{c.status}</td>
+                    <td>{c.reason || '-'}</td>
+                    <td>{c.message || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+      </>
+    );
+  };
+
+  const renderIngressDetails = (ingress: KubeResource) => {
+    const { metadata, spec, status } = ingress;
+    return (
+      <>
+        <section className="detail-section">
+          <h4>Summary</h4>
+          <DetailItem label="Name">{metadata.name}</DetailItem>
+          <DetailItem label="Namespace">{metadata.namespace}</DetailItem>
+          <DetailItem label="Ingress Class">{spec?.ingressClassName || '<none>'}</DetailItem>
+          <DetailItem label="Address">
+            {status?.loadBalancer?.ingress
+              ?.map(i => i.ip || i.hostname)
+              .filter(Boolean)
+              .join(', ') || '-'}
+          </DetailItem>
+          <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
+        </section>
+
+        <section className="detail-section">
+          <h4>Labels</h4>
+          {renderMetadataMap(metadata.labels)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Annotations</h4>
+          {renderMetadataMap(metadata.annotations)}
+        </section>
+
+        {spec?.rules && spec.rules.length > 0 && (
+          <section className="detail-section">
+            <h4>Rules</h4>
+            {spec.rules.map((rule, idx) => (
+              <div key={idx} style={{ marginBottom: '15px' }}>
+                <DetailItem label="Host">{rule.host || '*'}</DetailItem>
+                {rule.http?.paths && (
+                  <div style={{ marginLeft: '20px' }}>
+                    <h5>Paths</h5>
+                    {rule.http.paths.map((path, pidx) => (
+                      <DetailItem key={pidx} label={path.path || '/'}>
+                        {(path.backend as any)?.service?.name || '-'} (Port:{' '}
+                        {(path.backend as any)?.service?.port?.number || '-'})
+                      </DetailItem>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </section>
+        )}
+
+        {spec?.tls && spec.tls.length > 0 && (
+          <section className="detail-section">
+            <h4>TLS</h4>
+            {spec.tls.map((tls, idx) => (
+              <div key={idx} style={{ marginBottom: '10px' }}>
+                <DetailItem label="Hosts">{tls.hosts?.join(', ') || '-'}</DetailItem>
+                <DetailItem label="Secret">{tls.secretName || '-'}</DetailItem>
+              </div>
+            ))}
+          </section>
+        )}
+      </>
+    );
+  };
+
+  const renderConfigMapDetails = (cm: KubeResource) => {
+    const { metadata, data } = cm;
+    return (
+      <>
+        <section className="detail-section">
+          <h4>Summary</h4>
+          <DetailItem label="Name">{metadata.name}</DetailItem>
+          <DetailItem label="Namespace">{metadata.namespace}</DetailItem>
+          <DetailItem label="Data entries">{data ? Object.keys(data).length : 0}</DetailItem>
+          <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
+        </section>
+
+        <section className="detail-section">
+          <h4>Labels</h4>
+          {renderMetadataMap(metadata.labels)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Annotations</h4>
+          {renderMetadataMap(metadata.annotations)}
+        </section>
+
+        {data && Object.keys(data).length > 0 && (
+          <section className="detail-section">
+            <h4>Data</h4>
+            {Object.entries(data).map(([key, value]) => (
+              <div key={key} style={{ marginBottom: '10px' }}>
+                <DetailItem label={key}>
+                  <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</pre>
+                </DetailItem>
+              </div>
+            ))}
+          </section>
+        )}
+      </>
+    );
+  };
+
+  const renderSecretDetails = (secret: KubeResource) => {
+    const { metadata, data, type } = secret;
+    return (
+      <>
+        <section className="detail-section">
+          <h4>Summary</h4>
+          <DetailItem label="Name">{metadata.name}</DetailItem>
+          <DetailItem label="Namespace">{metadata.namespace}</DetailItem>
+          <DetailItem label="Type">{type || 'Opaque'}</DetailItem>
+          <DetailItem label="Data entries">{data ? Object.keys(data).length : 0}</DetailItem>
+          <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
+        </section>
+
+        <section className="detail-section">
+          <h4>Labels</h4>
+          {renderMetadataMap(metadata.labels)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Annotations</h4>
+          {renderMetadataMap(metadata.annotations)}
+        </section>
+
+        {data && Object.keys(data).length > 0 && (
+          <section className="detail-section">
+            <h4>Data</h4>
+            <ul className="metadata-list">
+              {Object.keys(data).map(key => (
+                <li key={key}>
+                  <span className="metadata-key">{key}:</span>
+                  <span className="metadata-value">(hidden)</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </>
+    );
+  };
+
+  const renderNamespaceDetails = (ns: KubeResource) => {
+    const { metadata, status } = ns;
+    return (
+      <>
+        <section className="detail-section">
+          <h4>Summary</h4>
+          <DetailItem label="Name">{metadata.name}</DetailItem>
+          <DetailItem label="Status">{status?.phase || 'Active'}</DetailItem>
+          <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
+        </section>
+
+        <section className="detail-section">
+          <h4>Labels</h4>
+          {renderMetadataMap(metadata.labels)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Annotations</h4>
+          {renderMetadataMap(metadata.annotations)}
+        </section>
+
+        {status?.conditions && status.conditions.length > 0 && (
+          <section className="detail-section">
+            <h4>Conditions</h4>
+            <table className="detail-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {status.conditions.map(c => (
+                  <tr key={c.type}>
+                    <td>{c.type}</td>
+                    <td>{c.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+      </>
+    );
+  };
+
+  const renderPodDetails = (pod: KubeResource) => {
+    const { metadata, spec, status } = pod;
+    return (
+      <>
+        <section className="detail-section">
+          <h4>Summary</h4>
+          <DetailItem label="Name">{metadata.name}</DetailItem>
+          <DetailItem label="Namespace">{metadata.namespace}</DetailItem>
+          <DetailItem label="Priority">{(pod as any).spec?.priority ?? 0}</DetailItem>
+          <DetailItem label="Service Account">{spec?.serviceAccountName || '-'}</DetailItem>
+          <DetailItem label="Node">{spec?.nodeName || '-'}</DetailItem>
+          <DetailItem label="Start Time">
+            {status?.startTime ? new Date(status.startTime).toLocaleString() : '-'}
+          </DetailItem>
+          <DetailItem label="Status">{status?.phase || '-'}</DetailItem>
+          <DetailItem label="IP">{status?.podIP || '-'}</DetailItem>
+          <DetailItem label="IPs">
+            {(pod as any).status?.podIPs?.map((ip: any) => ip.ip).join(', ') ||
+              status?.podIP ||
+              '-'}
+          </DetailItem>
+          <DetailItem label="Controlled By">
+            {metadata.ownerReferences?.[0]
+              ? `${metadata.ownerReferences[0].kind}/${metadata.ownerReferences[0].name}`
+              : '-'}
+          </DetailItem>
+          <DetailItem label="QoS Class">{(pod as any).status?.qosClass || '-'}</DetailItem>
+        </section>
+
+        <section className="detail-section">
+          <h4>Labels</h4>
+          {renderMetadataMap(metadata.labels)}
+        </section>
+
+        <section className="detail-section">
+          <h4>Annotations</h4>
+          {renderMetadataMap(metadata.annotations)}
+        </section>
+
+        {spec?.initContainers && spec.initContainers.length > 0 && (
+          <section className="detail-section">
+            <h4>Init Containers</h4>
+            {spec.initContainers.map((container: any) => {
+              const containerStatus = status?.containerStatuses?.find(
+                cs => cs.name === container.name
+              );
+              return (
+                <div key={container.name} style={{ marginBottom: '15px' }}>
+                  <h5>{container.name}</h5>
+                  <DetailItem label="Image">{container.image}</DetailItem>
+                  <DetailItem label="Image ID">{containerStatus?.imageID || '-'}</DetailItem>
+                  <DetailItem label="State">
+                    {containerStatus?.state ? Object.keys(containerStatus.state)[0] : '-'}
+                  </DetailItem>
+                  <DetailItem label="Ready">{containerStatus?.ready ? 'True' : 'False'}</DetailItem>
+                  <DetailItem label="Restart Count">
+                    {containerStatus?.restartCount ?? 0}
+                  </DetailItem>
+                  {container.resources?.limits && (
+                    <DetailItem label="Limits">
+                      CPU: {container.resources.limits.cpu || '-'}, Memory:{' '}
+                      {container.resources.limits.memory || '-'}
+                    </DetailItem>
+                  )}
+                  {container.resources?.requests && (
+                    <DetailItem label="Requests">
+                      CPU: {container.resources.requests.cpu || '-'}, Memory:{' '}
+                      {container.resources.requests.memory || '-'}
+                    </DetailItem>
+                  )}
+                </div>
+              );
+            })}
+          </section>
+        )}
+
         <section className="detail-section">
           <h4>Containers</h4>
-          {spec?.initContainers && spec.initContainers.length > 0 && (
-            <>
-              <h5>Init Containers</h5>
-              {/* Render Init Containers - simplified for now */}
-              {spec.initContainers.map(c => (
-                <p key={c.name}>
-                  {c.name} ({c.image}) - Status: {c.state?.terminated?.reason ?? 'Unknown'}
-                </p>
-              ))}{' '}
-            </>
-          )}
-          <h5>App Containers</h5>
-          {/* Render App Containers - simplified for now */}
-          {spec?.containers?.map(c => (
-            <p key={c.name}>
-              {c.name} ({c.image}) - Ready: {c.ready ? 'True' : 'False'}, Restarts: {c.restartCount}
-            </p>
-          )) ?? <p>-</p>}
+          {spec?.containers?.map((container: any) => {
+            const containerStatus = status?.containerStatuses?.find(
+              cs => cs.name === container.name
+            );
+            return (
+              <div key={container.name} style={{ marginBottom: '15px' }}>
+                <h5>{container.name}</h5>
+                <DetailItem label="Image">{container.image}</DetailItem>
+                <DetailItem label="Image ID">{containerStatus?.imageID || '-'}</DetailItem>
+                {container.ports && container.ports.length > 0 && (
+                  <DetailItem label="Ports">
+                    {container.ports
+                      .map(
+                        (p: any) =>
+                          `${p.containerPort}/${p.protocol || 'TCP'}${p.name ? ` (${p.name})` : ''}`
+                      )
+                      .join(', ')}
+                  </DetailItem>
+                )}
+                <DetailItem label="State">
+                  {containerStatus?.state ? Object.keys(containerStatus.state)[0] : '-'}
+                </DetailItem>
+                <DetailItem label="Ready">{containerStatus?.ready ? 'True' : 'False'}</DetailItem>
+                <DetailItem label="Restart Count">{containerStatus?.restartCount ?? 0}</DetailItem>
+                {container.resources?.limits && (
+                  <DetailItem label="Limits">
+                    CPU: {container.resources.limits.cpu || '-'}, Memory:{' '}
+                    {container.resources.limits.memory || '-'}
+                    {container.resources.limits['ephemeral-storage']
+                      ? `, Ephemeral Storage: ${container.resources.limits['ephemeral-storage']}`
+                      : ''}
+                  </DetailItem>
+                )}
+                {container.resources?.requests && (
+                  <DetailItem label="Requests">
+                    CPU: {container.resources.requests.cpu || '-'}, Memory:{' '}
+                    {container.resources.requests.memory || '-'}
+                    {container.resources.requests['ephemeral-storage']
+                      ? `, Ephemeral Storage: ${container.resources.requests['ephemeral-storage']}`
+                      : ''}
+                  </DetailItem>
+                )}
+                {container.livenessProbe && (
+                  <DetailItem label="Liveness">
+                    {container.livenessProbe.httpGet
+                      ? `http-get ${container.livenessProbe.httpGet.scheme?.toLowerCase() || 'http'}://:${container.livenessProbe.httpGet.port}${container.livenessProbe.httpGet.path}`
+                      : container.livenessProbe.exec
+                        ? 'exec'
+                        : 'tcp-socket'}
+                  </DetailItem>
+                )}
+                {container.readinessProbe && (
+                  <DetailItem label="Readiness">
+                    {container.readinessProbe.httpGet
+                      ? `http-get ${container.readinessProbe.httpGet.scheme?.toLowerCase() || 'http'}://:${container.readinessProbe.httpGet.port}${container.readinessProbe.httpGet.path}`
+                      : container.readinessProbe.exec
+                        ? 'exec'
+                        : 'tcp-socket'}
+                  </DetailItem>
+                )}
+                {container.startupProbe && (
+                  <DetailItem label="Startup">
+                    {container.startupProbe.httpGet
+                      ? `http-get ${container.startupProbe.httpGet.scheme?.toLowerCase() || 'http'}://:${container.startupProbe.httpGet.port}${container.startupProbe.httpGet.path}`
+                      : container.startupProbe.exec
+                        ? 'exec'
+                        : 'tcp-socket'}
+                  </DetailItem>
+                )}
+              </div>
+            );
+          }) ?? <p>-</p>}
         </section>
 
-        {/* --- Volumes --- */}
         <section className="detail-section">
-          <h4>Volumes</h4>
-          {/* Render Volumes - simplified for now */}
-          {spec?.volumes?.map(v => (
-            <p key={v.name}>
-              {v.name} (
-              {v.configMap
-                ? `ConfigMap: ${v.configMap.name}`
-                : v.secret
-                  ? `Secret: ${v.secret.secretName}`
-                  : 'Other'}
-              )
-            </p>
-          )) ?? <p>-</p>}
+          <h4>Conditions</h4>
+          <table className="detail-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {status?.conditions?.map(c => (
+                <tr key={c.type}>
+                  <td>{c.type}</td>
+                  <td>{c.status}</td>
+                </tr>
+              )) ?? (
+                <tr>
+                  <td colSpan={2}>-</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </section>
 
-        {/* TODO: Add Events section */}
+        {spec?.volumes && spec.volumes.length > 0 && (
+          <section className="detail-section">
+            <h4>Volumes</h4>
+            {spec.volumes.map((v: any) => (
+              <div key={v.name} style={{ marginBottom: '10px' }}>
+                <DetailItem label="Name">{v.name}</DetailItem>
+                <DetailItem label="Type">
+                  {v.configMap
+                    ? `ConfigMap (${v.configMap.name})`
+                    : v.secret
+                      ? `Secret (${v.secret.secretName})`
+                      : v.emptyDir
+                        ? 'EmptyDir'
+                        : v.persistentVolumeClaim
+                          ? `PersistentVolumeClaim (${v.persistentVolumeClaim.claimName})`
+                          : v.projected
+                            ? 'Projected'
+                            : v.downwardAPI
+                              ? 'DownwardAPI'
+                              : 'Other'}
+                </DetailItem>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {(pod as any).spec?.nodeSelector && (
+          <section className="detail-section">
+            <h4>Node-Selectors</h4>
+            {renderMetadataMap((pod as any).spec.nodeSelector)}
+          </section>
+        )}
+
+        {(pod as any).spec?.tolerations && (pod as any).spec.tolerations.length > 0 && (
+          <section className="detail-section">
+            <h4>Tolerations</h4>
+            <ul className="metadata-list">
+              {(pod as any).spec.tolerations.map((t: any, idx: number) => (
+                <li key={idx}>
+                  {t.key}
+                  {t.operator === 'Exists' ? '' : `=${t.value}`}:{t.effect || 'NoSchedule'}
+                  {t.tolerationSeconds ? ` for ${t.tolerationSeconds}s` : ''}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </>
     );
   };
@@ -199,9 +873,30 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
       </div>
 
       <div className="detail-content">
-        {resourceKind === 'Pod' ? (
-          renderPodDetails(resource)
-        ) : (
+        {resourceKind === 'Pod' && renderPodDetails(resource)}
+        {resourceKind === 'Deployment' && renderDeploymentDetails(resource)}
+        {resourceKind === 'ReplicaSet' && renderReplicaSetDetails(resource)}
+        {resourceKind === 'StatefulSet' && renderStatefulSetDetails(resource)}
+        {resourceKind === 'DaemonSet' && renderDaemonSetDetails(resource)}
+        {resourceKind === 'Service' && renderServiceDetails(resource)}
+        {resourceKind === 'Ingress' && renderIngressDetails(resource)}
+        {resourceKind === 'ConfigMap' && renderConfigMapDetails(resource)}
+        {resourceKind === 'Secret' && renderSecretDetails(resource)}
+        {resourceKind === 'Namespace' && renderNamespaceDetails(resource)}
+        {resourceKind === 'Node' && renderNodeDetails(resource)}
+        {![
+          'Pod',
+          'Deployment',
+          'ReplicaSet',
+          'StatefulSet',
+          'DaemonSet',
+          'Service',
+          'Ingress',
+          'ConfigMap',
+          'Secret',
+          'Namespace',
+          'Node',
+        ].includes(resourceKind) && (
           <div className="fallback-details">
             <section className="detail-section">
               <h4>Basic Information</h4>
@@ -219,6 +914,30 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
               <h4>Annotations</h4>
               {renderMetadataMap(resource.metadata.annotations)}
             </section>
+
+            {resource.status?.conditions && resource.status.conditions.length > 0 && (
+              <section className="detail-section">
+                <h4>Conditions</h4>
+                <table className="detail-table">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Last Transition</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resource.status.conditions.map(c => (
+                      <tr key={c.type}>
+                        <td>{c.type}</td>
+                        <td>{c.status}</td>
+                        <td>{formatAge(c.lastTransitionTime)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            )}
 
             <section className="detail-section">
               <h4>Raw Data</h4>
