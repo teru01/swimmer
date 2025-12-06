@@ -6,6 +6,7 @@ import { othersProvider } from '../../lib/providers/others';
 import { commands } from '../../api';
 import type { ClusterStats, NodeInfo, PodInfo } from '../../api/commands';
 import { getContextTags, getTagById, type Tag } from '../../lib/tag';
+import { formatAge } from '../../lib/utils';
 
 const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
 
@@ -184,8 +185,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
                   <tr>
                     <th>Name</th>
                     <th>Status</th>
-                    <th>CPU</th>
-                    <th>Memory</th>
+                    <th>Age</th>
+                    <th>Version</th>
+                    <th>Internal IP</th>
+                    <th>External IP</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -197,8 +200,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
                           {node.status}
                         </span>
                       </td>
-                      <td>{node.cpu}</td>
-                      <td>{node.memory}</td>
+                      <td>{node.creationTimestamp ? formatAge(node.creationTimestamp) : '-'}</td>
+                      <td>{node.version}</td>
+                      <td>{node.internalIP || '-'}</td>
+                      <td>{node.externalIP || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -216,8 +221,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
                   <tr>
                     <th>Name</th>
                     <th>Namespace</th>
+                    <th>Ready</th>
                     <th>Status</th>
-                    <th>Node</th>
+                    <th>Restarts</th>
+                    <th>Age</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -226,11 +233,17 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
                       <td className="pod-name">{pod.name}</td>
                       <td>{pod.namespace}</td>
                       <td>
+                        {pod.readyContainers !== undefined && pod.totalContainers !== undefined
+                          ? `${pod.readyContainers}/${pod.totalContainers}`
+                          : '-'}
+                      </td>
+                      <td>
                         <span className={`status-badge ${pod.status.toLowerCase()}`}>
                           {pod.status}
                         </span>
                       </td>
-                      <td>{pod.node}</td>
+                      <td>{pod.restarts}</td>
+                      <td>{pod.creationTimestamp ? formatAge(pod.creationTimestamp) : '-'}</td>
                     </tr>
                   ))}
                 </tbody>

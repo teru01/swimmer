@@ -156,22 +156,22 @@
 }
 
 .resource-scroll {
-  max-height: 300px;
+  max-height: calc(40px + 10 * 40px);
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 .resource-mini-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13px;
 }
 
 .resource-mini-table thead {
   position: sticky;
   top: 0;
-  background-color: var(--vscode-editorGroupHeader-tabsBackground);
-  z-index: 1;
+  z-index: 10;
 }
 
 .resource-mini-table th {
@@ -181,12 +181,33 @@
   color: var(--vscode-descriptionForeground);
   border-bottom: 1px solid var(--vscode-panel-border);
   font-size: 12px;
+  background-color: var(--vscode-editorGroupHeader-tabsBackground);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.resource-mini-table th:first-child {
+  border-left: 1px solid var(--vscode-panel-border);
+}
+
+.resource-mini-table th:last-child {
+  border-right: 1px solid var(--vscode-panel-border);
 }
 
 .resource-mini-table td {
   padding: 8px 12px;
   border-bottom: 1px solid var(--vscode-panel-border);
   color: var(--vscode-editor-foreground);
+  background-color: var(--vscode-editor-background);
+}
+
+.resource-mini-table td:first-child {
+  border-left: 1px solid var(--vscode-panel-border);
+}
+
+.resource-mini-table td:last-child {
+  border-right: 1px solid var(--vscode-panel-border);
 }
 
 .resource-mini-table tbody tr:hover {
@@ -194,7 +215,7 @@
 }
 
 .resource-mini-table tbody tr:last-child td {
-  border-bottom: none;
+  border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 .status-badge {

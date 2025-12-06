@@ -31,6 +31,9 @@ export interface NodeInfo {
   osImage: string;
   cpu: string;
   memory: string;
+  creationTimestamp?: string;
+  internalIP?: string;
+  externalIP?: string;
 }
 
 export interface PodInfo {
@@ -39,6 +42,9 @@ export interface PodInfo {
   status: string;
   node: string;
   restarts: number;
+  readyContainers?: number;
+  totalContainers?: number;
+  creationTimestamp?: string;
 }
 
 /**
@@ -150,6 +156,7 @@ export const commands = {
 
     console.info('Using mock data for getNodes (DEV mode)');
     await new Promise(resolve => setTimeout(resolve, 300));
+    const baseTime = new Date();
     return [
       {
         name: 'node-1',
@@ -158,6 +165,9 @@ export const commands = {
         osImage: 'Ubuntu 22.04',
         cpu: '4 cores',
         memory: '16Gi',
+        creationTimestamp: new Date(baseTime.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        internalIP: '10.0.1.1',
+        externalIP: '35.200.100.1',
       },
       {
         name: 'node-2',
@@ -166,6 +176,9 @@ export const commands = {
         osImage: 'Ubuntu 22.04',
         cpu: '4 cores',
         memory: '16Gi',
+        creationTimestamp: new Date(baseTime.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+        internalIP: '10.0.1.2',
+        externalIP: '35.200.100.2',
       },
       {
         name: 'node-3',
@@ -174,6 +187,9 @@ export const commands = {
         osImage: 'Ubuntu 22.04',
         cpu: '8 cores',
         memory: '32Gi',
+        creationTimestamp: new Date(baseTime.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        internalIP: '10.0.1.3',
+        externalIP: '35.200.100.3',
       },
       {
         name: 'node-4',
@@ -182,6 +198,9 @@ export const commands = {
         osImage: 'Ubuntu 22.04',
         cpu: '4 cores',
         memory: '16Gi',
+        creationTimestamp: new Date(baseTime.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+        internalIP: '10.0.1.4',
+        externalIP: '35.200.100.4',
       },
       {
         name: 'node-5',
@@ -190,6 +209,9 @@ export const commands = {
         osImage: 'Ubuntu 22.04',
         cpu: '4 cores',
         memory: '16Gi',
+        creationTimestamp: new Date(baseTime.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        internalIP: '10.0.1.5',
+        externalIP: '35.200.100.5',
       },
     ];
   },
@@ -208,14 +230,24 @@ export const commands = {
     const statuses = ['Running', 'Running', 'Running', 'Running', 'Pending', 'Failed'];
     const namespaces = ['default', 'kube-system', 'production', 'development'];
     const pods: PodInfo[] = [];
+    const baseTime = new Date();
 
     for (let i = 0; i < 15; i++) {
+      const totalContainers = Math.floor(Math.random() * 3) + 1;
+      const readyContainers =
+        statuses[i % statuses.length] === 'Running'
+          ? totalContainers
+          : Math.floor(Math.random() * totalContainers);
+      const minutesAgo = Math.floor(Math.random() * 60 * 24 * 7);
       pods.push({
         name: `pod-${i + 1}-${Math.random().toString(36).substring(7)}`,
         namespace: namespaces[i % namespaces.length],
         status: statuses[i % statuses.length],
         node: `node-${(i % 5) + 1}`,
         restarts: Math.floor(Math.random() * 3),
+        readyContainers,
+        totalContainers,
+        creationTimestamp: new Date(baseTime.getTime() - minutesAgo * 60000).toISOString(),
       });
     }
 
