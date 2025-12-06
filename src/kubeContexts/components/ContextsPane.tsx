@@ -13,6 +13,7 @@ import {
   attachTagToContext,
   detachTagFromContext,
   MAX_TAGS_PER_CONTEXT,
+  Tag,
 } from '../../lib/tag';
 import { Menu } from '../../components/ui/Menu';
 
@@ -45,6 +46,8 @@ function ContextsPane({
   const [loading, setLoading] = useState(true);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | undefined>(undefined);
   const [attachedTags, setAttachedTags] = useState<string[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+  const [tags, setTags] = useState<Tag[]>(loadTags());
 
   useEffect(() => {
     async function loadContexts() {
@@ -61,6 +64,7 @@ function ContextsPane({
       }
     }
     loadContexts();
+    setTags(loadTags());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -116,25 +120,44 @@ function ContextsPane({
 
   /**
    * ノードをフィルタリング
+   * textとtagの両方にマッチするcontextを表示
+   * textにマッチ: folderがtextにマッチ || context nameがマッチ
+   * tag: 全てのタグにマッチ
    */
   const filterNodes = (nodes: ContextNode[]): ContextNode[] => {
-    if (!searchText) return nodes;
+    const hasSearchText = searchText.trim().length > 0;
+    const hasSelectedTags = selectedTagIds.size > 0;
 
-    const filterNode = (node: ContextNode): ContextNode | undefined => {
-      const nameMatches = node.name.toLowerCase().includes(searchText.toLowerCase());
+    if (!hasSearchText && !hasSelectedTags) return nodes;
+
+    const filterNode = (node: ContextNode, parentNameMatch: boolean): ContextNode | undefined => {
+      const nameMatches =
+        !hasSearchText || node.name.toLowerCase().includes(searchText.toLowerCase());
 
       if (node.type === NodeType.Folder && node.children) {
-        const filteredChildren = node.children.map(filterNode).filter(Boolean) as ContextNode[];
-        if (filteredChildren.length > 0 || nameMatches) {
+        const filteredChildren = node.children
+          .map(node => filterNode(node, parentNameMatch || nameMatches))
+          .filter(Boolean) as ContextNode[];
+        if (filteredChildren.length > 0) {
           return { ...node, children: filteredChildren };
         }
+        return undefined;
+      }
+
+      if (node.type === NodeType.Context && node.clusterContext) {
+        const contextTags = getContextTags(node.clusterContext.id);
+        const isMatchAllTags =
+          !hasSelectedTags ||
+          Array.from(selectedTagIds).every(tagId => contextTags.includes(tagId));
+
+        if ((nameMatches || parentNameMatch) && isMatchAllTags) return node;
         return undefined;
       }
 
       return nameMatches ? node : undefined;
     };
 
-    return nodes.map(filterNode).filter(Boolean) as ContextNode[];
+    return nodes.map(node => filterNode(node, false)).filter(Boolean) as ContextNode[];
   };
 
   const handleContextMenu = (node: ContextNode, event: React.MouseEvent) => {
@@ -167,6 +190,18 @@ function ContextsPane({
       attachTagToContext(contextId, tagId);
       setAttachedTags(prev => [...prev, tagId]);
     }
+  };
+
+  const handleTagFilterClick = (tagId: string) => {
+    setSelectedTagIds(prev => {
+      const next = new Set(prev);
+      if (next.has(tagId)) {
+        next.delete(tagId);
+      } else {
+        next.add(tagId);
+      }
+      return next;
+    });
   };
 
   /**
@@ -241,6 +276,28 @@ function ContextsPane({
             spellCheck="false"
           />
         </div>
+        {tags.length > 0 && (
+          <div className="tags-filter-container">
+            {tags.map(tag => {
+              const isSelected = selectedTagIds.has(tag.id);
+              return (
+                <button
+                  key={tag.id}
+                  className={`tag-filter-button ${isSelected ? 'selected' : ''}`}
+                  onClick={() => handleTagFilterClick(tag.id)}
+                  style={{
+                    borderColor: tag.color,
+                    backgroundColor: isSelected ? tag.color : 'transparent',
+                    color: isSelected ? '#ffffff' : tag.color,
+                  }}
+                >
+                  <span className="tag-filter-dot" style={{ backgroundColor: tag.color }} />
+                  <span className="tag-filter-name">{tag.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="context-tree-container">

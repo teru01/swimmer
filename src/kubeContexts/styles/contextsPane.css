@@ -421,3 +421,43 @@
   background-color: var(--bg-hover);
   color: var(--text-primary);
 }
+
+.tags-filter-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag-filter-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 12px;
+  border: 1px solid;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tag-filter-button:hover {
+  opacity: 0.8;
+}
+
+.tag-filter-button.selected {
+  font-weight: 500;
+}
+
+.tag-filter-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tag-filter-name {
+  font-size: 11px;
+}
