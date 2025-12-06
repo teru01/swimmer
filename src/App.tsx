@@ -30,9 +30,8 @@ function App() {
 
   return (
     <div className="app">
-      {currentPage === 'main' ? (
-        <MainLayout onNavigateToPreferences={handleNavigateToPreferences} />
-      ) : (
+      <MainLayout onNavigateToPreferences={handleNavigateToPreferences} />
+      {currentPage === 'preferences' && (
         <PreferencesPage
           onBack={() => setCurrentPage('main')}
           initialSection={preferencesSection}
