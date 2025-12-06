@@ -108,14 +108,20 @@ const fetchResources = async (kind: string | undefined): Promise<KubeResource[]>
 interface ResourceListProps {
   selectedKind: string | undefined;
   onResourceSelect: (resource: KubeResource) => void; // Pass the whole resource object
+  contextId?: string;
 }
 
 /**
  * Pane component to display list of resources for the selected kind.
  * @param selectedKind Currently selected resource kind.
  * @param onResourceSelect Callback function when a resource is selected.
+ * @param contextId Kubernetes context ID.
  */
-const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSelect }) => {
+const ResourceList: React.FC<ResourceListProps> = ({
+  selectedKind,
+  onResourceSelect,
+  contextId,
+}) => {
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = useState<string>('all'); // 'all' represents All Namespaces
   const [resources, setResources] = useState<KubeResource[]>([]);
@@ -232,7 +238,7 @@ const ResourceList: React.FC<ResourceListProps> = ({ selectedKind, onResourceSel
   };
 
   if (selectedKind === 'Overview') {
-    return <ClusterOverview contextId="dummy-context-id" />;
+    return <ClusterOverview contextId={contextId || 'dummy-context-id'} />;
   }
 
   return (

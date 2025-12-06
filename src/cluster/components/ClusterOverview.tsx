@@ -5,6 +5,7 @@ import { eksProvider } from '../../lib/providers/eks';
 import { othersProvider } from '../../lib/providers/others';
 import { commands } from '../../api';
 import type { ClusterStats, NodeInfo, PodInfo } from '../../api/commands';
+import { getContextTags, getTagById, type Tag } from '../../lib/tag';
 
 const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
 
@@ -37,6 +38,7 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
   const [stats, setStats] = useState<ClusterStats | undefined>(undefined);
   const [nodes, setNodes] = useState<NodeInfo[]>([]);
   const [pods, setPods] = useState<PodInfo[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -53,6 +55,12 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
         setStats(statsData);
         setNodes(nodesData);
         setPods(podsData);
+
+        const tagIds = getContextTags(contextId);
+        const loadedTags = tagIds
+          .map(id => getTagById(id))
+          .filter((tag): tag is Tag => tag !== undefined);
+        setTags(loadedTags);
       } catch (error) {
         console.error('Failed to load cluster overview:', error);
       } finally {
@@ -101,6 +109,34 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
             <span className="info-label">Version:</span>
             <span className="info-value">{clusterInfo.clusterVersion}</span>
           </div>
+          <div className="info-item">
+            <span className="info-label">Tag:</span>
+            <div className="tags-container">
+              {tags.length > 0 ? (
+                tags.map(tag => (
+                  <span
+                    key={tag.id}
+                    className="cluster-tag"
+                    style={{
+                      borderColor: tag.color,
+                      backgroundColor: `${tag.color}20`,
+                      color: tag.color,
+                    }}
+                  >
+                    <span className="cluster-tag-dot" style={{ backgroundColor: tag.color }} />
+                    <span className="cluster-tag-name">{tag.name}</span>
+                  </span>
+                ))
+              ) : (
+                <span
+                  className="info-value"
+                  style={{ color: 'var(--vscode-descriptionForeground)' }}
+                >
+                  -
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -115,6 +151,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
             <div className="stat-detail">Ready/Total</div>
           </div>
           <div className="stat-card">
+            <div className="stat-label">Deployment</div>
+            <div className="stat-value">{stats.deploymentCount}</div>
+          </div>
+          <div className="stat-card">
             <div className="stat-label">Pods</div>
             <div className="stat-value">
               {stats.runningPods}/{stats.totalPods}
@@ -122,16 +162,12 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
             <div className="stat-detail">Running/Total</div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">Namespaces</div>
+            <div className="stat-label">Job</div>
+            <div className="stat-value">{stats.jobCount}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Namespace</div>
             <div className="stat-value">{stats.namespaceCount}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">CPU Usage</div>
-            <div className="stat-value">{stats.cpuUsage}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Memory Usage</div>
-            <div className="stat-value">{stats.memoryUsage}</div>
           </div>
         </div>
       </div>

@@ -69,6 +69,7 @@ function ClusterOperationPanelComponent({
             <div className="cluster-info-pane-container">
               <ClusterInfoPane
                 activeTabId={activeTab?.id}
+                activeContextId={activeTab?.clusterContext.id}
                 allViewStates={allClusterViewStates}
                 onViewStateChange={onViewStateChange}
               />

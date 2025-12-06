@@ -92,12 +92,14 @@ const fetchResourceDetail = async (
 
 interface ClusterInfoPaneProps {
   activeTabId: string | undefined;
+  activeContextId: string | undefined;
   allViewStates: Map<string, ClusterViewState>;
   onViewStateChange: (tabId: string, state: ClusterViewState) => void;
 }
 
 interface ClusterViewInstanceProps {
   tabId: string;
+  contextId: string | undefined;
   isVisible: boolean;
   viewState: ClusterViewState;
   onViewStateChange: (state: ClusterViewState) => void;
@@ -108,6 +110,7 @@ interface ClusterViewInstanceProps {
  */
 function ClusterViewInstance({
   isVisible,
+  contextId,
   viewState,
   onViewStateChange,
 }: ClusterViewInstanceProps) {
@@ -191,6 +194,7 @@ function ClusterViewInstance({
               <ResourceList
                 selectedKind={viewState.selectedKind}
                 onResourceSelect={handleResourceSelect}
+                contextId={contextId}
               />
             </Panel>
             {viewState.showDetailPane && (
@@ -223,7 +227,12 @@ function ClusterViewInstance({
 /**
  * Center Pane: Component to display cluster information with sidebar, list, and detail views.
  */
-function ClusterInfoPane({ activeTabId, allViewStates, onViewStateChange }: ClusterInfoPaneProps) {
+function ClusterInfoPane({
+  activeTabId,
+  activeContextId,
+  allViewStates,
+  onViewStateChange,
+}: ClusterInfoPaneProps) {
   return (
     <div className="cluster-info-pane-container">
       {activeTabId ? (
@@ -233,6 +242,7 @@ function ClusterInfoPane({ activeTabId, allViewStates, onViewStateChange }: Clus
               <ClusterViewInstance
                 key={tabId}
                 tabId={tabId}
+                contextId={tabId === activeTabId ? activeContextId : undefined}
                 isVisible={tabId === activeTabId}
                 viewState={viewState}
                 onViewStateChange={state => onViewStateChange(tabId, state)}

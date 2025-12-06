@@ -18,6 +18,8 @@ export interface ClusterStats {
   totalPods: number;
   runningPods: number;
   namespaceCount: number;
+  deploymentCount: number;
+  jobCount: number;
   cpuUsage: string;
   memoryUsage: string;
 }
@@ -130,6 +132,8 @@ export const commands = {
       totalPods: 42,
       runningPods: 38,
       namespaceCount: 8,
+      deploymentCount: 15,
+      jobCount: 3,
       cpuUsage: '45%',
       memoryUsage: '62%',
     };
