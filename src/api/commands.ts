@@ -253,4 +253,27 @@ export const commands = {
 
     return pods;
   },
+
+  /**
+   * Kubernetesリソースのリストを取得します
+   */
+  listResources: async (
+    context: string | undefined,
+    kind: string,
+    namespace: string | undefined
+  ): Promise<any[]> => {
+    return invoke('list_resources', { context, kind, namespace });
+  },
+
+  /**
+   * Kubernetesリソースの詳細を取得します
+   */
+  getResourceDetail: async (
+    context: string | undefined,
+    kind: string,
+    name: string,
+    namespace: string | undefined
+  ): Promise<any> => {
+    return invoke('get_resource_detail', { context, kind, name, namespace });
+  },
 };

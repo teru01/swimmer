@@ -1,3 +1,4 @@
+mod k8s_api;
 mod terminal;
 
 use kube::config::Kubeconfig;
@@ -63,7 +64,9 @@ pub fn run() {
             get_kube_contexts,
             terminal::create_terminal_session,
             terminal::write_to_terminal,
-            terminal::close_terminal_session
+            terminal::close_terminal_session,
+            k8s_api::list_resources,
+            k8s_api::get_resource_detail
         ])
         .setup(|app| {
             use tauri::{menu::*, Emitter};

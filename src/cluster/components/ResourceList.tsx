@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './ClusterInfoPane.css';
-import { formatAge } from '../../lib/utils'; // Import the utility
+import { formatAge } from '../../lib/utils';
 import ClusterOverview from './ClusterOverview';
+import { commands } from '../../api/commands';
 
 export interface KubeResource {
   kind?: string;
@@ -473,8 +474,10 @@ const ResourceList: React.FC<ResourceListProps> = ({
       setIsLoading(true);
       setError(undefined);
       try {
-        const fetchedResources = await fetchResources(selectedKind);
-        setResources(fetchedResources);
+        const namespace =
+          isNamespaced && selectedNamespace !== 'all' ? selectedNamespace : undefined;
+        const fetchedResources = await commands.listResources(contextId, selectedKind, namespace);
+        setResources(fetchedResources as KubeResource[]);
       } catch (err) {
         console.error(`Failed to fetch ${selectedKind}:`, err);
         setError(`Failed to load ${selectedKind}.`);
@@ -484,7 +487,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     };
 
     loadResources();
-  }, [selectedKind]);
+  }, [selectedKind, selectedNamespace, isNamespaced, contextId]);
 
   // Filter resources based on selectedNamespace
   const filteredResources = useMemo(() => {
