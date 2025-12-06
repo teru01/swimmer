@@ -3,14 +3,18 @@ import { listen } from '@tauri-apps/api/event';
 import './App.css';
 import './styles/layout.css';
 import MainLayout from './main/MainLayout';
-import PreferencesPage from './preferences/PreferencesPage';
+import PreferencesPage, { PreferencesSection } from './preferences/PreferencesPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<'main' | 'preferences'>('main');
+  const [preferencesSection, setPreferencesSection] = useState<PreferencesSection | undefined>(
+    undefined
+  );
 
   useEffect(() => {
     // メニューからのPreferencesイベントをリッスン
     const unlisten = listen('menu-preferences', () => {
+      setPreferencesSection(undefined);
       setCurrentPage('preferences');
     });
 
@@ -19,12 +23,20 @@ function App() {
     };
   }, []);
 
+  const handleNavigateToPreferences = (section?: PreferencesSection) => {
+    setPreferencesSection(section);
+    setCurrentPage('preferences');
+  };
+
   return (
     <div className="app">
       {currentPage === 'main' ? (
-        <MainLayout />
+        <MainLayout onNavigateToPreferences={handleNavigateToPreferences} />
       ) : (
-        <PreferencesPage onBack={() => setCurrentPage('main')} />
+        <PreferencesPage
+          onBack={() => setCurrentPage('main')}
+          initialSection={preferencesSection}
+        />
       )}
     </div>
   );

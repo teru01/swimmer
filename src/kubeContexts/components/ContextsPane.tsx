@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PreferencesSection } from '../../preferences/PreferencesPage';
 import { Button, Input } from '../../main/ui';
 import '../styles/contextsPane.css';
 import { ContextNode, NodeType, buildTreeFromContexts } from '../../lib/contextTree';
@@ -18,6 +19,7 @@ import { ContextMenuWithSubmenu } from '../../components/ui/ContextMenu';
 interface ContextsPaneProps {
   selectedContext: ContextNode | undefined;
   onContextNodeSelect?: (contextNode: ContextNode) => void;
+  onNavigateToPreferences?: (section?: PreferencesSection) => void;
 }
 
 // 使用するプロバイダーのリスト（Othersは最後に配置）
@@ -32,7 +34,11 @@ interface ContextMenuState {
   y: number;
 }
 
-function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProps) {
+function ContextsPane({
+  selectedContext,
+  onContextNodeSelect,
+  onNavigateToPreferences,
+}: ContextsPaneProps) {
   const [contextTree, setContextTree] = useState<ContextNode[]>([]);
   const [searchText, setSearchText] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -252,14 +258,7 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
         <ContextMenuWithSubmenu
           x={contextMenu.x}
           y={contextMenu.y}
-          items={[
-            {
-              id: 'dummy',
-              type: 'item',
-              label: 'Dummy',
-              onClick: () => {},
-            },
-          ]}
+          items={[]}
           submenuLabel="Attach Tags"
           submenuItems={
             loadTags().length === 0
@@ -280,6 +279,20 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
                   checked: attachedTags.includes(tag.id),
                 }))
           }
+          itemsAfterSubmenu={[
+            {
+              id: 'separator-after-tags',
+              type: 'separator',
+            },
+            {
+              id: 'add-tags',
+              type: 'item',
+              label: 'Add Tags',
+              onClick: () => {
+                onNavigateToPreferences?.('tags');
+              },
+            },
+          ]}
           onClose={() => setContextMenu(undefined)}
         />
       )}

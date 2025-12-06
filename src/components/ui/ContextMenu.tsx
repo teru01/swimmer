@@ -89,6 +89,7 @@ interface ContextMenuWithSubmenuProps {
   items: ContextMenuItemType[];
   submenuLabel?: string;
   submenuItems?: SubmenuItem[];
+  itemsAfterSubmenu?: ContextMenuItemType[];
   onClose: () => void;
 }
 
@@ -98,6 +99,7 @@ export function ContextMenuWithSubmenu({
   items,
   submenuLabel,
   submenuItems = [],
+  itemsAfterSubmenu = [],
   onClose,
 }: ContextMenuWithSubmenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -166,6 +168,22 @@ export function ContextMenuWithSubmenu({
             <span className="submenu-arrow">▶</span>
           </div>
         )}
+        {itemsAfterSubmenu.map(item => {
+          if (item.type === 'separator') {
+            return <div key={item.id} className="custom-context-menu-separator" />;
+          }
+
+          return (
+            <div
+              key={item.id}
+              className={`custom-context-menu-item ${item.disabled ? 'disabled' : ''}`}
+              onClick={() => handleItemClick(item)}
+              onMouseEnter={() => setShowSubmenu(false)}
+            >
+              {item.label}
+            </div>
+          );
+        })}
       </div>
 
       {showSubmenu && submenuItems.length > 0 && (

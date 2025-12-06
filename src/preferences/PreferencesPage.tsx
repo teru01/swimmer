@@ -3,15 +3,19 @@ import { usePreferences } from '../contexts/PreferencesContext';
 import './preferencesPage.css';
 import { loadTags, addTag, deleteTag, createTag, Tag } from '../lib/tag';
 
+export type PreferencesSection = 'general' | 'ai-chat' | 'terminal' | 'tags';
+
 interface PreferencesPageProps {
   onBack?: () => void;
+  initialSection?: PreferencesSection;
 }
 
-type Section = 'general' | 'ai-chat' | 'terminal' | 'tags';
-
-const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
+const PreferencesPage: React.FC<PreferencesPageProps> = ({
+  onBack,
+  initialSection = 'general',
+}) => {
   const { preferences, updatePreferences } = usePreferences();
-  const [activeSection, setActiveSection] = useState<Section>('general');
+  const [activeSection, setActiveSection] = useState<PreferencesSection>(initialSection);
   const [tags, setTags] = useState<Tag[]>(loadTags());
   const [newTagName, setNewTagName] = useState('');
   const [tagToDelete, setTagToDelete] = useState<Tag | undefined>(undefined);
@@ -210,8 +214,8 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({ onBack }) => {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2>Delete Tag</h2>
             <p>
-              Are you sure you want to delete the tag "{tagToDelete.name}"? This tag will be
-              detached from all contexts.
+              Are you sure you want to delete the tag &quot;{tagToDelete.name}&quot;? This tag will
+              be detached from all contexts.
             </p>
             <div className="modal-actions">
               <button onClick={cancelDeleteTag}>Cancel</button>

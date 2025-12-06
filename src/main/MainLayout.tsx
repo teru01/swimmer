@@ -1,4 +1,5 @@
 import { useState, useRef, Fragment } from 'react';
+import { PreferencesSection } from '../preferences/PreferencesPage';
 import ContextsPane from '../kubeContexts/components/ContextsPane';
 import ClusterOperationPanelComponent from '../cluster/components/ClusterOperationPanelComponent';
 import { ClusterViewState } from '../cluster/components/ClusterInfoPane';
@@ -30,13 +31,17 @@ const createDefaultClusterViewState = (): ClusterViewState => ({
   expandedGroups: new Set(resourceGroups.map(group => group.groupName)),
 });
 
+interface MainLayoutProps {
+  onNavigateToPreferences?: (section?: PreferencesSection) => void;
+}
+
 /**
  * Main Layout Component
  * - Left: Context hierarchy list (full height)
  * - Center: Cluster tabs on top, Cluster information and Terminal below
  * - Right: AI chat
  */
-function MainLayout() {
+function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
   const { preferences } = usePreferences();
 
   // include folder
@@ -317,6 +322,7 @@ function MainLayout() {
               <ContextsPane
                 selectedContext={selectedContext}
                 onContextNodeSelect={handleContextNodeSelect}
+                onNavigateToPreferences={onNavigateToPreferences}
               />
             </div>
           </Panel>
