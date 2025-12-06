@@ -15,6 +15,7 @@ import {
   MAX_TAGS_PER_CONTEXT,
   Tag,
 } from '../../lib/tag';
+import { loadFavorites, toggleFavorite } from '../../lib/favorite';
 import { Menu } from '../../components/ui/Menu';
 
 interface ContextsPaneProps {
@@ -48,6 +49,12 @@ function ContextsPane({
   const [attachedTags, setAttachedTags] = useState<string[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
   const [tags, setTags] = useState<Tag[]>(loadTags());
+  const [favorites, setFavorites] = useState<Set<string>>(loadFavorites());
+  const [favoritesHeight, setFavoritesHeight] = useState<number>(() => {
+    const saved = localStorage.getItem('swimmer_favorites_height');
+    return saved ? parseInt(saved, 10) : 200;
+  });
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     async function loadContexts() {
@@ -65,6 +72,7 @@ function ContextsPane({
     }
     loadContexts();
     setTags(loadTags());
+    setFavorites(loadFavorites());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -149,7 +157,6 @@ function ContextsPane({
         const isMatchAllTags =
           !hasSelectedTags ||
           Array.from(selectedTagIds).every(tagId => contextTags.includes(tagId));
-
         if ((nameMatches || parentNameMatch) && isMatchAllTags) return node;
         return undefined;
       }
@@ -159,6 +166,51 @@ function ContextsPane({
 
     return nodes.map(node => filterNode(node, false)).filter(Boolean) as ContextNode[];
   };
+
+  const handleFavoriteClick = (contextId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavorite(contextId);
+    setFavorites(loadFavorites());
+  };
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const contextsHeader = document.querySelector('.contexts-header');
+      if (!contextsHeader) return;
+
+      const headerRect = contextsHeader.getBoundingClientRect();
+      const contextsPane = document.querySelector('.contexts-pane');
+      if (!contextsPane) return;
+
+      const paneRect = contextsPane.getBoundingClientRect();
+      const y = e.clientY - headerRect.bottom;
+      const minHeight = 50;
+      const maxHeight = paneRect.height - headerRect.height - 100;
+
+      const newHeight = Math.max(minHeight, Math.min(maxHeight, y));
+      setFavoritesHeight(newHeight);
+      localStorage.setItem('swimmer_favorites_height', newHeight.toString());
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const handleContextMenu = (node: ContextNode, event: React.MouseEvent) => {
     event.preventDefault();
@@ -207,7 +259,11 @@ function ContextsPane({
   /**
    * ツリーノードをレンダリング
    */
-  const renderNode = (node: ContextNode, level: number = 0): JSX.Element => {
+  const renderNode = (
+    node: ContextNode,
+    level: number = 0,
+    showContextInfo = false
+  ): JSX.Element => {
     const isFolder = node.type === NodeType.Folder;
     const isContext = node.type === NodeType.Context;
     const isSelected = selectedContext && node.id === selectedContext.id;
@@ -232,9 +288,28 @@ function ContextsPane({
             {isFolder && <span className="folder-icon">{isExpanded ? '▼' : '▶'}</span>}
             {isContext && <span className="context-icon">⚙️</span>}
             <span className="node-name">{node.name}</span>
+            {isContext && node.clusterContext && showContextInfo && (
+              <span className="node-context-info">
+                {[
+                  node.clusterContext.provider,
+                  node.clusterContext.resourceContainerID,
+                  node.clusterContext.region,
+                ]
+                  .filter(Boolean)
+                  .join('/')}
+              </span>
+            )}
           </div>
           {isContext && (
             <div className="node-actions">
+              <button
+                className={`favorite-button ${favorites.has(node.clusterContext?.id || '') ? 'favorited' : ''}`}
+                onClick={e => handleFavoriteClick(node.clusterContext?.id || '', e)}
+                aria-label="Toggle favorite"
+                title="Toggle favorite"
+              >
+                ★
+              </button>
               <button
                 className="menu-button"
                 onClick={e => handleContextMenu(node, e)}
@@ -247,7 +322,7 @@ function ContextsPane({
         </div>
         {isFolder && isExpanded && node.children && (
           <div className="node-children">
-            {node.children.map(child => renderNode(child, level + 1))}
+            {node.children.map(child => renderNode(child, level + 1, showContextInfo))}
           </div>
         )}
       </div>
@@ -307,8 +382,41 @@ function ContextsPane({
         )}
       </div>
 
-      <div className="context-tree-container">
-        {filterNodes(contextTree).map(node => renderNode(node))}
+      <div className="favorites-section" style={{ height: `${favoritesHeight}px` }}>
+        <div className="favorites-header">
+          <span className="favorites-label">Favorites</span>
+        </div>
+        <div className="favorites-list">
+          {contextTree
+            .flatMap(node => {
+              const collectContexts = (n: ContextNode): ContextNode[] => {
+                if (n.type === NodeType.Context && n.clusterContext) {
+                  return favorites.has(n.clusterContext.id) ? [n] : [];
+                }
+                if (n.type === NodeType.Folder && n.children) {
+                  return n.children.flatMap(collectContexts);
+                }
+                return [];
+              };
+              return collectContexts(node);
+            })
+            .map(node => renderNode(node, 0, true))}
+        </div>
+      </div>
+
+      <div
+        className="resizer"
+        onMouseDown={handleResizeStart}
+        style={{ cursor: isResizing ? 'row-resize' : 'ns-resize' }}
+      />
+
+      <div className="context-tree-section">
+        <div className="context-tree-header">
+          <span className="context-tree-label">Clusters</span>
+        </div>
+        <div className="context-tree-container">
+          {filterNodes(contextTree).map(node => renderNode(node))}
+        </div>
       </div>
 
       {contextMenu && (
