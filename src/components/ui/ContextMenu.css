@@ -68,14 +68,11 @@
   opacity: 0.7;
 }
 
-.tag-check {
+.menu-item-prefix {
   width: 14px;
   font-size: 12px;
   font-weight: bold;
   flex-shrink: 0;
   text-align: center;
-}
-
-.tag-text {
-  flex: 1;
+  margin-right: 6px;
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ClusterContextTab } from '../types/panel';
-import { ContextMenu, ContextMenuItemType } from '../../components/ui/ContextMenu';
+import { Menu, MenuItem } from '../../components/ui/Menu';
 
 interface UseTabContextMenuProps {
   tabs: ClusterContextTab[];
@@ -38,10 +38,9 @@ export const useTabContextMenu = ({
   const renderMenu = (): JSX.Element | null => {
     if (!contextMenu) return null;
 
-    const menuItems: ContextMenuItemType[] = [
+    const menuItems: MenuItem[] = [
       {
         id: 'close',
-        type: 'item',
         label: 'Close',
         onClick: () => onCloseTab(contextMenu.tab),
       },
@@ -50,7 +49,6 @@ export const useTabContextMenu = ({
     if (onCloseOtherTabs) {
       menuItems.push({
         id: 'close-others',
-        type: 'item',
         label: 'Close Others',
         onClick: () => onCloseOtherTabs(contextMenu.tab),
       });
@@ -61,7 +59,6 @@ export const useTabContextMenu = ({
     if (onSplitRight) {
       menuItems.push({
         id: 'split-right',
-        type: 'item',
         label: 'Split Right',
         onClick: () => onSplitRight(contextMenu.tab),
       });
@@ -72,14 +69,13 @@ export const useTabContextMenu = ({
     if (onReloadTab) {
       menuItems.push({
         id: 'reload',
-        type: 'item',
         label: 'Reload',
         onClick: () => onReloadTab(contextMenu.tab),
       });
     }
 
     return (
-      <ContextMenu
+      <Menu
         x={contextMenu.x}
         y={contextMenu.y}
         items={menuItems}

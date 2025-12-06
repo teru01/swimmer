@@ -14,7 +14,7 @@ import {
   detachTagFromContext,
   MAX_TAGS_PER_CONTEXT,
 } from '../../lib/tag';
-import { ContextMenuWithSubmenu } from '../../components/ui/ContextMenu';
+import { Menu } from '../../components/ui/Menu';
 
 interface ContextsPaneProps {
   selectedContext: ContextNode | undefined;
@@ -255,38 +255,36 @@ function ContextsPane({
       </div>
 
       {contextMenu && (
-        <ContextMenuWithSubmenu
+        <Menu
           x={contextMenu.x}
           y={contextMenu.y}
-          items={[]}
-          submenuLabel="Attach Tags"
-          submenuItems={
-            loadTags().length === 0
-              ? [
-                  {
-                    id: 'no-tags',
-                    type: 'item',
-                    label: 'No tags available',
-                    onClick: () => {},
-                    disabled: true,
-                  },
-                ]
-              : loadTags().map(tag => ({
-                  id: tag.id,
-                  type: 'item' as const,
-                  label: tag.name,
-                  onClick: () => handleToggleTag(tag.id),
-                  checked: attachedTags.includes(tag.id),
-                }))
-          }
-          itemsAfterSubmenu={[
+          items={[
+            {
+              id: 'attach-tags',
+              label: 'Attach Tags',
+              children:
+                loadTags().length === 0
+                  ? [
+                      {
+                        id: 'no-tags',
+                        label: 'No tags available',
+                        onClick: () => {},
+                        disabled: true,
+                      },
+                    ]
+                  : loadTags().map(tag => ({
+                      id: tag.id,
+                      label: tag.name,
+                      onClick: () => handleToggleTag(tag.id),
+                      checked: attachedTags.includes(tag.id),
+                    })),
+            },
             {
               id: 'separator-after-tags',
               type: 'separator',
             },
             {
               id: 'add-tags',
-              type: 'item',
               label: 'Add Tags',
               onClick: () => {
                 onNavigateToPreferences?.('tags');
