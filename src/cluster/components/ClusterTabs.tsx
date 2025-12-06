@@ -29,7 +29,7 @@ function ClusterTabs({
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const activeTabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  const { handleContextMenu } = useTabContextMenu({
+  const { handleContextMenu, renderMenu } = useTabContextMenu({
     tabs,
     onCloseTab: onCloseCluster,
     onCloseOtherTabs,
@@ -67,34 +67,37 @@ function ClusterTabs({
   };
 
   return (
-    <div className="cluster-tabs" ref={tabsContainerRef}>
-      {tabs.map(tab => {
-        const isActive = activeContextId === tab.clusterContext.id;
-        const isPanelActive = tab.panelId === activePanelId;
-        const shouldDim = !isPanelActive || (isPanelActive && !isActive);
+    <>
+      <div className="cluster-tabs" ref={tabsContainerRef}>
+        {tabs.map(tab => {
+          const isActive = activeContextId === tab.clusterContext.id;
+          const isPanelActive = tab.panelId === activePanelId;
+          const shouldDim = !isPanelActive || (isPanelActive && !isActive);
 
-        return (
-          <div
-            key={tab.id}
-            ref={el => setTabRef(tab.clusterContext.id, el)}
-            className={`cluster-tab ${isActive ? 'active' : ''} ${shouldDim ? 'dimmed' : ''}`}
-            onClick={() => onClusterSelect(tab)}
-            onContextMenu={e => handleContextMenu(e, tab)}
-          >
-            <span className="tab-label">{tab.clusterContext.clusterName}</span>
-            <button
-              className="close-button"
-              onClick={e => {
-                e.stopPropagation();
-                onCloseCluster(tab);
-              }}
+          return (
+            <div
+              key={tab.id}
+              ref={el => setTabRef(tab.clusterContext.id, el)}
+              className={`cluster-tab ${isActive ? 'active' : ''} ${shouldDim ? 'dimmed' : ''}`}
+              onClick={() => onClusterSelect(tab)}
+              onContextMenu={e => handleContextMenu(e, tab)}
             >
-              ×
-            </button>
-          </div>
-        );
-      })}
-    </div>
+              <span className="tab-label">{tab.clusterContext.clusterName}</span>
+              <button
+                className="close-button"
+                onClick={e => {
+                  e.stopPropagation();
+                  onCloseCluster(tab);
+                }}
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      {renderMenu()}
+    </>
   );
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, Input } from '../../main/ui';
 import '../styles/contextsPane.css';
 import { ContextNode, NodeType, buildTreeFromContexts } from '../../lib/contextTree';
@@ -13,6 +13,7 @@ import {
   detachTagFromContext,
   MAX_TAGS_PER_CONTEXT,
 } from '../../lib/tag';
+import { ContextMenuWithSubmenu } from '../../components/ui/ContextMenu';
 
 interface ContextsPaneProps {
   selectedContext: ContextNode | undefined;
@@ -37,9 +38,7 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | undefined>(undefined);
-  const [showTagSubmenu, setShowTagSubmenu] = useState(false);
   const [attachedTags, setAttachedTags] = useState<string[]>([]);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadContexts() {
@@ -57,20 +56,6 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
     }
     loadContexts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setContextMenu(undefined);
-        setShowTagSubmenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
   }, []);
 
   useEffect(() => {
@@ -157,7 +142,6 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
       x: event.clientX,
       y: event.clientY,
     });
-    setShowTagSubmenu(false);
   };
 
   const handleToggleTag = (tagId: string) => {
@@ -265,54 +249,39 @@ function ContextsPane({ selectedContext, onContextNodeSelect }: ContextsPaneProp
       </div>
 
       {contextMenu && (
-        <div
-          ref={menuRef}
-          className="context-menu-container"
-          style={{
-            position: 'fixed',
-            left: `${contextMenu.x}px`,
-            top: `${contextMenu.y}px`,
-          }}
-        >
-          <div className="context-menu-main">
-            <div
-              className="context-menu-item"
-              onClick={() => {}}
-              onMouseEnter={() => setShowTagSubmenu(false)}
-            >
-              Dummy
-            </div>
-            <div
-              className="context-menu-item has-submenu"
-              onMouseEnter={() => setShowTagSubmenu(true)}
-            >
-              <span>Attach Tags</span>
-              <span className="submenu-arrow">▶</span>
-            </div>
-          </div>
-
-          {showTagSubmenu && (
-            <div className="context-menu-submenu" onMouseEnter={() => setShowTagSubmenu(true)}>
-              {loadTags().length === 0 ? (
-                <div className="context-menu-item disabled">No tags available</div>
-              ) : (
-                loadTags().map(tag => {
-                  const isAttached = attachedTags.includes(tag.id);
-                  return (
-                    <div
-                      key={tag.id}
-                      className="context-menu-item"
-                      onClick={() => handleToggleTag(tag.id)}
-                    >
-                      <span className="tag-check">{isAttached ? '✓' : ''}</span>
-                      <span className="tag-text">{tag.name}</span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          )}
-        </div>
+        <ContextMenuWithSubmenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            {
+              id: 'dummy',
+              type: 'item',
+              label: 'Dummy',
+              onClick: () => {},
+            },
+          ]}
+          submenuLabel="Attach Tags"
+          submenuItems={
+            loadTags().length === 0
+              ? [
+                  {
+                    id: 'no-tags',
+                    type: 'item',
+                    label: 'No tags available',
+                    onClick: () => {},
+                    disabled: true,
+                  },
+                ]
+              : loadTags().map(tag => ({
+                  id: tag.id,
+                  type: 'item' as const,
+                  label: tag.name,
+                  onClick: () => handleToggleTag(tag.id),
+                  checked: attachedTags.includes(tag.id),
+                }))
+          }
+          onClose={() => setContextMenu(undefined)}
+        />
       )}
     </div>
   );
