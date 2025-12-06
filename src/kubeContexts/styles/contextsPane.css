@@ -484,6 +484,7 @@
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+  position: relative;
 }
 
 .tags-filter-label {
@@ -502,6 +503,8 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .tags-filter-container::-webkit-scrollbar {
@@ -510,7 +513,8 @@
 
 .tags-filter-container:hover {
   scrollbar-width: thin;
-  scrollbar-color: var(--border-color) var(--bg-secondary);
+  scrollbar-color: var(--border-color) transparent;
+  overflow-x: overlay;
 }
 
 .tags-filter-container:hover::-webkit-scrollbar {
@@ -519,7 +523,7 @@
 }
 
 .tags-filter-container:hover::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: transparent;
   border-radius: 3px;
 }
 
@@ -534,7 +538,8 @@
 
 .tags-filter-container:active {
   scrollbar-width: thin;
-  scrollbar-color: var(--border-color) var(--bg-secondary);
+  scrollbar-color: var(--border-color) transparent;
+  overflow-x: overlay;
 }
 
 .tags-filter-container:active::-webkit-scrollbar {

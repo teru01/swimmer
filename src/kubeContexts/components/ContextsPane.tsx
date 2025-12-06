@@ -364,7 +364,7 @@ function ContextsPane({
                     className={`tag-filter-button ${isSelected ? 'selected' : ''}`}
                     onClick={() => handleTagFilterClick(tag.id)}
                     style={{
-                      borderColor: isSelected ? tag.color : '#000000',
+                      borderColor: isSelected ? tag.color : 'var(--border-color)',
                       backgroundColor: isSelected ? tag.color : 'transparent',
                       color: isSelected ? '#ffffff' : '#000000',
                     }}
