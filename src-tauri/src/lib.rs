@@ -66,7 +66,11 @@ pub fn run() {
             terminal::write_to_terminal,
             terminal::close_terminal_session,
             k8s_api::list_resources,
-            k8s_api::get_resource_detail
+            k8s_api::get_resource_detail,
+            k8s_api::get_cluster_overview_info,
+            k8s_api::get_cluster_stats,
+            k8s_api::get_nodes,
+            k8s_api::get_pods
         ])
         .setup(|app| {
             use tauri::{menu::*, Emitter};
