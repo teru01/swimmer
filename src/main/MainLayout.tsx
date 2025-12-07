@@ -26,6 +26,7 @@ import {
 const createDefaultClusterViewState = (): ClusterViewState => ({
   selectedKind: 'Overview',
   selectedResourceDetail: undefined,
+  selectedResourceEvents: [],
   isDetailLoading: false,
   showDetailPane: false,
   expandedGroups: new Set(resourceGroups.map(group => group.groupName)),

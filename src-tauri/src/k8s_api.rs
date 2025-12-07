@@ -713,6 +713,7 @@ pub async fn get_resource_detail(
     namespace: Option<String>,
 ) -> Result<Value> {
     let client = create_client(context).await?;
+    let namespace_for_events = namespace.clone();
 
     let resource: Value = match kind.as_str() {
         "Pod" => {
@@ -847,7 +848,36 @@ pub async fn get_resource_detail(
         _ => serde_json::json!({}),
     };
 
-    Ok(resource)
+    let event_supported_kinds = [
+        "Pod", "Deployment", "ReplicaSet", "StatefulSet", "DaemonSet", "Service",
+        "Job", "CronJob", "ConfigMap", "Secret", "PersistentVolume", "PersistentVolumeClaim",
+    ];
+
+    let events: Vec<Value> = if event_supported_kinds.contains(&kind.as_str()) {
+        let ns = namespace_for_events.as_ref().map(|s| s.as_str());
+        let all_events = client.list_events(ns).await?;
+        let filtered_events: Vec<Event> = all_events
+            .into_iter()
+            .filter(|event| {
+                let involved_object = &event.involved_object;
+                involved_object.kind.as_deref() == Some(&kind)
+                    && involved_object.name.as_deref() == Some(&name)
+                    && (involved_object.namespace.as_deref() == ns
+                        || (involved_object.namespace.is_none() && ns.is_none()))
+            })
+            .collect();
+        filtered_events
+            .into_iter()
+            .map(|e| serde_json::to_value(e).unwrap())
+            .collect()
+    } else {
+        vec![]
+    };
+
+    Ok(serde_json::json!({
+        "resource": resource,
+        "events": events,
+    }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

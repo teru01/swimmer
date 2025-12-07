@@ -9,6 +9,7 @@ import { commands } from '../../api/commands';
 export interface ClusterViewState {
   selectedKind: string | undefined;
   selectedResourceDetail: KubeResource | undefined;
+  selectedResourceEvents: KubeResource[];
   isDetailLoading: boolean;
   showDetailPane: boolean;
   expandedGroups: Set<string>;
@@ -17,24 +18,26 @@ export interface ClusterViewState {
 const fetchResourceDetail = async (
   resource: KubeResource | undefined,
   context: string | undefined
-): Promise<KubeResource | undefined> => {
+): Promise<{ resource: KubeResource; events: KubeResource[] } | undefined> => {
   if (!resource) return undefined;
   console.log(`Fetching details for: ${resource.metadata.name}`);
 
   const kind = resource.kind?.endsWith('s') ? resource.kind.slice(0, -1) : resource.kind;
-  if (!kind) return resource;
+  if (!kind) return { resource, events: [] };
 
   try {
-    const details = await commands.getResourceDetail(
+    const result = await commands.getResourceDetail(
       context,
       kind,
       resource.metadata.name,
       resource.metadata.namespace
     );
-    return details as KubeResource;
+    const resourceDetail = (result as any).resource as KubeResource;
+    const events = ((result as any).events || []) as KubeResource[];
+    return { resource: resourceDetail, events };
   } catch (error) {
     console.error('Failed to fetch resource detail:', error);
-    return resource;
+    return { resource, events: [] };
   }
 };
 
@@ -67,6 +70,7 @@ function ClusterViewInstance({
       ...viewState,
       selectedKind: kind,
       selectedResourceDetail: undefined,
+      selectedResourceEvents: [],
       showDetailPane: false,
     });
   };
@@ -85,14 +89,16 @@ function ClusterViewInstance({
         showDetailPane: true,
         isDetailLoading: true,
         selectedResourceDetail: undefined,
+        selectedResourceEvents: [],
       });
       try {
-        const details = await fetchResourceDetail(resource, contextId);
+        const result = await fetchResourceDetail(resource, contextId);
         onViewStateChange({
           ...viewState,
           showDetailPane: true,
           isDetailLoading: false,
-          selectedResourceDetail: details,
+          selectedResourceDetail: result?.resource,
+          selectedResourceEvents: result?.events || [],
         });
       } catch (error) {
         console.error('Failed to fetch resource details:', error);
@@ -101,6 +107,7 @@ function ClusterViewInstance({
           showDetailPane: true,
           isDetailLoading: false,
           selectedResourceDetail: undefined,
+          selectedResourceEvents: [],
         });
       }
     },
@@ -112,6 +119,7 @@ function ClusterViewInstance({
       ...viewState,
       showDetailPane: false,
       selectedResourceDetail: undefined,
+      selectedResourceEvents: [],
     });
   };
 
@@ -159,8 +167,10 @@ function ClusterViewInstance({
                 >
                   <ResourceDetailPane
                     resource={viewState.selectedResourceDetail}
+                    events={viewState.selectedResourceEvents}
                     isLoading={viewState.isDetailLoading}
                     onClose={handleCloseDetailPane}
+                    contextId={contextId}
                   />
                 </Panel>
               </>

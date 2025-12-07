@@ -5,8 +5,10 @@ import { formatAge } from '../../lib/utils';
 
 interface ResourceDetailPaneProps {
   resource: KubeResource | undefined;
+  events?: KubeResource[];
   isLoading?: boolean;
   onClose: () => void;
+  contextId?: string;
 }
 
 // Helper component to render key-value pairs nicely
@@ -45,6 +47,7 @@ const renderMetadataMap = (map: { [key: string]: string } | undefined) => {
  */
 const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   resource,
+  events: eventsProp = [],
   isLoading,
   onClose,
 }) => {
@@ -67,6 +70,51 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   }
 
   const resourceKind = resource.kind || 'Unknown';
+
+  const renderEvents = () => {
+    if (eventsProp.length === 0) {
+      return (
+        <section className="detail-section">
+          <h4>Events</h4>
+          <div className="detail-value">No events found</div>
+        </section>
+      );
+    }
+
+    return (
+      <section className="detail-section">
+        <h4>Events</h4>
+        <table className="detail-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Reason</th>
+              <th>Message</th>
+              <th>Count</th>
+              <th>Age</th>
+            </tr>
+          </thead>
+          <tbody>
+            {eventsProp.map((event, index) => (
+              <tr key={`${event.metadata.name}-${index}`}>
+                <td>
+                  <span
+                    className={`status-badge ${((event as any).type || 'Normal').toLowerCase()}`}
+                  >
+                    {(event as any).type || 'Normal'}
+                  </span>
+                </td>
+                <td>{(event as any).reason || '-'}</td>
+                <td>{(event as any).message || '-'}</td>
+                <td>{(event as any).count || 1}</td>
+                <td>{formatAge(event.metadata.creationTimestamp)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    );
+  };
 
   const renderDeploymentDetails = (deployment: KubeResource) => {
     const { metadata, spec, status } = deployment;
@@ -120,6 +168,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             </tbody>
           </table>
         </section>
+        {renderEvents()}
       </>
     );
   };
@@ -181,6 +230,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             </tbody>
           </table>
         </section>
+        {renderEvents()}
       </>
     );
   };
@@ -272,6 +322,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
           <h4>Labels</h4>
           {renderMetadataMap(metadata.labels)}
         </section>
+        {renderEvents()}
       </>
     );
   };
@@ -330,6 +381,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             </table>
           </section>
         )}
+        {renderEvents()}
       </>
     );
   };
@@ -384,6 +436,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             </table>
           </section>
         )}
+        {renderEvents()}
       </>
     );
   };
@@ -439,6 +492,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             </table>
           </section>
         )}
+        {renderEvents()}
       </>
     );
   };
@@ -542,6 +596,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             ))}
           </section>
         )}
+        {renderEvents()}
       </>
     );
   };
@@ -582,6 +637,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             </ul>
           </section>
         )}
+        {renderEvents()}
       </>
     );
   };
@@ -855,6 +911,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             </ul>
           </section>
         )}
+        {renderEvents()}
       </>
     );
   };
@@ -938,6 +995,8 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
                 </table>
               </section>
             )}
+
+            {renderEvents()}
 
             <section className="detail-section">
               <h4>Raw Data</h4>
