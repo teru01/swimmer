@@ -14,11 +14,20 @@ export const resourceGroups = [
   },
   {
     groupName: 'Workloads',
-    kinds: ['Pods', 'Deployments', 'ReplicaSets', 'StatefulSets', 'DaemonSets', 'Jobs', 'CronJobs'],
+    kinds: [
+      'Pods',
+      'Deployments',
+      'ReplicaSets',
+      'StatefulSets',
+      'DaemonSets',
+      'Jobs',
+      'CronJobs',
+      'HorizontalPodAutoscalers',
+    ],
   },
   {
     groupName: 'Network',
-    kinds: ['Services', 'Ingresses', 'NetworkPolicies'],
+    kinds: ['Services', 'Endpoints', 'Ingresses', 'NetworkPolicies'],
   },
   {
     groupName: 'Storage',
@@ -26,7 +35,7 @@ export const resourceGroups = [
   },
   {
     groupName: 'Configuration',
-    kinds: ['ConfigMaps', 'Secrets'],
+    kinds: ['ConfigMaps', 'Secrets', 'LimitRanges', 'ResourceQuotas'],
   },
   {
     groupName: 'RBAC',

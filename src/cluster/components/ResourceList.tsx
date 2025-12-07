@@ -551,6 +551,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
         return ['Name', 'Status', 'Age'];
       case 'Events':
         return [...base, 'Type', 'Reason', 'Object', 'Message'];
+      case 'Endpoints':
+        return [...base, 'Endpoints', 'Age'];
+      case 'HorizontalPodAutoscalers':
+        return [...base, 'Targets', 'MinPods', 'MaxPods', 'Replicas', 'Age'];
+      case 'LimitRanges':
+        return [...base, 'Type', 'Age'];
+      case 'ResourceQuotas':
+        return [...base, 'Request', 'Limit', 'Age'];
       case 'ServiceAccounts':
         return [...base, 'Secrets'];
       case 'Roles':
@@ -783,6 +791,48 @@ const ResourceList: React.FC<ResourceListProps> = ({
           return (resource as any).spec.scope;
         }
         return '-';
+      case 'Endpoints': {
+        const subsets = (resource as any).subsets || [];
+        if (subsets.length === 0) return '<none>';
+        const addresses = subsets.flatMap((s: any) => s.addresses || []);
+        const ports = subsets.flatMap((s: any) => s.ports || []);
+        if (addresses.length === 0) return '<none>';
+        const portStr = ports.length > 0 ? `:${ports[0].port}` : '';
+        return `${addresses.length} addresses${portStr}`;
+      }
+      case 'Targets': {
+        const targetRef = (resource as any).spec?.scaleTargetRef;
+        if (targetRef) {
+          return `${targetRef.kind}/${targetRef.name}`;
+        }
+        return '-';
+      }
+      case 'MinPods':
+        return (resource as any).spec?.minReplicas || '-';
+      case 'MaxPods':
+        return (resource as any).spec?.maxReplicas || '-';
+      case 'Replicas': {
+        const current = (resource as any).status?.currentReplicas;
+        const desired = (resource as any).status?.desiredReplicas;
+        if (current !== undefined && desired !== undefined) {
+          return `${current}/${desired}`;
+        }
+        return '-';
+      }
+      case 'Request': {
+        const hard = (resource as any).status?.hard || {};
+        const used = (resource as any).status?.used || {};
+        const cpu = used['requests.cpu'] || hard['requests.cpu'] || '-';
+        const memory = used['requests.memory'] || hard['requests.memory'] || '-';
+        return `cpu: ${cpu}, memory: ${memory}`;
+      }
+      case 'Limit': {
+        const hard = (resource as any).status?.hard || {};
+        const used = (resource as any).status?.used || {};
+        const cpu = used['limits.cpu'] || hard['limits.cpu'] || '-';
+        const memory = used['limits.memory'] || hard['limits.memory'] || '-';
+        return `cpu: ${cpu}, memory: ${memory}`;
+      }
       default:
         return '-';
     }
