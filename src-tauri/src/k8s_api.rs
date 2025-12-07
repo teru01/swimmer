@@ -12,8 +12,10 @@ use kube::{
     config::{Config, InferConfigError},
     Client,
 };
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::env;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -35,15 +37,296 @@ impl serde::Serialize for K8sError {
     }
 }
 
-type Result<T> = std::result::Result<T, K8sError>;
+pub type Result<T> = std::result::Result<T, K8sError>;
 
-pub async fn create_client(context: Option<String>) -> Result<Client> {
-    let mut config = Config::infer().await?;
-    if let Some(_ctx) = context {
-        config.cluster_url = config.cluster_url; // TODO: switch context
+#[async_trait]
+pub trait K8sClient: Send + Sync {
+    async fn list_pods(&self, namespace: Option<&str>) -> Result<Vec<Pod>>;
+    async fn get_pod(&self, name: &str, namespace: &str) -> Result<Pod>;
+    async fn list_deployments(&self, namespace: Option<&str>) -> Result<Vec<Deployment>>;
+    async fn get_deployment(&self, name: &str, namespace: &str) -> Result<Deployment>;
+    async fn list_services(&self, namespace: Option<&str>) -> Result<Vec<Service>>;
+    async fn get_service(&self, name: &str, namespace: &str) -> Result<Service>;
+    async fn list_nodes(&self) -> Result<Vec<Node>>;
+    async fn get_node(&self, name: &str) -> Result<Node>;
+    async fn list_namespaces(&self) -> Result<Vec<Namespace>>;
+    async fn get_namespace(&self, name: &str) -> Result<Namespace>;
+    async fn list_replicasets(&self, namespace: Option<&str>) -> Result<Vec<ReplicaSet>>;
+    async fn list_statefulsets(&self, namespace: Option<&str>) -> Result<Vec<StatefulSet>>;
+    async fn list_daemonsets(&self, namespace: Option<&str>) -> Result<Vec<DaemonSet>>;
+    async fn list_jobs(&self, namespace: Option<&str>) -> Result<Vec<Job>>;
+    async fn list_cronjobs(&self, namespace: Option<&str>) -> Result<Vec<CronJob>>;
+    async fn list_configmaps(&self, namespace: Option<&str>) -> Result<Vec<ConfigMap>>;
+    async fn list_secrets(&self, namespace: Option<&str>) -> Result<Vec<Secret>>;
+    async fn list_ingresses(&self, namespace: Option<&str>) -> Result<Vec<Ingress>>;
+    async fn list_networkpolicies(&self, namespace: Option<&str>) -> Result<Vec<NetworkPolicy>>;
+    async fn list_persistentvolumes(&self) -> Result<Vec<PersistentVolume>>;
+    async fn list_persistentvolumeclaims(&self, namespace: Option<&str>) -> Result<Vec<PersistentVolumeClaim>>;
+    async fn list_storageclasses(&self) -> Result<Vec<StorageClass>>;
+    async fn list_roles(&self, namespace: Option<&str>) -> Result<Vec<Role>>;
+    async fn list_clusterroles(&self) -> Result<Vec<ClusterRole>>;
+    async fn list_rolebindings(&self, namespace: Option<&str>) -> Result<Vec<RoleBinding>>;
+    async fn list_clusterrolebindings(&self) -> Result<Vec<ClusterRoleBinding>>;
+    async fn list_serviceaccounts(&self, namespace: Option<&str>) -> Result<Vec<ServiceAccount>>;
+    async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info>;
+}
+
+pub struct RealK8sClient {
+    client: Client,
+}
+
+impl RealK8sClient {
+    pub async fn new(context: Option<String>) -> Result<Self> {
+        let mut config = Config::infer().await?;
+        if let Some(_ctx) = context {
+            config.cluster_url = config.cluster_url; // TODO: switch context
+        }
+        let client = Client::try_from(config)?;
+        Ok(Self { client })
     }
-    let client = Client::try_from(config)?;
-    Ok(client)
+}
+
+#[async_trait]
+impl K8sClient for RealK8sClient {
+    async fn list_pods(&self, namespace: Option<&str>) -> Result<Vec<Pod>> {
+        let api: Api<Pod> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let pods: ObjectList<Pod> = api.list(&ListParams::default()).await?;
+        Ok(pods.items)
+    }
+
+    async fn get_pod(&self, name: &str, namespace: &str) -> Result<Pod> {
+        let api: Api<Pod> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
+    async fn list_deployments(&self, namespace: Option<&str>) -> Result<Vec<Deployment>> {
+        let api: Api<Deployment> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<Deployment> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn get_deployment(&self, name: &str, namespace: &str) -> Result<Deployment> {
+        let api: Api<Deployment> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
+    async fn list_services(&self, namespace: Option<&str>) -> Result<Vec<Service>> {
+        let api: Api<Service> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<Service> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn get_service(&self, name: &str, namespace: &str) -> Result<Service> {
+        let api: Api<Service> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
+    async fn list_nodes(&self) -> Result<Vec<Node>> {
+        let api: Api<Node> = Api::all(self.client.clone());
+        let items: ObjectList<Node> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn get_node(&self, name: &str) -> Result<Node> {
+        let api: Api<Node> = Api::all(self.client.clone());
+        Ok(api.get(name).await?)
+    }
+
+    async fn list_namespaces(&self) -> Result<Vec<Namespace>> {
+        let api: Api<Namespace> = Api::all(self.client.clone());
+        let items: ObjectList<Namespace> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn get_namespace(&self, name: &str) -> Result<Namespace> {
+        let api: Api<Namespace> = Api::all(self.client.clone());
+        Ok(api.get(name).await?)
+    }
+
+    async fn list_replicasets(&self, namespace: Option<&str>) -> Result<Vec<ReplicaSet>> {
+        let api: Api<ReplicaSet> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<ReplicaSet> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_statefulsets(&self, namespace: Option<&str>) -> Result<Vec<StatefulSet>> {
+        let api: Api<StatefulSet> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<StatefulSet> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_daemonsets(&self, namespace: Option<&str>) -> Result<Vec<DaemonSet>> {
+        let api: Api<DaemonSet> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<DaemonSet> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_jobs(&self, namespace: Option<&str>) -> Result<Vec<Job>> {
+        let api: Api<Job> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<Job> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_cronjobs(&self, namespace: Option<&str>) -> Result<Vec<CronJob>> {
+        let api: Api<CronJob> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<CronJob> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_configmaps(&self, namespace: Option<&str>) -> Result<Vec<ConfigMap>> {
+        let api: Api<ConfigMap> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<ConfigMap> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_secrets(&self, namespace: Option<&str>) -> Result<Vec<Secret>> {
+        let api: Api<Secret> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<Secret> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_ingresses(&self, namespace: Option<&str>) -> Result<Vec<Ingress>> {
+        let api: Api<Ingress> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<Ingress> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_networkpolicies(&self, namespace: Option<&str>) -> Result<Vec<NetworkPolicy>> {
+        let api: Api<NetworkPolicy> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<NetworkPolicy> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_persistentvolumes(&self) -> Result<Vec<PersistentVolume>> {
+        let api: Api<PersistentVolume> = Api::all(self.client.clone());
+        let items: ObjectList<PersistentVolume> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_persistentvolumeclaims(&self, namespace: Option<&str>) -> Result<Vec<PersistentVolumeClaim>> {
+        let api: Api<PersistentVolumeClaim> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<PersistentVolumeClaim> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_storageclasses(&self) -> Result<Vec<StorageClass>> {
+        let api: Api<StorageClass> = Api::all(self.client.clone());
+        let items: ObjectList<StorageClass> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_roles(&self, namespace: Option<&str>) -> Result<Vec<Role>> {
+        let api: Api<Role> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<Role> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_clusterroles(&self) -> Result<Vec<ClusterRole>> {
+        let api: Api<ClusterRole> = Api::all(self.client.clone());
+        let items: ObjectList<ClusterRole> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_rolebindings(&self, namespace: Option<&str>) -> Result<Vec<RoleBinding>> {
+        let api: Api<RoleBinding> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<RoleBinding> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_clusterrolebindings(&self) -> Result<Vec<ClusterRoleBinding>> {
+        let api: Api<ClusterRoleBinding> = Api::all(self.client.clone());
+        let items: ObjectList<ClusterRoleBinding> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_serviceaccounts(&self, namespace: Option<&str>) -> Result<Vec<ServiceAccount>> {
+        let api: Api<ServiceAccount> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<ServiceAccount> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info> {
+        Ok(self.client.apiserver_version().await?)
+    }
+}
+
+pub use crate::mock_client::MockK8sClient;
+
+pub async fn create_client(context: Option<String>) -> Result<Box<dyn K8sClient>> {
+    let use_mock = env::var("USE_MOCK")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
+
+    if use_mock {
+        Ok(Box::new(MockK8sClient::new()))
+    } else {
+        Ok(Box::new(RealK8sClient::new(context).await?))
+    }
 }
 
 #[tauri::command]
@@ -56,263 +339,134 @@ pub async fn list_resources(
 
     let resources: Vec<Value> = match kind.as_str() {
         "Pods" => {
-            let api: Api<Pod> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let pods: ObjectList<Pod> = api.list(&ListParams::default()).await?;
-            pods.items
-                .into_iter()
+            let pods = client.list_pods(namespace.as_deref()).await?;
+            pods.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Deployments" => {
-            let api: Api<Deployment> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<Deployment> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_deployments(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Services" => {
-            let api: Api<Service> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<Service> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_services(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Nodes" => {
-            let api: Api<Node> = Api::all(client);
-            let items: ObjectList<Node> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_nodes().await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Namespaces" => {
-            let api: Api<Namespace> = Api::all(client);
-            let items: ObjectList<Namespace> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_namespaces().await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ReplicaSets" => {
-            let api: Api<ReplicaSet> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<ReplicaSet> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_replicasets(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "StatefulSets" => {
-            let api: Api<StatefulSet> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<StatefulSet> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_statefulsets(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "DaemonSets" => {
-            let api: Api<DaemonSet> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<DaemonSet> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_daemonsets(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Jobs" => {
-            let api: Api<Job> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<Job> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_jobs(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "CronJobs" => {
-            let api: Api<CronJob> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<CronJob> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_cronjobs(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ConfigMaps" => {
-            let api: Api<ConfigMap> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<ConfigMap> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_configmaps(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Secrets" => {
-            let api: Api<Secret> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<Secret> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_secrets(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Ingresses" => {
-            let api: Api<Ingress> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<Ingress> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_ingresses(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "NetworkPolicies" => {
-            let api: Api<NetworkPolicy> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<NetworkPolicy> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_networkpolicies(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "PersistentVolumes" => {
-            let api: Api<PersistentVolume> = Api::all(client);
-            let items: ObjectList<PersistentVolume> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_persistentvolumes().await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "PersistentVolumeClaims" => {
-            let api: Api<PersistentVolumeClaim> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<PersistentVolumeClaim> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_persistentvolumeclaims(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "StorageClasses" => {
-            let api: Api<StorageClass> = Api::all(client);
-            let items: ObjectList<StorageClass> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_storageclasses().await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Roles" => {
-            let api: Api<Role> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<Role> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_roles(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ClusterRoles" => {
-            let api: Api<ClusterRole> = Api::all(client);
-            let items: ObjectList<ClusterRole> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_clusterroles().await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "RoleBindings" => {
-            let api: Api<RoleBinding> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<RoleBinding> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_rolebindings(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ClusterRoleBindings" => {
-            let api: Api<ClusterRoleBinding> = Api::all(client);
-            let items: ObjectList<ClusterRoleBinding> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_clusterrolebindings().await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ServiceAccounts" => {
-            let api: Api<ServiceAccount> = if let Some(ns) = namespace {
-                Api::namespaced(client, &ns)
-            } else {
-                Api::all(client)
-            };
-            let items: ObjectList<ServiceAccount> = api.list(&ListParams::default()).await?;
-            items
-                .items
-                .into_iter()
+            let items = client.list_serviceaccounts(namespace.as_deref()).await?;
+            items.into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
@@ -333,61 +487,47 @@ pub async fn get_resource_detail(
 
     let resource: Value = match kind.as_str() {
         "Pod" => {
-            let api: Api<Pod> = if let Some(ns) = &namespace {
-                Api::namespaced(client, ns)
-            } else {
-                return Err(K8sError::Kube(kube::Error::Api(
-                    kube::error::ErrorResponse {
-                        status: "Failure".to_string(),
-                        message: "Namespace required for Pod".to_string(),
-                        reason: "BadRequest".to_string(),
-                        code: 400,
-                    },
-                )));
-            };
-            let pod = api.get(&name).await?;
+            let ns = namespace.ok_or_else(|| K8sError::Kube(kube::Error::Api(
+                kube::error::ErrorResponse {
+                    status: "Failure".to_string(),
+                    message: "Namespace required for Pod".to_string(),
+                    reason: "BadRequest".to_string(),
+                    code: 400,
+                },
+            )))?;
+            let pod = client.get_pod(&name, &ns).await?;
             serde_json::to_value(pod)?
         }
         "Deployment" => {
-            let api: Api<Deployment> = if let Some(ns) = &namespace {
-                Api::namespaced(client, ns)
-            } else {
-                return Err(K8sError::Kube(kube::Error::Api(
-                    kube::error::ErrorResponse {
-                        status: "Failure".to_string(),
-                        message: "Namespace required for Deployment".to_string(),
-                        reason: "BadRequest".to_string(),
-                        code: 400,
-                    },
-                )));
-            };
-            let item = api.get(&name).await?;
+            let ns = namespace.ok_or_else(|| K8sError::Kube(kube::Error::Api(
+                kube::error::ErrorResponse {
+                    status: "Failure".to_string(),
+                    message: "Namespace required for Deployment".to_string(),
+                    reason: "BadRequest".to_string(),
+                    code: 400,
+                },
+            )))?;
+            let item = client.get_deployment(&name, &ns).await?;
             serde_json::to_value(item)?
         }
         "Service" => {
-            let api: Api<Service> = if let Some(ns) = &namespace {
-                Api::namespaced(client, ns)
-            } else {
-                return Err(K8sError::Kube(kube::Error::Api(
-                    kube::error::ErrorResponse {
-                        status: "Failure".to_string(),
-                        message: "Namespace required for Service".to_string(),
-                        reason: "BadRequest".to_string(),
-                        code: 400,
-                    },
-                )));
-            };
-            let item = api.get(&name).await?;
+            let ns = namespace.ok_or_else(|| K8sError::Kube(kube::Error::Api(
+                kube::error::ErrorResponse {
+                    status: "Failure".to_string(),
+                    message: "Namespace required for Service".to_string(),
+                    reason: "BadRequest".to_string(),
+                    code: 400,
+                },
+            )))?;
+            let item = client.get_service(&name, &ns).await?;
             serde_json::to_value(item)?
         }
         "Node" => {
-            let api: Api<Node> = Api::all(client);
-            let item = api.get(&name).await?;
+            let item = client.get_node(&name).await?;
             serde_json::to_value(item)?
         }
         "Namespace" => {
-            let api: Api<Namespace> = Api::all(client);
-            let item = api.get(&name).await?;
+            let item = client.get_namespace(&name).await?;
             serde_json::to_value(item)?
         }
         _ => serde_json::json!({}),
@@ -507,11 +647,9 @@ pub async fn get_cluster_overview_info(context_id: String) -> Result<ClusterOver
 pub async fn get_cluster_stats(context_id: String) -> Result<ClusterStats> {
     let client = create_client(Some(context_id)).await?;
 
-    let nodes_api: Api<Node> = Api::all(client.clone());
-    let nodes: ObjectList<Node> = nodes_api.list(&ListParams::default()).await?;
-    let total_nodes = nodes.items.len();
+    let nodes = client.list_nodes().await?;
+    let total_nodes = nodes.len();
     let ready_nodes = nodes
-        .items
         .iter()
         .filter(|node| {
             node.status
@@ -526,11 +664,9 @@ pub async fn get_cluster_stats(context_id: String) -> Result<ClusterStats> {
         })
         .count();
 
-    let pods_api: Api<Pod> = Api::all(client.clone());
-    let pods: ObjectList<Pod> = pods_api.list(&ListParams::default()).await?;
-    let total_pods = pods.items.len();
+    let pods = client.list_pods(None).await?;
+    let total_pods = pods.len();
     let running_pods = pods
-        .items
         .iter()
         .filter(|pod| {
             pod.status
@@ -541,17 +677,14 @@ pub async fn get_cluster_stats(context_id: String) -> Result<ClusterStats> {
         })
         .count();
 
-    let namespaces_api: Api<Namespace> = Api::all(client.clone());
-    let namespaces: ObjectList<Namespace> = namespaces_api.list(&ListParams::default()).await?;
-    let namespace_count = namespaces.items.len();
+    let namespaces = client.list_namespaces().await?;
+    let namespace_count = namespaces.len();
 
-    let deployments_api: Api<Deployment> = Api::all(client.clone());
-    let deployments: ObjectList<Deployment> = deployments_api.list(&ListParams::default()).await?;
-    let deployment_count = deployments.items.len();
+    let deployments = client.list_deployments(None).await?;
+    let deployment_count = deployments.len();
 
-    let jobs_api: Api<Job> = Api::all(client.clone());
-    let jobs: ObjectList<Job> = jobs_api.list(&ListParams::default()).await?;
-    let job_count = jobs.items.len();
+    let jobs = client.list_jobs(None).await?;
+    let job_count = jobs.len();
 
     Ok(ClusterStats {
         total_nodes,
@@ -567,11 +700,9 @@ pub async fn get_cluster_stats(context_id: String) -> Result<ClusterStats> {
 #[tauri::command]
 pub async fn get_nodes(context_id: String) -> Result<Vec<NodeInfo>> {
     let client = create_client(Some(context_id)).await?;
-    let api: Api<Node> = Api::all(client);
-    let nodes: ObjectList<Node> = api.list(&ListParams::default()).await?;
+    let nodes = client.list_nodes().await?;
 
     let node_infos = nodes
-        .items
         .iter()
         .map(|node| {
             let name = node.metadata.name.clone().unwrap_or_default();
@@ -662,11 +793,9 @@ pub async fn get_nodes(context_id: String) -> Result<Vec<NodeInfo>> {
 #[tauri::command]
 pub async fn get_pods(context_id: String) -> Result<Vec<PodInfo>> {
     let client = create_client(Some(context_id)).await?;
-    let api: Api<Pod> = Api::all(client);
-    let pods: ObjectList<Pod> = api.list(&ListParams::default()).await?;
+    let pods = client.list_pods(None).await?;
 
     let pod_infos = pods
-        .items
         .iter()
         .map(|pod| {
             let name = pod.metadata.name.clone().unwrap_or_default();

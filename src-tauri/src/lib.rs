@@ -1,4 +1,5 @@
 mod k8s_api;
+mod mock_client;
 mod terminal;
 
 use kube::config::Kubeconfig;
