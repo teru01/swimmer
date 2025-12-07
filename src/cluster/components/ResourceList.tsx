@@ -129,280 +129,18 @@ export interface KubeResource {
   type?: string;
 }
 
-const dummyNamespaces = ['default', 'kube-system', 'production', 'development'];
-
-// Simulates fetching namespaces
-const fetchNamespaces = async (): Promise<string[]> => {
-  console.log('Fetching namespaces...');
-  await new Promise(resolve => setTimeout(resolve, 200)); // Simulate delay
-  return dummyNamespaces;
-};
-
-// Simulates fetching resources for a given kind
-const fetchResources = async (kind: string | undefined): Promise<KubeResource[]> => {
-  console.log(`Fetching resources for kind: ${kind}`);
-  if (!kind) return [];
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
-
-  // Generate more diverse dummy data including namespace and creation time
-  const baseTime = new Date();
-  const resources: KubeResource[] = [];
-  const count = 15; // Generate more items
-
-  for (let i = 0; i < count; i++) {
-    const ns = dummyNamespaces[i % dummyNamespaces.length];
-    const minutesAgo = Math.floor(Math.random() * 60 * 24 * 3); // Up to 3 days ago
-    const creationTime = new Date(baseTime.getTime() - minutesAgo * 60000);
-    const nameSuffix = Math.random().toString(36).substring(2, 8);
-
-    const resource: KubeResource = {
-      kind: kind.endsWith('s') ? kind.slice(0, -1) : kind,
-      apiVersion: 'v1',
-      metadata: {
-        name: `${kind.toLowerCase().replace(/\s+/g, '-')}-${nameSuffix}`,
-        namespace: [
-          'Nodes',
-          'Namespaces',
-          'PersistentVolumes',
-          'StorageClasses',
-          'ClusterRoles',
-          'ClusterRoleBindings',
-        ].includes(kind)
-          ? undefined
-          : ns,
-        creationTimestamp: creationTime.toISOString(),
-        uid: `${kind}-${i}-${nameSuffix}`,
-      },
-    };
-
-    if (kind === 'Pods') {
-      resource.status = {
-        phase: Math.random() > 0.2 ? 'Running' : 'Pending',
-        podIP: `10.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-        startTime: creationTime.toISOString(),
-        containerStatuses: [
-          {
-            name: 'app',
-            ready: Math.random() > 0.1,
-            restartCount: Math.floor(Math.random() * 3),
-            state: { running: { startedAt: creationTime.toISOString() } },
-            image: 'nginx:latest',
-            imageID: 'docker-pullable://nginx@sha256:abc123',
-          },
-        ],
-        conditions: [
-          { type: 'PodScheduled', status: 'True', lastTransitionTime: creationTime.toISOString() },
-          { type: 'Initialized', status: 'True', lastTransitionTime: creationTime.toISOString() },
-          { type: 'Ready', status: 'True', lastTransitionTime: creationTime.toISOString() },
-          {
-            type: 'ContainersReady',
-            status: 'True',
-            lastTransitionTime: creationTime.toISOString(),
-          },
-        ],
-      };
-      resource.spec = {
-        nodeName: `node-${Math.floor(Math.random() * 3) + 1}`,
-        serviceAccountName: 'default',
-        containers: [
-          {
-            name: 'app',
-            image: 'nginx:latest',
-            ports: [{ containerPort: 80, protocol: 'TCP' }],
-            resources: {
-              limits: { cpu: '500m', memory: '512Mi' },
-              requests: { cpu: '250m', memory: '256Mi' },
-            },
-          },
-        ],
-        volumes: [{ name: 'default-token', secret: { secretName: 'default-token-xyz' } }],
-      };
-    } else if (kind === 'Deployments') {
-      const replicas = Math.floor(Math.random() * 5) + 1;
-      resource.status = {
-        replicas: replicas,
-        readyReplicas: Math.floor(Math.random() * replicas),
-        availableReplicas: Math.floor(Math.random() * replicas),
-        updatedReplicas: Math.floor(Math.random() * replicas),
-        conditions: [
-          {
-            type: 'Available',
-            status: 'True',
-            lastTransitionTime: creationTime.toISOString(),
-            reason: 'MinimumReplicasAvailable',
-            message: 'Deployment has minimum availability.',
-          },
-          {
-            type: 'Progressing',
-            status: 'True',
-            lastTransitionTime: creationTime.toISOString(),
-            reason: 'NewReplicaSetAvailable',
-            message: 'ReplicaSet has successfully progressed.',
-          },
-        ],
-      };
-      resource.spec = {
-        replicas: replicas,
-        selector: { matchLabels: { app: resource.metadata.name } },
-      };
-    } else if (kind === 'Services') {
-      resource.spec = {
-        type: ['ClusterIP', 'NodePort', 'LoadBalancer'][Math.floor(Math.random() * 3)],
-        clusterIP: `10.96.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-        ports: [{ port: 80, targetPort: 8080, protocol: 'TCP', name: 'http' }],
-        selector: { matchLabels: { app: resource.metadata.name } },
-      };
-    } else if (kind === 'Nodes') {
-      resource.status = {
-        addresses: [
-          { type: 'InternalIP', address: `10.0.0.${i + 1}` },
-          { type: 'Hostname', address: `node-${i + 1}` },
-        ],
-        capacity: {
-          cpu: '4',
-          memory: '16Gi',
-          pods: '110',
-        },
-        allocatable: {
-          cpu: '3800m',
-          memory: '15Gi',
-          pods: '110',
-        },
-        conditions: [
-          {
-            type: 'Ready',
-            status: 'True',
-            lastTransitionTime: creationTime.toISOString(),
-            reason: 'KubeletReady',
-            message: 'kubelet is posting ready status',
-          },
-          {
-            type: 'MemoryPressure',
-            status: 'False',
-            lastTransitionTime: creationTime.toISOString(),
-          },
-          { type: 'DiskPressure', status: 'False', lastTransitionTime: creationTime.toISOString() },
-        ],
-        nodeInfo: {
-          kubeletVersion: 'v1.28.0',
-          containerRuntimeVersion: 'containerd://1.7.0',
-          osImage: 'Ubuntu 22.04.3 LTS',
-        },
-      };
-      resource.metadata.labels = {
-        'kubernetes.io/hostname': `node-${i + 1}`,
-        'node-role.kubernetes.io/worker': '',
-      };
-    } else if (kind === 'ReplicaSets') {
-      const replicas = Math.floor(Math.random() * 5) + 1;
-      resource.status = {
-        replicas: replicas,
-        readyReplicas: Math.floor(Math.random() * replicas),
-        availableReplicas: Math.floor(Math.random() * replicas),
-      };
-      resource.spec = {
-        replicas: replicas,
-        selector: { matchLabels: { app: resource.metadata.name } },
-      };
-      resource.metadata.ownerReferences = [
-        {
-          apiVersion: 'apps/v1',
-          kind: 'Deployment',
-          name: `deployment-${nameSuffix}`,
-          uid: `deployment-${nameSuffix}`,
-          controller: true,
-        },
-      ];
-    } else if (kind === 'StatefulSets') {
-      const replicas = Math.floor(Math.random() * 5) + 1;
-      resource.status = {
-        replicas: replicas,
-        readyReplicas: Math.floor(Math.random() * replicas),
-        currentReplicas: Math.floor(Math.random() * replicas),
-        updatedReplicas: Math.floor(Math.random() * replicas),
-      };
-      resource.spec = {
-        replicas: replicas,
-        selector: { matchLabels: { app: resource.metadata.name } },
-      };
-    } else if (kind === 'DaemonSets') {
-      const desired = Math.floor(Math.random() * 5) + 3;
-      resource.status = {
-        desiredNumberScheduled: desired,
-        currentNumberScheduled: desired,
-        numberReady: Math.floor(Math.random() * desired),
-        numberAvailable: Math.floor(Math.random() * desired),
-        updatedNumberScheduled: Math.floor(Math.random() * desired),
-      };
-      resource.spec = {
-        selector: { matchLabels: { app: resource.metadata.name } },
-      };
-    } else if (kind === 'Ingresses') {
-      resource.spec = {
-        ingressClassName: ['nginx', 'traefik', undefined][Math.floor(Math.random() * 3)],
-        rules: [
-          {
-            host: `${resource.metadata.name}.example.com`,
-            http: {
-              paths: [
-                {
-                  path: '/',
-                  pathType: 'Prefix',
-                  backend: {
-                    service: {
-                      name: 'web-service',
-                      port: { number: 80 },
-                    },
-                  },
-                },
-              ],
-            },
-          },
-        ],
-        tls:
-          Math.random() > 0.5
-            ? [
-                {
-                  hosts: [`${resource.metadata.name}.example.com`],
-                  secretName: `${resource.metadata.name}-tls`,
-                },
-              ]
-            : undefined,
-      };
-      resource.status = {
-        loadBalancer: {
-          ingress: [{ ip: `203.0.113.${Math.floor(Math.random() * 255)}` }],
-        },
-      };
-    } else if (kind === 'ConfigMaps') {
-      resource.data = {
-        'config.yaml': 'apiVersion: v1\nkind: Config\nname: example',
-        'database.url': 'postgresql://localhost:5432/db',
-        'app.name': 'My Application',
-      };
-    } else if (kind === 'Secrets') {
-      resource.type = ['Opaque', 'kubernetes.io/tls', 'kubernetes.io/dockerconfigjson'][
-        Math.floor(Math.random() * 3)
-      ];
-      resource.data = {
-        username: 'YWRtaW4=',
-        password: 'cGFzc3dvcmQxMjM=',
-        token: 'ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5',
-      };
-    } else if (kind === 'Namespaces') {
-      resource.status = {
-        phase: 'Active',
-      };
-      resource.metadata.labels = {
-        'kubernetes.io/metadata.name': resource.metadata.name,
-      };
-    }
-
-    resources.push(resource);
+// Fetch namespaces from backend
+const fetchNamespaces = async (contextId?: string): Promise<string[]> => {
+  try {
+    const namespaceResources = await commands.listResources(contextId, 'Namespaces', undefined);
+    return namespaceResources
+      .map((ns: KubeResource) => ns.metadata.name)
+      .filter((name: string | undefined): name is string => name !== undefined);
+  } catch (err) {
+    console.error('Failed to fetch namespaces:', err);
+    return [];
   }
-  return resources;
 };
-// --- End of Dummy Data & Fetch Functions ---
 
 interface ResourceListProps {
   selectedKind: string | undefined;
@@ -453,11 +191,11 @@ const ResourceList: React.FC<ResourceListProps> = ({
         setSelectedNamespace('all');
       }
       try {
-        const fetchedNamespaces = await fetchNamespaces();
+        const fetchedNamespaces = await fetchNamespaces(contextId);
         setNamespaces(fetchedNamespaces);
       } catch (err) {
         console.error('Failed to fetch namespaces:', err);
-        // Handle error appropriately
+        setNamespaces([]);
       }
     };
     loadNamespaces();
