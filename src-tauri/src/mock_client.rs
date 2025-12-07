@@ -1,16 +1,19 @@
 use async_trait::async_trait;
-use k8s_openapi::api::apps::v1::{DaemonSet, Deployment, ReplicaSet, StatefulSet};
-use k8s_openapi::api::batch::v1::{CronJob, Job};
+use k8s_openapi::api::apps::v1::{DaemonSet, Deployment, DeploymentSpec, DeploymentStatus, ReplicaSet, ReplicaSetSpec, ReplicaSetStatus, StatefulSet, StatefulSetSpec, StatefulSetStatus};
+use k8s_openapi::api::batch::v1::{CronJob, CronJobSpec, CronJobStatus, Job, JobSpec, JobStatus};
 use k8s_openapi::api::core::v1::{
-    ConfigMap, Namespace, Node, PersistentVolume, PersistentVolumeClaim, Pod, Secret, Service,
-    ServiceAccount,
+    ConfigMap, Container, ContainerStatus, Namespace, NamespaceSpec, NamespaceStatus, Node, NodeAddress, NodeCondition,
+    NodeSpec, NodeStatus, NodeSystemInfo, PersistentVolume, PersistentVolumeClaim, PersistentVolumeClaimSpec, PersistentVolumeClaimStatus, PersistentVolumeSpec, PersistentVolumeStatus, Pod, PodSpec, PodStatus,
+    Secret, Service, ServiceAccount, ServiceSpec, ServiceStatus, VolumeResourceRequirements,
 };
 use k8s_openapi::api::networking::v1::{Ingress, NetworkPolicy};
 use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, Role, RoleBinding};
 use k8s_openapi::api::storage::v1::StorageClass;
-use serde_json;
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta, Time};
+use k8s_openapi::apimachinery::pkg::api::resource::Quantity;
+use std::collections::BTreeMap;
 
-use crate::k8s_api::{K8sClient, K8sError, Result};
+use crate::k8s_api::{K8sClient, Result};
 
 pub struct MockK8sClient;
 
@@ -18,899 +21,628 @@ impl MockK8sClient {
     pub fn new() -> Self {
         Self
     }
+
+    fn create_metadata(name: String, namespace: Option<String>, uid: String, creation_timestamp: Option<Time>, labels: Option<BTreeMap<String, String>>) -> ObjectMeta {
+        ObjectMeta {
+            name: Some(name),
+            namespace,
+            uid: Some(uid),
+            creation_timestamp,
+            labels,
+            ..Default::default()
+        }
+    }
+
+    fn create_pod(name: String, namespace: String, uid: String, creation_timestamp: Time, labels: BTreeMap<String, String>, container_name: String, image: String, pod_ip: String, phase: String, restart_count: i32) -> Pod {
+        Pod {
+            metadata: Self::create_metadata(name, Some(namespace), uid, Some(creation_timestamp), Some(labels)),
+            spec: Some(PodSpec {
+                containers: vec![Container {
+                    name: container_name.clone(),
+                    image: Some(image.clone()),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            status: Some(PodStatus {
+                phase: Some(phase),
+                pod_ip: Some(pod_ip),
+                container_statuses: Some(vec![ContainerStatus {
+                    name: container_name,
+                    ready: true,
+                    restart_count,
+                    image: image,
+                    image_id: "docker://sha256:abc123".to_string(),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            }),
+        }
+    }
 }
 
 #[async_trait]
 impl K8sClient for MockK8sClient {
     async fn list_pods(&self, _namespace: Option<&str>) -> Result<Vec<Pod>> {
-        let pods_json = r#"[
-            {
-                "apiVersion": "v1",
-                "kind": "Pod",
-                "metadata": {
-                    "name": "web-app-1",
-                    "namespace": "default",
-                    "uid": "pod-1",
-                    "creationTimestamp": "2024-01-15T10:00:00Z",
-                    "labels": {
-                        "app": "web",
-                        "version": "1.0"
-                    }
-                },
-                "spec": {
-                    "containers": [
-                        {
-                            "name": "web",
-                            "image": "nginx:1.21"
-                        }
-                    ]
-                },
-                "status": {
-                    "phase": "Running",
-                    "podIP": "10.244.1.5",
-                    "containerStatuses": [
-                        {
-                            "name": "web",
-                            "ready": true,
-                            "restartCount": 0,
-                            "image": "nginx:1.21",
-                            "imageID": "docker://sha256:abc123"
-                        }
-                    ]
-                }
-            },
-            {
-                "apiVersion": "v1",
-                "kind": "Pod",
-                "metadata": {
-                    "name": "api-server-1",
-                    "namespace": "default",
-                    "uid": "pod-2",
-                    "creationTimestamp": "2024-01-15T09:30:00Z",
-                    "labels": {
-                        "app": "api",
-                        "version": "2.0"
-                    }
-                },
-                "spec": {
-                    "containers": [
-                        {
-                            "name": "api",
-                            "image": "myapp/api:2.0"
-                        }
-                    ]
-                },
-                "status": {
-                    "phase": "Running",
-                    "podIP": "10.244.1.6",
-                    "containerStatuses": [
-                        {
-                            "name": "api",
-                            "ready": true,
-                            "restartCount": 2,
-                            "image": "myapp/api:2.0",
-                            "imageID": "docker://sha256:def456"
-                        }
-                    ]
-                }
-            }
-        ]"#;
-        serde_json::from_str(pods_json).map_err(K8sError::Serialization)
+        let creation_time1 = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T10:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let creation_time2 = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T09:30:00Z").unwrap().with_timezone(&chrono::Utc));
+
+        let mut labels1 = BTreeMap::new();
+        labels1.insert("app".to_string(), "web".to_string());
+        labels1.insert("version".to_string(), "1.0".to_string());
+
+        let mut labels2 = BTreeMap::new();
+        labels2.insert("app".to_string(), "api".to_string());
+        labels2.insert("version".to_string(), "2.0".to_string());
+
+        Ok(vec![
+            Self::create_pod(
+                "web-app-1".to_string(),
+                "default".to_string(),
+                "pod-1".to_string(),
+                creation_time1,
+                labels1,
+                "web".to_string(),
+                "nginx:1.21".to_string(),
+                "10.244.1.5".to_string(),
+                "Running".to_string(),
+                0,
+            ),
+            Self::create_pod(
+                "api-server-1".to_string(),
+                "default".to_string(),
+                "pod-2".to_string(),
+                creation_time2,
+                labels2,
+                "api".to_string(),
+                "myapp/api:2.0".to_string(),
+                "10.244.1.6".to_string(),
+                "Running".to_string(),
+                2,
+            ),
+        ])
     }
 
     async fn get_pod(&self, name: &str, namespace: &str) -> Result<Pod> {
-        let pod_json = format!(
-            r#"{{
-                "apiVersion": "v1",
-                "kind": "Pod",
-                "metadata": {{
-                    "name": "{}",
-                    "namespace": "{}",
-                    "uid": "pod-{}-uid",
-                    "creationTimestamp": "2024-01-15T10:00:00Z"
-                }},
-                "spec": {{
-                    "containers": [
-                        {{
-                            "name": "main",
-                            "image": "nginx:1.21"
-                        }}
-                    ]
-                }},
-                "status": {{
-                    "phase": "Running",
-                    "podIP": "10.244.1.5",
-                    "containerStatuses": [
-                        {{
-                            "name": "main",
-                            "ready": true,
-                            "restartCount": 0,
-                            "image": "nginx:1.21",
-                            "imageID": "docker://sha256:abc123"
-                        }}
-                    ]
-                }}
-            }}"#,
-            name, namespace, name
-        );
-        serde_json::from_str(&pod_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T10:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut labels = BTreeMap::new();
+        labels.insert("app".to_string(), "web".to_string());
+
+        Ok(Self::create_pod(
+            name.to_string(),
+            namespace.to_string(),
+            format!("pod-{}-uid", name),
+            creation_time,
+            labels,
+            "main".to_string(),
+            "nginx:1.21".to_string(),
+            "10.244.1.5".to_string(),
+            "Running".to_string(),
+            0,
+        ))
     }
 
     async fn list_deployments(&self, _namespace: Option<&str>) -> Result<Vec<Deployment>> {
-        let deployments_json = r#"[
-            {
-                "apiVersion": "apps/v1",
-                "kind": "Deployment",
-                "metadata": {
-                    "name": "web-deployment",
-                    "namespace": "default",
-                    "uid": "deploy-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                },
-                "spec": {
-                    "replicas": 3,
-                    "selector": {
-                        "matchLabels": {
-                            "app": "web"
-                        }
-                    }
-                },
-                "status": {
-                    "replicas": 3,
-                    "readyReplicas": 3,
-                    "availableReplicas": 3
-                }
+        let creation_time1 = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let creation_time2 = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T07:00:00Z").unwrap().with_timezone(&chrono::Utc));
+
+        let mut labels1 = BTreeMap::new();
+        labels1.insert("app".to_string(), "web".to_string());
+
+        let mut labels2 = BTreeMap::new();
+        labels2.insert("app".to_string(), "api".to_string());
+
+        let mut selector_labels1 = BTreeMap::new();
+        selector_labels1.insert("app".to_string(), "web".to_string());
+
+        let mut selector_labels2 = BTreeMap::new();
+        selector_labels2.insert("app".to_string(), "api".to_string());
+
+        Ok(vec![
+            Deployment {
+                metadata: Self::create_metadata("web-deployment".to_string(), Some("default".to_string()), "deploy-1".to_string(), Some(creation_time1), Some(labels1)),
+                spec: Some(DeploymentSpec {
+                    replicas: Some(3),
+                    selector: LabelSelector {
+                        match_labels: Some(selector_labels1),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+                status: Some(DeploymentStatus {
+                    replicas: Some(3),
+                    ready_replicas: Some(3),
+                    available_replicas: Some(3),
+                    ..Default::default()
+                }),
             },
-            {
-                "apiVersion": "apps/v1",
-                "kind": "Deployment",
-                "metadata": {
-                    "name": "api-deployment",
-                    "namespace": "default",
-                    "uid": "deploy-2",
-                    "creationTimestamp": "2024-01-15T07:00:00Z"
-                },
-                "spec": {
-                    "replicas": 2,
-                    "selector": {
-                        "matchLabels": {
-                            "app": "api"
-                        }
-                    }
-                },
-                "status": {
-                    "replicas": 2,
-                    "readyReplicas": 2,
-                    "availableReplicas": 2
-                }
-            }
-        ]"#;
-        serde_json::from_str(deployments_json).map_err(K8sError::Serialization)
+            Deployment {
+                metadata: Self::create_metadata("api-deployment".to_string(), Some("default".to_string()), "deploy-2".to_string(), Some(creation_time2), Some(labels2)),
+                spec: Some(DeploymentSpec {
+                    replicas: Some(2),
+                    selector: LabelSelector {
+                        match_labels: Some(selector_labels2),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+                status: Some(DeploymentStatus {
+                    replicas: Some(2),
+                    ready_replicas: Some(2),
+                    available_replicas: Some(2),
+                    ..Default::default()
+                }),
+            },
+        ])
     }
 
     async fn get_deployment(&self, name: &str, namespace: &str) -> Result<Deployment> {
-        let deployment_json = format!(
-            r#"{{
-                "apiVersion": "apps/v1",
-                "kind": "Deployment",
-                "metadata": {{
-                    "name": "{}",
-                    "namespace": "{}",
-                    "uid": "deploy-{}-uid",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                }},
-                "spec": {{
-                    "replicas": 3,
-                    "selector": {{
-                        "matchLabels": {{
-                            "app": "web"
-                        }}
-                    }}
-                }},
-                "status": {{
-                    "replicas": 3,
-                    "readyReplicas": 3,
-                    "availableReplicas": 3
-                }}
-            }}"#,
-            name, namespace, name
-        );
-        serde_json::from_str(&deployment_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut labels = BTreeMap::new();
+        labels.insert("app".to_string(), "web".to_string());
+
+        let mut selector_labels = BTreeMap::new();
+        selector_labels.insert("app".to_string(), "web".to_string());
+
+        Ok(Deployment {
+            metadata: Self::create_metadata(name.to_string(), Some(namespace.to_string()), format!("deploy-{}-uid", name), Some(creation_time), Some(labels)),
+            spec: Some(DeploymentSpec {
+                replicas: Some(3),
+                selector: LabelSelector {
+                    match_labels: Some(selector_labels),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+            status: Some(DeploymentStatus {
+                replicas: Some(3),
+                ready_replicas: Some(3),
+                available_replicas: Some(3),
+                ..Default::default()
+            }),
+        })
     }
 
     async fn list_services(&self, _namespace: Option<&str>) -> Result<Vec<Service>> {
-        let services_json = r#"[
-            {
-                "apiVersion": "v1",
-                "kind": "Service",
-                "metadata": {
-                    "name": "web-service",
-                    "namespace": "default",
-                    "uid": "svc-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                },
-                "spec": {
-                    "type": "ClusterIP",
-                    "ports": [
-                        {
-                            "port": 80,
-                            "targetPort": 8080
-                        }
-                    ],
-                    "selector": {
-                        "app": "web"
-                    }
-                },
-                "status": {
-                    "loadBalancer": {}
-                }
-            }
-        ]"#;
-        serde_json::from_str(services_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut labels = BTreeMap::new();
+        labels.insert("app".to_string(), "web".to_string());
+
+        let mut selector = BTreeMap::new();
+        selector.insert("app".to_string(), "web".to_string());
+
+        Ok(vec![Service {
+            metadata: Self::create_metadata("web-service".to_string(), Some("default".to_string()), "svc-1".to_string(), Some(creation_time), Some(labels)),
+            spec: Some(ServiceSpec {
+                type_: Some("ClusterIP".to_string()),
+                ports: Some(vec![k8s_openapi::api::core::v1::ServicePort {
+                    port: 80,
+                    target_port: Some(k8s_openapi::apimachinery::pkg::util::intstr::IntOrString::Int(8080)),
+                    ..Default::default()
+                }]),
+                selector: Some(selector),
+                ..Default::default()
+            }),
+            status: Some(ServiceStatus {
+                load_balancer: Some(Default::default()),
+                ..Default::default()
+            }),
+        }])
     }
 
     async fn get_service(&self, name: &str, namespace: &str) -> Result<Service> {
-        let service_json = format!(
-            r#"{{
-                "apiVersion": "v1",
-                "kind": "Service",
-                "metadata": {{
-                    "name": "{}",
-                    "namespace": "{}",
-                    "uid": "svc-{}-uid",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                }},
-                "spec": {{
-                    "type": "ClusterIP",
-                    "ports": [
-                        {{
-                            "port": 80,
-                            "targetPort": 8080
-                        }}
-                    ]
-                }},
-                "status": {{
-                    "loadBalancer": {{}}
-                }}
-            }}"#,
-            name, namespace, name
-        );
-        serde_json::from_str(&service_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut labels = BTreeMap::new();
+        labels.insert("app".to_string(), "web".to_string());
+
+        Ok(Service {
+            metadata: Self::create_metadata(name.to_string(), Some(namespace.to_string()), format!("svc-{}-uid", name), Some(creation_time), Some(labels)),
+            spec: Some(ServiceSpec {
+                type_: Some("ClusterIP".to_string()),
+                ports: Some(vec![k8s_openapi::api::core::v1::ServicePort {
+                    port: 80,
+                    target_port: Some(k8s_openapi::apimachinery::pkg::util::intstr::IntOrString::Int(8080)),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            }),
+            status: Some(ServiceStatus {
+                load_balancer: Some(Default::default()),
+                ..Default::default()
+            }),
+        })
     }
 
     async fn list_nodes(&self) -> Result<Vec<Node>> {
-        let nodes_json = r#"[
-            {
-                "apiVersion": "v1",
-                "kind": "Node",
-                "metadata": {
-                    "name": "node-1",
-                    "uid": "node-1-uid",
-                    "creationTimestamp": "2024-01-01T00:00:00Z",
-                    "labels": {
-                        "kubernetes.io/os": "linux",
-                        "node-role.kubernetes.io/worker": ""
-                    }
-                },
-                "spec": {},
-                "status": {
-                    "conditions": [
-                        {
-                            "type": "Ready",
-                            "status": "True"
-                        }
-                    ],
-                    "nodeInfo": {
-                        "kubeletVersion": "v1.28.0",
-                        "osImage": "Ubuntu 22.04",
-                        "containerRuntimeVersion": "containerd://1.7.0"
-                    },
-                    "capacity": {
-                        "cpu": "4",
-                        "memory": "8Gi"
-                    },
-                    "addresses": [
-                        {
-                            "type": "InternalIP",
-                            "address": "192.168.1.10"
+        let creation_time1 = Time(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let creation_time2 = Time(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+
+        let mut labels1 = BTreeMap::new();
+        labels1.insert("kubernetes.io/os".to_string(), "linux".to_string());
+        labels1.insert("node-role.kubernetes.io/worker".to_string(), "".to_string());
+
+        let mut labels2 = BTreeMap::new();
+        labels2.insert("kubernetes.io/os".to_string(), "linux".to_string());
+        labels2.insert("node-role.kubernetes.io/worker".to_string(), "".to_string());
+
+        let mut capacity1 = BTreeMap::new();
+        capacity1.insert("cpu".to_string(), Quantity("4".to_string()));
+        capacity1.insert("memory".to_string(), Quantity("8Gi".to_string()));
+
+        let mut capacity2 = BTreeMap::new();
+        capacity2.insert("cpu".to_string(), Quantity("8".to_string()));
+        capacity2.insert("memory".to_string(), Quantity("16Gi".to_string()));
+
+        Ok(vec![
+            Node {
+                metadata: Self::create_metadata("node-1".to_string(), None, "node-1-uid".to_string(), Some(creation_time1), Some(labels1)),
+                spec: Some(NodeSpec::default()),
+                status: Some(NodeStatus {
+                    conditions: Some(vec![NodeCondition {
+                        type_: "Ready".to_string(),
+                        status: "True".to_string(),
+                        ..Default::default()
+                    }]),
+                    node_info: Some(NodeSystemInfo {
+                        kubelet_version: "v1.28.0".to_string(),
+                        os_image: "Ubuntu 22.04".to_string(),
+                        container_runtime_version: "containerd://1.7.0".to_string(),
+                        ..Default::default()
+                    }),
+                    capacity: Some(capacity1),
+                    addresses: Some(vec![
+                        NodeAddress {
+                            type_: "InternalIP".to_string(),
+                            address: "192.168.1.10".to_string(),
                         },
-                        {
-                            "type": "ExternalIP",
-                            "address": "203.0.113.10"
-                        }
-                    ]
-                }
+                        NodeAddress {
+                            type_: "ExternalIP".to_string(),
+                            address: "203.0.113.10".to_string(),
+                        },
+                    ]),
+                    ..Default::default()
+                }),
             },
-            {
-                "apiVersion": "v1",
-                "kind": "Node",
-                "metadata": {
-                    "name": "node-2",
-                    "uid": "node-2-uid",
-                    "creationTimestamp": "2024-01-01T00:00:00Z",
-                    "labels": {
-                        "kubernetes.io/os": "linux",
-                        "node-role.kubernetes.io/worker": ""
-                    }
-                },
-                "spec": {},
-                "status": {
-                    "conditions": [
-                        {
-                            "type": "Ready",
-                            "status": "True"
-                        }
-                    ],
-                    "nodeInfo": {
-                        "kubeletVersion": "v1.28.0",
-                        "osImage": "Ubuntu 22.04",
-                        "containerRuntimeVersion": "containerd://1.7.0"
-                    },
-                    "capacity": {
-                        "cpu": "8",
-                        "memory": "16Gi"
-                    },
-                    "addresses": [
-                        {
-                            "type": "InternalIP",
-                            "address": "192.168.1.11"
-                        }
-                    ]
-                }
-            }
-        ]"#;
-        serde_json::from_str(nodes_json).map_err(K8sError::Serialization)
+            Node {
+                metadata: Self::create_metadata("node-2".to_string(), None, "node-2-uid".to_string(), Some(creation_time2), Some(labels2)),
+                spec: Some(NodeSpec::default()),
+                status: Some(NodeStatus {
+                    conditions: Some(vec![NodeCondition {
+                        type_: "Ready".to_string(),
+                        status: "True".to_string(),
+                        ..Default::default()
+                    }]),
+                    node_info: Some(NodeSystemInfo {
+                        kubelet_version: "v1.28.0".to_string(),
+                        os_image: "Ubuntu 22.04".to_string(),
+                        container_runtime_version: "containerd://1.7.0".to_string(),
+                        ..Default::default()
+                    }),
+                    capacity: Some(capacity2),
+                    addresses: Some(vec![NodeAddress {
+                        type_: "InternalIP".to_string(),
+                        address: "192.168.1.11".to_string(),
+                    }]),
+                    ..Default::default()
+                }),
+            },
+        ])
     }
 
     async fn get_node(&self, name: &str) -> Result<Node> {
-        let node_json = format!(
-            r#"{{
-                "apiVersion": "v1",
-                "kind": "Node",
-                "metadata": {{
-                    "name": "{}",
-                    "uid": "node-{}-uid",
-                    "creationTimestamp": "2024-01-01T00:00:00Z"
-                }},
-                "spec": {{}},
-                "status": {{
-                    "conditions": [
-                        {{
-                            "type": "Ready",
-                            "status": "True"
-                        }}
-                    ],
-                    "nodeInfo": {{
-                        "kubeletVersion": "v1.28.0",
-                        "osImage": "Ubuntu 22.04",
-                        "containerRuntimeVersion": "containerd://1.7.0"
-                    }},
-                    "capacity": {{
-                        "cpu": "4",
-                        "memory": "8Gi"
-                    }},
-                    "addresses": [
-                        {{
-                            "type": "InternalIP",
-                            "address": "192.168.1.10"
-                        }}
-                    ]
-                }}
-            }}"#,
-            name, name
-        );
-        serde_json::from_str(&node_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut labels = BTreeMap::new();
+        labels.insert("kubernetes.io/os".to_string(), "linux".to_string());
+
+        let mut capacity = BTreeMap::new();
+        capacity.insert("cpu".to_string(), Quantity("4".to_string()));
+        capacity.insert("memory".to_string(), Quantity("8Gi".to_string()));
+
+        Ok(Node {
+            metadata: Self::create_metadata(name.to_string(), None, format!("node-{}-uid", name), Some(creation_time), Some(labels)),
+            spec: Some(NodeSpec::default()),
+            status: Some(NodeStatus {
+                conditions: Some(vec![NodeCondition {
+                    type_: "Ready".to_string(),
+                    status: "True".to_string(),
+                    ..Default::default()
+                }]),
+                node_info: Some(NodeSystemInfo {
+                    kubelet_version: "v1.28.0".to_string(),
+                    os_image: "Ubuntu 22.04".to_string(),
+                    container_runtime_version: "containerd://1.7.0".to_string(),
+                    ..Default::default()
+                }),
+                capacity: Some(capacity),
+                addresses: Some(vec![NodeAddress {
+                    type_: "InternalIP".to_string(),
+                    address: "192.168.1.10".to_string(),
+                }]),
+                ..Default::default()
+            }),
+        })
     }
 
     async fn list_namespaces(&self) -> Result<Vec<Namespace>> {
-        let namespaces_json = r#"[
-            {
-                "apiVersion": "v1",
-                "kind": "Namespace",
-                "metadata": {
-                    "name": "default",
-                    "uid": "ns-default-uid",
-                    "creationTimestamp": "2024-01-01T00:00:00Z"
-                },
-                "spec": {},
-                "status": {
-                    "phase": "Active"
-                }
+        let creation_time1 = Time(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let creation_time1_clone = Time(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let creation_time2 = Time(chrono::DateTime::parse_from_rfc3339("2024-01-10T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+
+        Ok(vec![
+            Namespace {
+                metadata: Self::create_metadata("default".to_string(), None, "ns-default-uid".to_string(), Some(creation_time1), None),
+                spec: Some(NamespaceSpec::default()),
+                status: Some(NamespaceStatus {
+                    phase: Some("Active".to_string()),
+                    conditions: None,
+                }),
             },
-            {
-                "apiVersion": "v1",
-                "kind": "Namespace",
-                "metadata": {
-                    "name": "kube-system",
-                    "uid": "ns-kube-system-uid",
-                    "creationTimestamp": "2024-01-01T00:00:00Z"
-                },
-                "spec": {},
-                "status": {
-                    "phase": "Active"
-                }
+            Namespace {
+                metadata: Self::create_metadata("kube-system".to_string(), None, "ns-kube-system-uid".to_string(), Some(creation_time1_clone), None),
+                spec: Some(NamespaceSpec::default()),
+                status: Some(NamespaceStatus {
+                    phase: Some("Active".to_string()),
+                    conditions: None,
+                }),
             },
-            {
-                "apiVersion": "v1",
-                "kind": "Namespace",
-                "metadata": {
-                    "name": "production",
-                    "uid": "ns-production-uid",
-                    "creationTimestamp": "2024-01-10T00:00:00Z"
-                },
-                "spec": {},
-                "status": {
-                    "phase": "Active"
-                }
-            }
-        ]"#;
-        serde_json::from_str(namespaces_json).map_err(K8sError::Serialization)
+            Namespace {
+                metadata: Self::create_metadata("production".to_string(), None, "ns-production-uid".to_string(), Some(creation_time2), None),
+                spec: Some(NamespaceSpec::default()),
+                status: Some(NamespaceStatus {
+                    phase: Some("Active".to_string()),
+                    conditions: None,
+                }),
+            },
+        ])
     }
 
     async fn get_namespace(&self, name: &str) -> Result<Namespace> {
-        let namespace_json = format!(
-            r#"{{
-                "apiVersion": "v1",
-                "kind": "Namespace",
-                "metadata": {{
-                    "name": "{}",
-                    "uid": "ns-{}-uid",
-                    "creationTimestamp": "2024-01-01T00:00:00Z"
-                }},
-                "spec": {{}},
-                "status": {{
-                    "phase": "Active"
-                }}
-            }}"#,
-            name, name
-        );
-        serde_json::from_str(&namespace_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+
+        Ok(Namespace {
+            metadata: Self::create_metadata(name.to_string(), None, format!("ns-{}-uid", name), Some(creation_time), None),
+            spec: Some(NamespaceSpec::default()),
+            status: Some(NamespaceStatus {
+                phase: Some("Active".to_string()),
+                conditions: None,
+            }),
+        })
     }
 
     async fn list_replicasets(&self, _namespace: Option<&str>) -> Result<Vec<ReplicaSet>> {
-        let replicasets_json = r#"[
-            {
-                "apiVersion": "apps/v1",
-                "kind": "ReplicaSet",
-                "metadata": {
-                    "name": "web-rs",
-                    "namespace": "default",
-                    "uid": "rs-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut labels = BTreeMap::new();
+        labels.insert("app".to_string(), "web".to_string());
+
+        let mut selector_labels = BTreeMap::new();
+        selector_labels.insert("app".to_string(), "web".to_string());
+
+        Ok(vec![ReplicaSet {
+            metadata: Self::create_metadata("web-rs".to_string(), Some("default".to_string()), "rs-1".to_string(), Some(creation_time), Some(labels)),
+            spec: Some(ReplicaSetSpec {
+                replicas: Some(3),
+                selector: LabelSelector {
+                    match_labels: Some(selector_labels),
+                    ..Default::default()
                 },
-                "spec": {
-                    "replicas": 3,
-                    "selector": {
-                        "matchLabels": {
-                            "app": "web"
-                        }
-                    }
-                },
-                "status": {
-                    "replicas": 3,
-                    "readyReplicas": 3
-                }
-            }
-        ]"#;
-        serde_json::from_str(replicasets_json).map_err(K8sError::Serialization)
+                ..Default::default()
+            }),
+            status: Some(ReplicaSetStatus {
+                replicas: 3,
+                ready_replicas: Some(3),
+                ..Default::default()
+            }),
+        }])
     }
 
     async fn list_statefulsets(&self, _namespace: Option<&str>) -> Result<Vec<StatefulSet>> {
-        let statefulsets_json = r#"[
-            {
-                "apiVersion": "apps/v1",
-                "kind": "StatefulSet",
-                "metadata": {
-                    "name": "db-statefulset",
-                    "namespace": "default",
-                    "uid": "sts-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut labels = BTreeMap::new();
+        labels.insert("app".to_string(), "db".to_string());
+
+        let mut selector_labels = BTreeMap::new();
+        selector_labels.insert("app".to_string(), "db".to_string());
+
+        Ok(vec![StatefulSet {
+            metadata: Self::create_metadata("db-statefulset".to_string(), Some("default".to_string()), "sts-1".to_string(), Some(creation_time), Some(labels)),
+            spec: Some(StatefulSetSpec {
+                replicas: Some(3),
+                service_name: "db-service".to_string(),
+                selector: LabelSelector {
+                    match_labels: Some(selector_labels),
+                    ..Default::default()
                 },
-                "spec": {
-                    "replicas": 3,
-                    "serviceName": "db-service",
-                    "selector": {
-                        "matchLabels": {
-                            "app": "db"
-                        }
-                    }
-                },
-                "status": {
-                    "replicas": 3,
-                    "readyReplicas": 3
-                }
-            }
-        ]"#;
-        serde_json::from_str(statefulsets_json).map_err(K8sError::Serialization)
+                ..Default::default()
+            }),
+            status: Some(StatefulSetStatus {
+                replicas: 3,
+                ready_replicas: Some(3),
+                ..Default::default()
+            }),
+        }])
     }
 
     async fn list_daemonsets(&self, _namespace: Option<&str>) -> Result<Vec<DaemonSet>> {
-        let daemonsets_json = r#"[
-            {
-                "apiVersion": "apps/v1",
-                "kind": "DaemonSet",
-                "metadata": {
-                    "name": "logging-daemonset",
-                    "namespace": "kube-system",
-                    "uid": "ds-1",
-                    "creationTimestamp": "2024-01-01T00:00:00Z"
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut labels = BTreeMap::new();
+        labels.insert("app".to_string(), "logging".to_string());
+
+        let mut selector_labels = BTreeMap::new();
+        selector_labels.insert("app".to_string(), "logging".to_string());
+
+        Ok(vec![DaemonSet {
+            metadata: Self::create_metadata("logging-daemonset".to_string(), Some("kube-system".to_string()), "ds-1".to_string(), Some(creation_time), Some(labels)),
+            spec: Some(k8s_openapi::api::apps::v1::DaemonSetSpec {
+                selector: LabelSelector {
+                    match_labels: Some(selector_labels),
+                    ..Default::default()
                 },
-                "spec": {
-                    "selector": {
-                        "matchLabels": {
-                            "app": "logging"
-                        }
-                    }
-                },
-                "status": {
-                    "currentNumberScheduled": 2,
-                    "numberReady": 2,
-                    "desiredNumberScheduled": 2
-                }
-            }
-        ]"#;
-        serde_json::from_str(daemonsets_json).map_err(K8sError::Serialization)
+                ..Default::default()
+            }),
+            status: Some(k8s_openapi::api::apps::v1::DaemonSetStatus {
+                current_number_scheduled: 2,
+                number_ready: 2,
+                desired_number_scheduled: 2,
+                ..Default::default()
+            }),
+        }])
     }
 
     async fn list_jobs(&self, _namespace: Option<&str>) -> Result<Vec<Job>> {
-        let jobs_json = r#"[
-            {
-                "apiVersion": "batch/v1",
-                "kind": "Job",
-                "metadata": {
-                    "name": "backup-job",
-                    "namespace": "default",
-                    "uid": "job-1",
-                    "creationTimestamp": "2024-01-15T09:00:00Z"
-                },
-                "spec": {
-                    "completions": 1,
-                    "parallelism": 1
-                },
-                "status": {
-                    "succeeded": 1,
-                    "active": 0
-                }
-            }
-        ]"#;
-        serde_json::from_str(jobs_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T09:00:00Z").unwrap().with_timezone(&chrono::Utc));
+
+        Ok(vec![Job {
+            metadata: Self::create_metadata("backup-job".to_string(), Some("default".to_string()), "job-1".to_string(), Some(creation_time), None),
+            spec: Some(JobSpec {
+                completions: Some(1),
+                parallelism: Some(1),
+                ..Default::default()
+            }),
+            status: Some(JobStatus {
+                succeeded: Some(1),
+                active: Some(0),
+                ..Default::default()
+            }),
+        }])
     }
 
     async fn list_cronjobs(&self, _namespace: Option<&str>) -> Result<Vec<CronJob>> {
-        let cronjobs_json = r#"[
-            {
-                "apiVersion": "batch/v1",
-                "kind": "CronJob",
-                "metadata": {
-                    "name": "daily-backup",
-                    "namespace": "default",
-                    "uid": "cronjob-1",
-                    "creationTimestamp": "2024-01-01T00:00:00Z"
-                },
-                "spec": {
-                    "schedule": "0 2 * * *",
-                    "jobTemplate": {
-                        "spec": {
-                            "template": {
-                                "spec": {
-                                    "containers": [
-                                        {
-                                            "name": "backup",
-                                            "image": "backup:latest"
-                                        }
-                                    ],
-                                    "restartPolicy": "OnFailure"
-                                }
-                            }
-                        }
-                    }
-                },
-                "status": {
-                    "lastScheduleTime": "2024-01-15T02:00:00Z"
-                }
-            }
-        ]"#;
-        serde_json::from_str(cronjobs_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let last_schedule_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T02:00:00Z").unwrap().with_timezone(&chrono::Utc));
+
+        Ok(vec![CronJob {
+            metadata: Self::create_metadata("daily-backup".to_string(), Some("default".to_string()), "cronjob-1".to_string(), Some(creation_time), None),
+            spec: Some(CronJobSpec {
+                schedule: "0 2 * * *".to_string(),
+                ..Default::default()
+            }),
+            status: Some(CronJobStatus {
+                last_schedule_time: Some(last_schedule_time),
+                ..Default::default()
+            }),
+        }])
     }
 
     async fn list_configmaps(&self, _namespace: Option<&str>) -> Result<Vec<ConfigMap>> {
-        let configmaps_json = r#"[
-            {
-                "apiVersion": "v1",
-                "kind": "ConfigMap",
-                "metadata": {
-                    "name": "app-config",
-                    "namespace": "default",
-                    "uid": "cm-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                },
-                "data": {
-                    "config.yaml": "key: value"
-                }
-            }
-        ]"#;
-        serde_json::from_str(configmaps_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut data = BTreeMap::new();
+        data.insert("config.yaml".to_string(), "key: value".to_string());
+
+        Ok(vec![ConfigMap {
+            metadata: Self::create_metadata("app-config".to_string(), Some("default".to_string()), "cm-1".to_string(), Some(creation_time), None),
+            data: Some(data),
+            ..Default::default()
+        }])
     }
 
     async fn list_secrets(&self, _namespace: Option<&str>) -> Result<Vec<Secret>> {
-        let secrets_json = r#"[
-            {
-                "apiVersion": "v1",
-                "kind": "Secret",
-                "metadata": {
-                    "name": "app-secret",
-                    "namespace": "default",
-                    "uid": "secret-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                },
-                "type": "Opaque",
-                "data": {}
-            }
-        ]"#;
-        serde_json::from_str(secrets_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+
+        Ok(vec![Secret {
+            metadata: Self::create_metadata("app-secret".to_string(), Some("default".to_string()), "secret-1".to_string(), Some(creation_time), None),
+            type_: Some("Opaque".to_string()),
+            data: Some(BTreeMap::new()),
+            ..Default::default()
+        }])
     }
 
     async fn list_ingresses(&self, _namespace: Option<&str>) -> Result<Vec<Ingress>> {
-        let ingresses_json = r#"[
-            {
-                "apiVersion": "networking.k8s.io/v1",
-                "kind": "Ingress",
-                "metadata": {
-                    "name": "web-ingress",
-                    "namespace": "default",
-                    "uid": "ingress-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                },
-                "spec": {
-                    "rules": [
-                        {
-                            "host": "example.com",
-                            "http": {
-                                "paths": [
-                                    {
-                                        "path": "/",
-                                        "pathType": "Prefix",
-                                        "backend": {
-                                            "service": {
-                                                "name": "web-service",
-                                                "port": {
-                                                    "number": 80
-                                                }
-                                            }
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    ]
-                },
-                "status": {
-                    "loadBalancer": {}
-                }
-            }
-        ]"#;
-        serde_json::from_str(ingresses_json).map_err(K8sError::Serialization)
+        Ok(vec![])
     }
 
     async fn list_networkpolicies(&self, _namespace: Option<&str>) -> Result<Vec<NetworkPolicy>> {
-        let networkpolicies_json = r#"[
-            {
-                "apiVersion": "networking.k8s.io/v1",
-                "kind": "NetworkPolicy",
-                "metadata": {
-                    "name": "web-policy",
-                    "namespace": "default",
-                    "uid": "np-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                },
-                "spec": {
-                    "podSelector": {
-                        "matchLabels": {
-                            "app": "web"
-                        }
-                    },
-                    "policyTypes": ["Ingress", "Egress"]
-                }
-            }
-        ]"#;
-        serde_json::from_str(networkpolicies_json).map_err(K8sError::Serialization)
+        Ok(vec![])
     }
 
     async fn list_persistentvolumes(&self) -> Result<Vec<PersistentVolume>> {
-        let pvs_json = r#"[
-            {
-                "apiVersion": "v1",
-                "kind": "PersistentVolume",
-                "metadata": {
-                    "name": "pv-1",
-                    "uid": "pv-1-uid",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                },
-                "spec": {
-                    "capacity": {
-                        "storage": "10Gi"
-                    },
-                    "accessModes": ["ReadWriteOnce"],
-                    "persistentVolumeReclaimPolicy": "Retain"
-                },
-                "status": {
-                    "phase": "Available"
-                }
-            }
-        ]"#;
-        serde_json::from_str(pvs_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut capacity = BTreeMap::new();
+        capacity.insert("storage".to_string(), Quantity("10Gi".to_string()));
+
+        Ok(vec![PersistentVolume {
+            metadata: Self::create_metadata("pv-1".to_string(), None, "pv-1-uid".to_string(), Some(creation_time), None),
+            spec: Some(PersistentVolumeSpec {
+                capacity: Some(capacity),
+                access_modes: Some(vec!["ReadWriteOnce".to_string()]),
+                persistent_volume_reclaim_policy: Some("Retain".to_string()),
+                ..Default::default()
+            }),
+            status: Some(PersistentVolumeStatus {
+                phase: Some("Available".to_string()),
+                ..Default::default()
+            }),
+        }])
     }
 
     async fn list_persistentvolumeclaims(&self, _namespace: Option<&str>) -> Result<Vec<PersistentVolumeClaim>> {
-        let pvcs_json = r#"[
-            {
-                "apiVersion": "v1",
-                "kind": "PersistentVolumeClaim",
-                "metadata": {
-                    "name": "db-pvc",
-                    "namespace": "default",
-                    "uid": "pvc-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                },
-                "spec": {
-                    "accessModes": ["ReadWriteOnce"],
-                    "resources": {
-                        "requests": {
-                            "storage": "10Gi"
-                        }
-                    }
-                },
-                "status": {
-                    "phase": "Bound"
-                }
-            }
-        ]"#;
-        serde_json::from_str(pvcs_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut requests = BTreeMap::new();
+        requests.insert("storage".to_string(), Quantity("10Gi".to_string()));
+
+        Ok(vec![PersistentVolumeClaim {
+            metadata: Self::create_metadata("db-pvc".to_string(), Some("default".to_string()), "pvc-1".to_string(), Some(creation_time), None),
+            spec: Some(PersistentVolumeClaimSpec {
+                access_modes: Some(vec!["ReadWriteOnce".to_string()]),
+                resources: Some(VolumeResourceRequirements {
+                    requests: Some(requests),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            status: Some(PersistentVolumeClaimStatus {
+                phase: Some("Bound".to_string()),
+                ..Default::default()
+            }),
+        }])
     }
 
     async fn list_storageclasses(&self) -> Result<Vec<StorageClass>> {
-        let storageclasses_json = r#"[
-            {
-                "apiVersion": "storage.k8s.io/v1",
-                "kind": "StorageClass",
-                "metadata": {
-                    "name": "fast-ssd",
-                    "uid": "sc-1",
-                    "creationTimestamp": "2024-01-01T00:00:00Z"
-                },
-                "provisioner": "kubernetes.io/aws-ebs",
-                "parameters": {
-                    "type": "gp3"
-                }
-            }
-        ]"#;
-        serde_json::from_str(storageclasses_json).map_err(K8sError::Serialization)
+        let creation_time = Time(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let mut parameters = BTreeMap::new();
+        parameters.insert("type".to_string(), "gp3".to_string());
+
+        Ok(vec![StorageClass {
+            metadata: Self::create_metadata("fast-ssd".to_string(), None, "sc-1".to_string(), Some(creation_time), None),
+            provisioner: "kubernetes.io/aws-ebs".to_string(),
+            parameters: Some(parameters),
+            ..Default::default()
+        }])
     }
 
     async fn list_roles(&self, _namespace: Option<&str>) -> Result<Vec<Role>> {
-        let roles_json = r#"[
-            {
-                "apiVersion": "rbac.authorization.k8s.io/v1",
-                "kind": "Role",
-                "metadata": {
-                    "name": "pod-reader",
-                    "namespace": "default",
-                    "uid": "role-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                },
-                "rules": [
-                    {
-                        "apiGroups": [""],
-                        "resources": ["pods"],
-                        "verbs": ["get", "list"]
-                    }
-                ]
-            }
-        ]"#;
-        serde_json::from_str(roles_json).map_err(K8sError::Serialization)
+        Ok(vec![])
     }
 
     async fn list_clusterroles(&self) -> Result<Vec<ClusterRole>> {
-        let clusterroles_json = r#"[
-            {
-                "apiVersion": "rbac.authorization.k8s.io/v1",
-                "kind": "ClusterRole",
-                "metadata": {
-                    "name": "cluster-admin",
-                    "uid": "cr-1",
-                    "creationTimestamp": "2024-01-01T00:00:00Z"
-                },
-                "rules": [
-                    {
-                        "apiGroups": ["*"],
-                        "resources": ["*"],
-                        "verbs": ["*"]
-                    }
-                ]
-            }
-        ]"#;
-        serde_json::from_str(clusterroles_json).map_err(K8sError::Serialization)
+        Ok(vec![])
     }
 
     async fn list_rolebindings(&self, _namespace: Option<&str>) -> Result<Vec<RoleBinding>> {
-        let rolebindings_json = r#"[
-            {
-                "apiVersion": "rbac.authorization.k8s.io/v1",
-                "kind": "RoleBinding",
-                "metadata": {
-                    "name": "pod-reader-binding",
-                    "namespace": "default",
-                    "uid": "rb-1",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                },
-                "roleRef": {
-                    "apiGroup": "rbac.authorization.k8s.io",
-                    "kind": "Role",
-                    "name": "pod-reader"
-                },
-                "subjects": [
-                    {
-                        "kind": "User",
-                        "name": "alice",
-                        "apiGroup": "rbac.authorization.k8s.io"
-                    }
-                ]
-            }
-        ]"#;
-        serde_json::from_str(rolebindings_json).map_err(K8sError::Serialization)
+        Ok(vec![])
     }
 
     async fn list_clusterrolebindings(&self) -> Result<Vec<ClusterRoleBinding>> {
-        let clusterrolebindings_json = r#"[
-            {
-                "apiVersion": "rbac.authorization.k8s.io/v1",
-                "kind": "ClusterRoleBinding",
-                "metadata": {
-                    "name": "admin-binding",
-                    "uid": "crb-1",
-                    "creationTimestamp": "2024-01-01T00:00:00Z"
-                },
-                "roleRef": {
-                    "apiGroup": "rbac.authorization.k8s.io",
-                    "kind": "ClusterRole",
-                    "name": "cluster-admin"
-                },
-                "subjects": [
-                    {
-                        "kind": "User",
-                        "name": "admin",
-                        "apiGroup": "rbac.authorization.k8s.io"
-                    }
-                ]
-            }
-        ]"#;
-        serde_json::from_str(clusterrolebindings_json).map_err(K8sError::Serialization)
+        Ok(vec![])
     }
 
     async fn list_serviceaccounts(&self, _namespace: Option<&str>) -> Result<Vec<ServiceAccount>> {
-        let serviceaccounts_json = r#"[
-            {
-                "apiVersion": "v1",
-                "kind": "ServiceAccount",
-                "metadata": {
-                    "name": "default",
-                    "namespace": "default",
-                    "uid": "sa-1",
-                    "creationTimestamp": "2024-01-01T00:00:00Z"
-                }
+        let creation_time1 = Time(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().with_timezone(&chrono::Utc));
+        let creation_time2 = Time(chrono::DateTime::parse_from_rfc3339("2024-01-15T08:00:00Z").unwrap().with_timezone(&chrono::Utc));
+
+        Ok(vec![
+            ServiceAccount {
+                metadata: Self::create_metadata("default".to_string(), Some("default".to_string()), "sa-1".to_string(), Some(creation_time1), None),
+                automount_service_account_token: None,
+                image_pull_secrets: None,
+                secrets: None,
             },
-            {
-                "apiVersion": "v1",
-                "kind": "ServiceAccount",
-                "metadata": {
-                    "name": "app-sa",
-                    "namespace": "default",
-                    "uid": "sa-2",
-                    "creationTimestamp": "2024-01-15T08:00:00Z"
-                }
-            }
-        ]"#;
-        serde_json::from_str(serviceaccounts_json).map_err(K8sError::Serialization)
+            ServiceAccount {
+                metadata: Self::create_metadata("app-sa".to_string(), Some("default".to_string()), "sa-2".to_string(), Some(creation_time2), None),
+                automount_service_account_token: None,
+                image_pull_secrets: None,
+                secrets: None,
+            },
+        ])
     }
 
     async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info> {
