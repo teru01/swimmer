@@ -323,6 +323,10 @@ const ResourceList: React.FC<ResourceListProps> = ({
       case 'Age':
         return formatAge(resource.metadata.creationTimestamp);
       case 'Status':
+        if (resource.kind === 'Node') {
+          const readyCondition = resource.status?.conditions?.find((c: any) => c.type === 'Ready');
+          return readyCondition?.status === 'True' ? 'Ready' : 'NotReady';
+        }
         return resource.status?.phase || '-';
       case 'Restarts': {
         const totalRestarts = resource.status?.containerStatuses?.reduce(

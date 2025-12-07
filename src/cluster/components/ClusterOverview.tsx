@@ -4,7 +4,8 @@ import { gkeProvider } from '../../lib/providers/gke';
 import { eksProvider } from '../../lib/providers/eks';
 import { othersProvider } from '../../lib/providers/others';
 import { commands } from '../../api';
-import type { ClusterStats, NodeInfo, PodInfo } from '../../api/commands';
+import type { ClusterStats } from '../../api/commands';
+import type { KubeResource } from './ResourceList';
 import { getContextTags, getTagById, type Tag } from '../../lib/tag';
 import { formatAge } from '../../lib/utils';
 
@@ -37,8 +38,8 @@ interface ClusterOverviewProps {
 const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
   const [clusterInfo, setClusterInfo] = useState<ClusterInfo | undefined>(undefined);
   const [stats, setStats] = useState<ClusterStats | undefined>(undefined);
-  const [nodes, setNodes] = useState<NodeInfo[]>([]);
-  const [pods, setPods] = useState<PodInfo[]>([]);
+  const [nodes, setNodes] = useState<KubeResource[]>([]);
+  const [pods, setPods] = useState<KubeResource[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -49,13 +50,13 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
         const [info, statsData, nodesData, podsData] = await Promise.all([
           fetchClusterInfo(contextId),
           commands.getClusterStats(contextId),
-          commands.getNodes(contextId),
-          commands.getPods(contextId),
+          commands.listResources(contextId, 'Nodes', undefined),
+          commands.listResources(contextId, 'Pods', undefined),
         ]);
         setClusterInfo(info);
         setStats(statsData);
-        setNodes(nodesData);
-        setPods(podsData);
+        setNodes(nodesData as KubeResource[]);
+        setPods(podsData as KubeResource[]);
 
         const tagIds = getContextTags(contextId);
         const loadedTags = tagIds
@@ -192,20 +193,35 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {nodes.map(node => (
-                    <tr key={node.name}>
-                      <td>{node.name}</td>
-                      <td>
-                        <span className={`status-badge ${node.status.toLowerCase()}`}>
-                          {node.status}
-                        </span>
-                      </td>
-                      <td>{node.creationTimestamp ? formatAge(node.creationTimestamp) : '-'}</td>
-                      <td>{node.version}</td>
-                      <td>{node.internalIP || '-'}</td>
-                      <td>{node.externalIP || '-'}</td>
-                    </tr>
-                  ))}
+                  {nodes.map(node => {
+                    const readyCondition = node.status?.conditions?.find(
+                      (c: any) => c.type === 'Ready'
+                    );
+                    const status = readyCondition?.status === 'True' ? 'Ready' : 'NotReady';
+                    const version = node.status?.nodeInfo?.kubeletVersion || '-';
+                    const internalIP =
+                      node.status?.addresses?.find((a: any) => a.type === 'InternalIP')?.address ||
+                      '-';
+                    const externalIP =
+                      node.status?.addresses?.find((a: any) => a.type === 'ExternalIP')?.address ||
+                      '-';
+                    return (
+                      <tr key={node.metadata.name}>
+                        <td>{node.metadata.name}</td>
+                        <td>
+                          <span className={`status-badge ${status.toLowerCase()}`}>{status}</span>
+                        </td>
+                        <td>
+                          {node.metadata.creationTimestamp
+                            ? formatAge(node.metadata.creationTimestamp)
+                            : '-'}
+                        </td>
+                        <td>{version}</td>
+                        <td>{internalIP}</td>
+                        <td>{externalIP}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -228,24 +244,38 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {pods.map((pod, index) => (
-                    <tr key={`${pod.namespace}-${pod.name}-${index}`}>
-                      <td className="pod-name">{pod.name}</td>
-                      <td>{pod.namespace}</td>
-                      <td>
-                        {pod.readyContainers !== undefined && pod.totalContainers !== undefined
-                          ? `${pod.readyContainers}/${pod.totalContainers}`
-                          : '-'}
-                      </td>
-                      <td>
-                        <span className={`status-badge ${pod.status.toLowerCase()}`}>
-                          {pod.status}
-                        </span>
-                      </td>
-                      <td>{pod.restarts}</td>
-                      <td>{pod.creationTimestamp ? formatAge(pod.creationTimestamp) : '-'}</td>
-                    </tr>
-                  ))}
+                  {pods.map((pod, index) => {
+                    const readyContainers = pod.status?.containerStatuses?.filter(
+                      (c: any) => c.ready
+                    ).length;
+                    const totalContainers = pod.status?.containerStatuses?.length;
+                    const restarts =
+                      pod.status?.containerStatuses?.reduce(
+                        (sum: number, c: any) => sum + (c.restartCount || 0),
+                        0
+                      ) || 0;
+                    const status = pod.status?.phase || '-';
+                    return (
+                      <tr key={`${pod.metadata.namespace}-${pod.metadata.name}-${index}`}>
+                        <td className="pod-name">{pod.metadata.name}</td>
+                        <td>{pod.metadata.namespace || '-'}</td>
+                        <td>
+                          {readyContainers !== undefined && totalContainers !== undefined
+                            ? `${readyContainers}/${totalContainers}`
+                            : '-'}
+                        </td>
+                        <td>
+                          <span className={`status-badge ${status.toLowerCase()}`}>{status}</span>
+                        </td>
+                        <td>{restarts}</td>
+                        <td>
+                          {pod.metadata.creationTimestamp
+                            ? formatAge(pod.metadata.creationTimestamp)
+                            : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

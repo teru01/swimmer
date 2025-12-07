@@ -24,29 +24,6 @@ export interface ClusterStats {
   memoryUsage: string;
 }
 
-export interface NodeInfo {
-  name: string;
-  status: string;
-  version: string;
-  osImage: string;
-  cpu: string;
-  memory: string;
-  creationTimestamp?: string;
-  internalIP?: string;
-  externalIP?: string;
-}
-
-export interface PodInfo {
-  name: string;
-  namespace: string;
-  status: string;
-  node: string;
-  restarts: number;
-  readyContainers?: number;
-  totalContainers?: number;
-  creationTimestamp?: string;
-}
-
 /**
  * サポートされている全ての Rust コマンドをラップしたオブジェクト
  */
@@ -77,20 +54,6 @@ export const commands = {
    */
   getClusterStats: async (contextId: string): Promise<ClusterStats> => {
     return invoke('get_cluster_stats', { contextId });
-  },
-
-  /**
-   * ノード一覧を取得します
-   */
-  getNodes: async (contextId: string): Promise<NodeInfo[]> => {
-    return invoke('get_nodes', { contextId });
-  },
-
-  /**
-   * Pod一覧を取得します
-   */
-  getPods: async (contextId: string): Promise<PodInfo[]> => {
-    return invoke('get_pods', { contextId });
   },
 
   /**
