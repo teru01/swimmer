@@ -30,19 +30,36 @@ impl serde::Serialize for Error {
 type Result<T> = std::result::Result<T, Error>;
 
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-#[tauri::command]
 async fn get_kube_contexts() -> Result<Vec<String>> {
-    let kubeconfig = Kubeconfig::read().map_err(Error::Kube)?;
-    let context_names = kubeconfig
-        .contexts
-        .into_iter()
-        .map(|ctx| ctx.name)
-        .collect();
-    Ok(context_names)
+    let use_mock = std::env::var("USE_MOCK")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
+
+    if use_mock {
+        Ok(vec![
+            "gke_project-a_asia-northeast1_cluster-1".to_string(),
+            "gke_project-a_asia-northeast1_cluster-2".to_string(),
+            "gke_project-b_us-central1_cluster-1".to_string(),
+            "gke_project-b_us-central1_cluster-2".to_string(),
+            "arn:aws:eks:ap-northeast-1:123456789012:cluster/eks-cluster-1".to_string(),
+            "arn:aws:eks:ap-northeast-1:123456789012:cluster/eks-cluster-2".to_string(),
+            "arn:aws:eks:us-west-2:123456789012:cluster/eks-cluster-3".to_string(),
+            "docker-desktop".to_string(),
+            "minikube".to_string(),
+            "kind-cluster".to_string(),
+            "custom-context-1".to_string(),
+            "custom-context-2".to_string(),
+        ])
+    } else {
+        let kubeconfig = Kubeconfig::read().map_err(Error::Kube)?;
+        let context_names = kubeconfig
+            .contexts
+            .into_iter()
+            .map(|ctx| ctx.name)
+            .collect();
+        Ok(context_names)
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -61,7 +78,6 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(terminal_sessions)
         .invoke_handler(tauri::generate_handler![
-            greet,
             get_kube_contexts,
             terminal::create_terminal_session,
             terminal::write_to_terminal,
