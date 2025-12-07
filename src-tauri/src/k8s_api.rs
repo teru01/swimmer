@@ -1,7 +1,8 @@
 use k8s_openapi::api::apps::v1::{DaemonSet, Deployment, ReplicaSet, StatefulSet};
+use k8s_openapi::api::autoscaling::v2::HorizontalPodAutoscaler;
 use k8s_openapi::api::batch::v1::{CronJob, Job};
 use k8s_openapi::api::core::v1::{
-    ConfigMap, Namespace, Node, PersistentVolume, PersistentVolumeClaim, Pod, Secret, Service,
+    ConfigMap, Endpoints, Event, LimitRange, Namespace, Node, PersistentVolume, PersistentVolumeClaim, Pod, ResourceQuota, Secret, Service,
     ServiceAccount,
 };
 use k8s_openapi::api::networking::v1::{Ingress, NetworkPolicy};
@@ -52,22 +53,49 @@ pub trait K8sClient: Send + Sync {
     async fn list_namespaces(&self) -> Result<Vec<Namespace>>;
     async fn get_namespace(&self, name: &str) -> Result<Namespace>;
     async fn list_replicasets(&self, namespace: Option<&str>) -> Result<Vec<ReplicaSet>>;
+    async fn get_replicaset(&self, name: &str, namespace: &str) -> Result<ReplicaSet>;
     async fn list_statefulsets(&self, namespace: Option<&str>) -> Result<Vec<StatefulSet>>;
+    async fn get_statefulset(&self, name: &str, namespace: &str) -> Result<StatefulSet>;
     async fn list_daemonsets(&self, namespace: Option<&str>) -> Result<Vec<DaemonSet>>;
+    async fn get_daemonset(&self, name: &str, namespace: &str) -> Result<DaemonSet>;
     async fn list_jobs(&self, namespace: Option<&str>) -> Result<Vec<Job>>;
+    async fn get_job(&self, name: &str, namespace: &str) -> Result<Job>;
     async fn list_cronjobs(&self, namespace: Option<&str>) -> Result<Vec<CronJob>>;
+    async fn get_cronjob(&self, name: &str, namespace: &str) -> Result<CronJob>;
     async fn list_configmaps(&self, namespace: Option<&str>) -> Result<Vec<ConfigMap>>;
+    async fn get_configmap(&self, name: &str, namespace: &str) -> Result<ConfigMap>;
     async fn list_secrets(&self, namespace: Option<&str>) -> Result<Vec<Secret>>;
+    async fn get_secret(&self, name: &str, namespace: &str) -> Result<Secret>;
     async fn list_ingresses(&self, namespace: Option<&str>) -> Result<Vec<Ingress>>;
+    async fn get_ingress(&self, name: &str, namespace: &str) -> Result<Ingress>;
     async fn list_networkpolicies(&self, namespace: Option<&str>) -> Result<Vec<NetworkPolicy>>;
+    async fn get_networkpolicy(&self, name: &str, namespace: &str) -> Result<NetworkPolicy>;
     async fn list_persistentvolumes(&self) -> Result<Vec<PersistentVolume>>;
+    async fn get_persistentvolume(&self, name: &str) -> Result<PersistentVolume>;
     async fn list_persistentvolumeclaims(&self, namespace: Option<&str>) -> Result<Vec<PersistentVolumeClaim>>;
+    async fn get_persistentvolumeclaim(&self, name: &str, namespace: &str) -> Result<PersistentVolumeClaim>;
     async fn list_storageclasses(&self) -> Result<Vec<StorageClass>>;
+    async fn get_storageclass(&self, name: &str) -> Result<StorageClass>;
     async fn list_roles(&self, namespace: Option<&str>) -> Result<Vec<Role>>;
+    async fn get_role(&self, name: &str, namespace: &str) -> Result<Role>;
     async fn list_clusterroles(&self) -> Result<Vec<ClusterRole>>;
+    async fn get_clusterrole(&self, name: &str) -> Result<ClusterRole>;
     async fn list_rolebindings(&self, namespace: Option<&str>) -> Result<Vec<RoleBinding>>;
+    async fn get_rolebinding(&self, name: &str, namespace: &str) -> Result<RoleBinding>;
     async fn list_clusterrolebindings(&self) -> Result<Vec<ClusterRoleBinding>>;
+    async fn get_clusterrolebinding(&self, name: &str) -> Result<ClusterRoleBinding>;
     async fn list_serviceaccounts(&self, namespace: Option<&str>) -> Result<Vec<ServiceAccount>>;
+    async fn get_serviceaccount(&self, name: &str, namespace: &str) -> Result<ServiceAccount>;
+    async fn list_endpoints(&self, namespace: Option<&str>) -> Result<Vec<Endpoints>>;
+    async fn get_endpoints(&self, name: &str, namespace: &str) -> Result<Endpoints>;
+    async fn list_events(&self, namespace: Option<&str>) -> Result<Vec<Event>>;
+    async fn get_event(&self, name: &str, namespace: &str) -> Result<Event>;
+    async fn list_horizontalpodautoscalers(&self, namespace: Option<&str>) -> Result<Vec<HorizontalPodAutoscaler>>;
+    async fn get_horizontalpodautoscaler(&self, name: &str, namespace: &str) -> Result<HorizontalPodAutoscaler>;
+    async fn list_limitranges(&self, namespace: Option<&str>) -> Result<Vec<LimitRange>>;
+    async fn get_limitrange(&self, name: &str, namespace: &str) -> Result<LimitRange>;
+    async fn list_resourcequotas(&self, namespace: Option<&str>) -> Result<Vec<ResourceQuota>>;
+    async fn get_resourcequota(&self, name: &str, namespace: &str) -> Result<ResourceQuota>;
     async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info>;
 }
 
@@ -165,6 +193,11 @@ impl K8sClient for RealK8sClient {
         Ok(items.items)
     }
 
+    async fn get_replicaset(&self, name: &str, namespace: &str) -> Result<ReplicaSet> {
+        let api: Api<ReplicaSet> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
     async fn list_statefulsets(&self, namespace: Option<&str>) -> Result<Vec<StatefulSet>> {
         let api: Api<StatefulSet> = if let Some(ns) = namespace {
             Api::namespaced(self.client.clone(), ns)
@@ -173,6 +206,11 @@ impl K8sClient for RealK8sClient {
         };
         let items: ObjectList<StatefulSet> = api.list(&ListParams::default()).await?;
         Ok(items.items)
+    }
+
+    async fn get_statefulset(&self, name: &str, namespace: &str) -> Result<StatefulSet> {
+        let api: Api<StatefulSet> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
     }
 
     async fn list_daemonsets(&self, namespace: Option<&str>) -> Result<Vec<DaemonSet>> {
@@ -185,6 +223,11 @@ impl K8sClient for RealK8sClient {
         Ok(items.items)
     }
 
+    async fn get_daemonset(&self, name: &str, namespace: &str) -> Result<DaemonSet> {
+        let api: Api<DaemonSet> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
     async fn list_jobs(&self, namespace: Option<&str>) -> Result<Vec<Job>> {
         let api: Api<Job> = if let Some(ns) = namespace {
             Api::namespaced(self.client.clone(), ns)
@@ -193,6 +236,11 @@ impl K8sClient for RealK8sClient {
         };
         let items: ObjectList<Job> = api.list(&ListParams::default()).await?;
         Ok(items.items)
+    }
+
+    async fn get_job(&self, name: &str, namespace: &str) -> Result<Job> {
+        let api: Api<Job> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
     }
 
     async fn list_cronjobs(&self, namespace: Option<&str>) -> Result<Vec<CronJob>> {
@@ -205,6 +253,11 @@ impl K8sClient for RealK8sClient {
         Ok(items.items)
     }
 
+    async fn get_cronjob(&self, name: &str, namespace: &str) -> Result<CronJob> {
+        let api: Api<CronJob> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
     async fn list_configmaps(&self, namespace: Option<&str>) -> Result<Vec<ConfigMap>> {
         let api: Api<ConfigMap> = if let Some(ns) = namespace {
             Api::namespaced(self.client.clone(), ns)
@@ -213,6 +266,11 @@ impl K8sClient for RealK8sClient {
         };
         let items: ObjectList<ConfigMap> = api.list(&ListParams::default()).await?;
         Ok(items.items)
+    }
+
+    async fn get_configmap(&self, name: &str, namespace: &str) -> Result<ConfigMap> {
+        let api: Api<ConfigMap> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
     }
 
     async fn list_secrets(&self, namespace: Option<&str>) -> Result<Vec<Secret>> {
@@ -225,6 +283,11 @@ impl K8sClient for RealK8sClient {
         Ok(items.items)
     }
 
+    async fn get_secret(&self, name: &str, namespace: &str) -> Result<Secret> {
+        let api: Api<Secret> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
     async fn list_ingresses(&self, namespace: Option<&str>) -> Result<Vec<Ingress>> {
         let api: Api<Ingress> = if let Some(ns) = namespace {
             Api::namespaced(self.client.clone(), ns)
@@ -233,6 +296,11 @@ impl K8sClient for RealK8sClient {
         };
         let items: ObjectList<Ingress> = api.list(&ListParams::default()).await?;
         Ok(items.items)
+    }
+
+    async fn get_ingress(&self, name: &str, namespace: &str) -> Result<Ingress> {
+        let api: Api<Ingress> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
     }
 
     async fn list_networkpolicies(&self, namespace: Option<&str>) -> Result<Vec<NetworkPolicy>> {
@@ -245,10 +313,20 @@ impl K8sClient for RealK8sClient {
         Ok(items.items)
     }
 
+    async fn get_networkpolicy(&self, name: &str, namespace: &str) -> Result<NetworkPolicy> {
+        let api: Api<NetworkPolicy> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
     async fn list_persistentvolumes(&self) -> Result<Vec<PersistentVolume>> {
         let api: Api<PersistentVolume> = Api::all(self.client.clone());
         let items: ObjectList<PersistentVolume> = api.list(&ListParams::default()).await?;
         Ok(items.items)
+    }
+
+    async fn get_persistentvolume(&self, name: &str) -> Result<PersistentVolume> {
+        let api: Api<PersistentVolume> = Api::all(self.client.clone());
+        Ok(api.get(name).await?)
     }
 
     async fn list_persistentvolumeclaims(&self, namespace: Option<&str>) -> Result<Vec<PersistentVolumeClaim>> {
@@ -261,10 +339,20 @@ impl K8sClient for RealK8sClient {
         Ok(items.items)
     }
 
+    async fn get_persistentvolumeclaim(&self, name: &str, namespace: &str) -> Result<PersistentVolumeClaim> {
+        let api: Api<PersistentVolumeClaim> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
     async fn list_storageclasses(&self) -> Result<Vec<StorageClass>> {
         let api: Api<StorageClass> = Api::all(self.client.clone());
         let items: ObjectList<StorageClass> = api.list(&ListParams::default()).await?;
         Ok(items.items)
+    }
+
+    async fn get_storageclass(&self, name: &str) -> Result<StorageClass> {
+        let api: Api<StorageClass> = Api::all(self.client.clone());
+        Ok(api.get(name).await?)
     }
 
     async fn list_roles(&self, namespace: Option<&str>) -> Result<Vec<Role>> {
@@ -277,10 +365,20 @@ impl K8sClient for RealK8sClient {
         Ok(items.items)
     }
 
+    async fn get_role(&self, name: &str, namespace: &str) -> Result<Role> {
+        let api: Api<Role> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
     async fn list_clusterroles(&self) -> Result<Vec<ClusterRole>> {
         let api: Api<ClusterRole> = Api::all(self.client.clone());
         let items: ObjectList<ClusterRole> = api.list(&ListParams::default()).await?;
         Ok(items.items)
+    }
+
+    async fn get_clusterrole(&self, name: &str) -> Result<ClusterRole> {
+        let api: Api<ClusterRole> = Api::all(self.client.clone());
+        Ok(api.get(name).await?)
     }
 
     async fn list_rolebindings(&self, namespace: Option<&str>) -> Result<Vec<RoleBinding>> {
@@ -293,10 +391,20 @@ impl K8sClient for RealK8sClient {
         Ok(items.items)
     }
 
+    async fn get_rolebinding(&self, name: &str, namespace: &str) -> Result<RoleBinding> {
+        let api: Api<RoleBinding> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
     async fn list_clusterrolebindings(&self) -> Result<Vec<ClusterRoleBinding>> {
         let api: Api<ClusterRoleBinding> = Api::all(self.client.clone());
         let items: ObjectList<ClusterRoleBinding> = api.list(&ListParams::default()).await?;
         Ok(items.items)
+    }
+
+    async fn get_clusterrolebinding(&self, name: &str) -> Result<ClusterRoleBinding> {
+        let api: Api<ClusterRoleBinding> = Api::all(self.client.clone());
+        Ok(api.get(name).await?)
     }
 
     async fn list_serviceaccounts(&self, namespace: Option<&str>) -> Result<Vec<ServiceAccount>> {
@@ -307,6 +415,86 @@ impl K8sClient for RealK8sClient {
         };
         let items: ObjectList<ServiceAccount> = api.list(&ListParams::default()).await?;
         Ok(items.items)
+    }
+
+    async fn get_serviceaccount(&self, name: &str, namespace: &str) -> Result<ServiceAccount> {
+        let api: Api<ServiceAccount> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
+    async fn list_endpoints(&self, namespace: Option<&str>) -> Result<Vec<Endpoints>> {
+        let api: Api<Endpoints> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<Endpoints> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn get_endpoints(&self, name: &str, namespace: &str) -> Result<Endpoints> {
+        let api: Api<Endpoints> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
+    async fn list_events(&self, namespace: Option<&str>) -> Result<Vec<Event>> {
+        let api: Api<Event> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<Event> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn get_event(&self, name: &str, namespace: &str) -> Result<Event> {
+        let api: Api<Event> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
+    async fn list_horizontalpodautoscalers(&self, namespace: Option<&str>) -> Result<Vec<HorizontalPodAutoscaler>> {
+        let api: Api<HorizontalPodAutoscaler> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<HorizontalPodAutoscaler> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn get_horizontalpodautoscaler(&self, name: &str, namespace: &str) -> Result<HorizontalPodAutoscaler> {
+        let api: Api<HorizontalPodAutoscaler> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
+    async fn list_limitranges(&self, namespace: Option<&str>) -> Result<Vec<LimitRange>> {
+        let api: Api<LimitRange> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<LimitRange> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn get_limitrange(&self, name: &str, namespace: &str) -> Result<LimitRange> {
+        let api: Api<LimitRange> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
+    }
+
+    async fn list_resourcequotas(&self, namespace: Option<&str>) -> Result<Vec<ResourceQuota>> {
+        let api: Api<ResourceQuota> = if let Some(ns) = namespace {
+            Api::namespaced(self.client.clone(), ns)
+        } else {
+            Api::all(self.client.clone())
+        };
+        let items: ObjectList<ResourceQuota> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn get_resourcequota(&self, name: &str, namespace: &str) -> Result<ResourceQuota> {
+        let api: Api<ResourceQuota> = Api::namespaced(self.client.clone(), namespace);
+        Ok(api.get(name).await?)
     }
 
     async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info> {
@@ -470,10 +658,51 @@ pub async fn list_resources(
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
+        "Endpoints" => {
+            let items = client.list_endpoints(namespace.as_deref()).await?;
+            items.into_iter()
+                .map(|p| serde_json::to_value(p).unwrap())
+                .collect()
+        }
+        "Events" => {
+            let items = client.list_events(namespace.as_deref()).await?;
+            items.into_iter()
+                .map(|p| serde_json::to_value(p).unwrap())
+                .collect()
+        }
+        "HorizontalPodAutoscalers" => {
+            let items = client.list_horizontalpodautoscalers(namespace.as_deref()).await?;
+            items.into_iter()
+                .map(|p| serde_json::to_value(p).unwrap())
+                .collect()
+        }
+        "LimitRanges" => {
+            let items = client.list_limitranges(namespace.as_deref()).await?;
+            items.into_iter()
+                .map(|p| serde_json::to_value(p).unwrap())
+                .collect()
+        }
+        "ResourceQuotas" => {
+            let items = client.list_resourcequotas(namespace.as_deref()).await?;
+            items.into_iter()
+                .map(|p| serde_json::to_value(p).unwrap())
+                .collect()
+        }
         _ => vec![],
     };
 
     Ok(resources)
+}
+
+fn require_namespace(kind: &str) -> K8sError {
+    K8sError::Kube(kube::Error::Api(
+        kube::error::ErrorResponse {
+            status: "Failure".to_string(),
+            message: format!("Namespace required for {}", kind),
+            reason: "BadRequest".to_string(),
+            code: 400,
+        },
+    ))
 }
 
 #[tauri::command]
@@ -487,39 +716,83 @@ pub async fn get_resource_detail(
 
     let resource: Value = match kind.as_str() {
         "Pod" => {
-            let ns = namespace.ok_or_else(|| K8sError::Kube(kube::Error::Api(
-                kube::error::ErrorResponse {
-                    status: "Failure".to_string(),
-                    message: "Namespace required for Pod".to_string(),
-                    reason: "BadRequest".to_string(),
-                    code: 400,
-                },
-            )))?;
+            let ns = namespace.ok_or_else(|| require_namespace("Pod"))?;
             let pod = client.get_pod(&name, &ns).await?;
             serde_json::to_value(pod)?
         }
         "Deployment" => {
-            let ns = namespace.ok_or_else(|| K8sError::Kube(kube::Error::Api(
-                kube::error::ErrorResponse {
-                    status: "Failure".to_string(),
-                    message: "Namespace required for Deployment".to_string(),
-                    reason: "BadRequest".to_string(),
-                    code: 400,
-                },
-            )))?;
+            let ns = namespace.ok_or_else(|| require_namespace("Deployment"))?;
             let item = client.get_deployment(&name, &ns).await?;
             serde_json::to_value(item)?
         }
         "Service" => {
-            let ns = namespace.ok_or_else(|| K8sError::Kube(kube::Error::Api(
-                kube::error::ErrorResponse {
-                    status: "Failure".to_string(),
-                    message: "Namespace required for Service".to_string(),
-                    reason: "BadRequest".to_string(),
-                    code: 400,
-                },
-            )))?;
+            let ns = namespace.ok_or_else(|| require_namespace("Service"))?;
             let item = client.get_service(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "ReplicaSet" => {
+            let ns = namespace.ok_or_else(|| require_namespace("ReplicaSet"))?;
+            let item = client.get_replicaset(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "StatefulSet" => {
+            let ns = namespace.ok_or_else(|| require_namespace("StatefulSet"))?;
+            let item = client.get_statefulset(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "DaemonSet" => {
+            let ns = namespace.ok_or_else(|| require_namespace("DaemonSet"))?;
+            let item = client.get_daemonset(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "Job" => {
+            let ns = namespace.ok_or_else(|| require_namespace("Job"))?;
+            let item = client.get_job(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "CronJob" => {
+            let ns = namespace.ok_or_else(|| require_namespace("CronJob"))?;
+            let item = client.get_cronjob(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "ConfigMap" => {
+            let ns = namespace.ok_or_else(|| require_namespace("ConfigMap"))?;
+            let item = client.get_configmap(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "Secret" => {
+            let ns = namespace.ok_or_else(|| require_namespace("Secret"))?;
+            let item = client.get_secret(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "Ingress" => {
+            let ns = namespace.ok_or_else(|| require_namespace("Ingress"))?;
+            let item = client.get_ingress(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "NetworkPolicy" => {
+            let ns = namespace.ok_or_else(|| require_namespace("NetworkPolicy"))?;
+            let item = client.get_networkpolicy(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "PersistentVolumeClaim" => {
+            let ns = namespace.ok_or_else(|| require_namespace("PersistentVolumeClaim"))?;
+            let item = client.get_persistentvolumeclaim(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "Role" => {
+            let ns = namespace.ok_or_else(|| require_namespace("Role"))?;
+            let item = client.get_role(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "RoleBinding" => {
+            let ns = namespace.ok_or_else(|| require_namespace("RoleBinding"))?;
+            let item = client.get_rolebinding(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "ServiceAccount" => {
+            let ns = namespace.ok_or_else(|| require_namespace("ServiceAccount"))?;
+            let item = client.get_serviceaccount(&name, &ns).await?;
             serde_json::to_value(item)?
         }
         "Node" => {
@@ -528,6 +801,47 @@ pub async fn get_resource_detail(
         }
         "Namespace" => {
             let item = client.get_namespace(&name).await?;
+            serde_json::to_value(item)?
+        }
+        "PersistentVolume" => {
+            let item = client.get_persistentvolume(&name).await?;
+            serde_json::to_value(item)?
+        }
+        "StorageClass" => {
+            let item = client.get_storageclass(&name).await?;
+            serde_json::to_value(item)?
+        }
+        "ClusterRole" => {
+            let item = client.get_clusterrole(&name).await?;
+            serde_json::to_value(item)?
+        }
+        "ClusterRoleBinding" => {
+            let item = client.get_clusterrolebinding(&name).await?;
+            serde_json::to_value(item)?
+        }
+        "Endpoints" => {
+            let ns = namespace.ok_or_else(|| require_namespace("Endpoints"))?;
+            let item = client.get_endpoints(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "Event" => {
+            let ns = namespace.ok_or_else(|| require_namespace("Event"))?;
+            let item = client.get_event(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "HorizontalPodAutoscaler" => {
+            let ns = namespace.ok_or_else(|| require_namespace("HorizontalPodAutoscaler"))?;
+            let item = client.get_horizontalpodautoscaler(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "LimitRange" => {
+            let ns = namespace.ok_or_else(|| require_namespace("LimitRange"))?;
+            let item = client.get_limitrange(&name, &ns).await?;
+            serde_json::to_value(item)?
+        }
+        "ResourceQuota" => {
+            let ns = namespace.ok_or_else(|| require_namespace("ResourceQuota"))?;
+            let item = client.get_resourcequota(&name, &ns).await?;
             serde_json::to_value(item)?
         }
         _ => serde_json::json!({}),
