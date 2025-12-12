@@ -9,7 +9,7 @@ use crate::Error;
 
 // Terminal session management
 pub struct TerminalSession {
-    pub writer: Box<dyn Write + Send>,
+    pub writer: Arc<Mutex<Box<dyn Write + Send>>>,
     pub reader: Arc<Mutex<Box<dyn Read + Send>>>,
 }
 
@@ -41,7 +41,17 @@ pub async fn create_terminal_session(
         })
         .map_err(|e| Error::Terminal(format!("Failed to create PTY: {}", e)))?;
 
-    let cmd = CommandBuilder::new(shell_path);
+    let mut cmd = CommandBuilder::new(shell_path.clone());
+    // Enable emacs mode via shell option if supported
+    // zsh and bash support -o emacs option
+    let shell_name = std::path::Path::new(&shell_path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
+    if shell_name == "zsh" || shell_name == "bash" {
+        cmd.arg("-o");
+        cmd.arg("emacs");
+    }
     let _child = pty_pair
         .slave
         .spawn_command(cmd)
@@ -57,8 +67,10 @@ pub async fn create_terminal_session(
         .take_writer()
         .map_err(|e| Error::Terminal(format!("Failed to take writer: {}", e)))?;
 
+    let writer = Arc::new(Mutex::new(Box::new(writer) as Box<dyn Write + Send>));
+
     let session = TerminalSession {
-        writer: Box::new(writer),
+        writer,
         reader: Arc::new(Mutex::new(reader)),
     };
 
@@ -106,12 +118,13 @@ pub async fn write_to_terminal(
     session_id: String,
     data: String,
 ) -> Result<(), Error> {
-    let mut sessions = sessions.lock().unwrap();
-    if let Some(session) = sessions.get_mut(&session_id) {
+    let sessions = sessions.lock().unwrap();
+    if let Some(session) = sessions.get(&session_id) {
         let bytes = data.as_bytes();
+        let mut writer = session.writer.lock().unwrap();
         let mut written = 0;
         while written < bytes.len() {
-            match session.writer.write(&bytes[written..]) {
+            match writer.write(&bytes[written..]) {
                 Ok(n) => written += n,
                 Err(e) => {
                     return Err(Error::Terminal(format!(
@@ -122,8 +135,7 @@ pub async fn write_to_terminal(
             }
         }
         // Flush to ensure data is sent immediately
-        session
-            .writer
+        writer
             .flush()
             .map_err(|e| Error::Terminal(format!("Failed to flush terminal: {}", e)))?;
     } else {
