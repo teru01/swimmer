@@ -11,12 +11,13 @@ use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, Role, RoleBind
 use k8s_openapi::api::storage::v1::StorageClass;
 use kube::{
     api::{Api, ListParams, ObjectList},
-    config::{Config, InferConfigError},
+    config::{Config, InferConfigError, KubeConfigOptions, Kubeconfig, KubeconfigError},
     Client,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
+use std::path::PathBuf;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -25,8 +26,12 @@ pub enum K8sError {
     Kube(#[from] kube::Error),
     #[error("Config error: {0}")]
     Config(#[from] InferConfigError),
+    #[error("Kubeconfig error: {0}")]
+    KubeconfigError(#[from] KubeconfigError),
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 impl serde::Serialize for K8sError {
@@ -119,10 +124,27 @@ pub struct RealK8sClient {
 
 impl RealK8sClient {
     pub async fn new(context: Option<String>) -> Result<Self> {
-        let mut config = Config::infer().await?;
-        if let Some(_ctx) = context {
-            config.cluster_url = config.cluster_url; // TODO: switch context
-        }
+        let config = if let Some(ctx) = context {
+            // Load kubeconfig from default location
+            let home_dir = env::var("HOME")
+                .map_err(|e| K8sError::Io(std::io::Error::new(std::io::ErrorKind::NotFound, e)))?;
+            let kubeconfig_path = PathBuf::from(home_dir).join(".kube/config");
+
+            // Load kubeconfig file
+            let kubeconfig = Kubeconfig::read_from(&kubeconfig_path)?;
+
+            // Create config with specified context
+            let config_options = KubeConfigOptions {
+                context: Some(ctx),
+                cluster: None,
+                user: None,
+            };
+
+            Config::from_custom_kubeconfig(kubeconfig, &config_options).await?
+        } else {
+            Config::infer().await?
+        };
+
         let client = Client::try_from(config)?;
         Ok(Self { client })
     }
