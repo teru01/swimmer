@@ -139,6 +139,7 @@ export const createTerminalSession = async (
   // Create terminal session on backend
   const sessionId = (await invoke('create_terminal_session', {
     shellPath: preferences.terminal.shellPath,
+    contextName: clusterContext.id,
   })) as string;
 
   // Handle terminal input

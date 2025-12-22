@@ -4467,6 +4467,7 @@ dependencies = [
  "portable-pty",
  "serde",
  "serde_json",
+ "serde_yaml",
  "tauri",
  "tauri-build",
  "tauri-plugin-log",

@@ -1,9 +1,10 @@
+use async_trait::async_trait;
 use k8s_openapi::api::apps::v1::{DaemonSet, Deployment, ReplicaSet, StatefulSet};
 use k8s_openapi::api::autoscaling::v2::HorizontalPodAutoscaler;
 use k8s_openapi::api::batch::v1::{CronJob, Job};
 use k8s_openapi::api::core::v1::{
-    ConfigMap, Endpoints, Event, LimitRange, Namespace, Node, PersistentVolume, PersistentVolumeClaim, Pod, ResourceQuota, Secret, Service,
-    ServiceAccount,
+    ConfigMap, Endpoints, Event, LimitRange, Namespace, Node, PersistentVolume,
+    PersistentVolumeClaim, Pod, ResourceQuota, Secret, Service, ServiceAccount,
 };
 use k8s_openapi::api::networking::v1::{Ingress, NetworkPolicy};
 use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, Role, RoleBinding};
@@ -13,7 +14,6 @@ use kube::{
     config::{Config, InferConfigError},
     Client,
 };
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
@@ -72,8 +72,15 @@ pub trait K8sClient: Send + Sync {
     async fn get_networkpolicy(&self, name: &str, namespace: &str) -> Result<NetworkPolicy>;
     async fn list_persistentvolumes(&self) -> Result<Vec<PersistentVolume>>;
     async fn get_persistentvolume(&self, name: &str) -> Result<PersistentVolume>;
-    async fn list_persistentvolumeclaims(&self, namespace: Option<&str>) -> Result<Vec<PersistentVolumeClaim>>;
-    async fn get_persistentvolumeclaim(&self, name: &str, namespace: &str) -> Result<PersistentVolumeClaim>;
+    async fn list_persistentvolumeclaims(
+        &self,
+        namespace: Option<&str>,
+    ) -> Result<Vec<PersistentVolumeClaim>>;
+    async fn get_persistentvolumeclaim(
+        &self,
+        name: &str,
+        namespace: &str,
+    ) -> Result<PersistentVolumeClaim>;
     async fn list_storageclasses(&self) -> Result<Vec<StorageClass>>;
     async fn get_storageclass(&self, name: &str) -> Result<StorageClass>;
     async fn list_roles(&self, namespace: Option<&str>) -> Result<Vec<Role>>;
@@ -90,8 +97,15 @@ pub trait K8sClient: Send + Sync {
     async fn get_endpoints(&self, name: &str, namespace: &str) -> Result<Endpoints>;
     async fn list_events(&self, namespace: Option<&str>) -> Result<Vec<Event>>;
     async fn get_event(&self, name: &str, namespace: &str) -> Result<Event>;
-    async fn list_horizontalpodautoscalers(&self, namespace: Option<&str>) -> Result<Vec<HorizontalPodAutoscaler>>;
-    async fn get_horizontalpodautoscaler(&self, name: &str, namespace: &str) -> Result<HorizontalPodAutoscaler>;
+    async fn list_horizontalpodautoscalers(
+        &self,
+        namespace: Option<&str>,
+    ) -> Result<Vec<HorizontalPodAutoscaler>>;
+    async fn get_horizontalpodautoscaler(
+        &self,
+        name: &str,
+        namespace: &str,
+    ) -> Result<HorizontalPodAutoscaler>;
     async fn list_limitranges(&self, namespace: Option<&str>) -> Result<Vec<LimitRange>>;
     async fn get_limitrange(&self, name: &str, namespace: &str) -> Result<LimitRange>;
     async fn list_resourcequotas(&self, namespace: Option<&str>) -> Result<Vec<ResourceQuota>>;
@@ -329,7 +343,10 @@ impl K8sClient for RealK8sClient {
         Ok(api.get(name).await?)
     }
 
-    async fn list_persistentvolumeclaims(&self, namespace: Option<&str>) -> Result<Vec<PersistentVolumeClaim>> {
+    async fn list_persistentvolumeclaims(
+        &self,
+        namespace: Option<&str>,
+    ) -> Result<Vec<PersistentVolumeClaim>> {
         let api: Api<PersistentVolumeClaim> = if let Some(ns) = namespace {
             Api::namespaced(self.client.clone(), ns)
         } else {
@@ -339,7 +356,11 @@ impl K8sClient for RealK8sClient {
         Ok(items.items)
     }
 
-    async fn get_persistentvolumeclaim(&self, name: &str, namespace: &str) -> Result<PersistentVolumeClaim> {
+    async fn get_persistentvolumeclaim(
+        &self,
+        name: &str,
+        namespace: &str,
+    ) -> Result<PersistentVolumeClaim> {
         let api: Api<PersistentVolumeClaim> = Api::namespaced(self.client.clone(), namespace);
         Ok(api.get(name).await?)
     }
@@ -452,7 +473,10 @@ impl K8sClient for RealK8sClient {
         Ok(api.get(name).await?)
     }
 
-    async fn list_horizontalpodautoscalers(&self, namespace: Option<&str>) -> Result<Vec<HorizontalPodAutoscaler>> {
+    async fn list_horizontalpodautoscalers(
+        &self,
+        namespace: Option<&str>,
+    ) -> Result<Vec<HorizontalPodAutoscaler>> {
         let api: Api<HorizontalPodAutoscaler> = if let Some(ns) = namespace {
             Api::namespaced(self.client.clone(), ns)
         } else {
@@ -462,7 +486,11 @@ impl K8sClient for RealK8sClient {
         Ok(items.items)
     }
 
-    async fn get_horizontalpodautoscaler(&self, name: &str, namespace: &str) -> Result<HorizontalPodAutoscaler> {
+    async fn get_horizontalpodautoscaler(
+        &self,
+        name: &str,
+        namespace: &str,
+    ) -> Result<HorizontalPodAutoscaler> {
         let api: Api<HorizontalPodAutoscaler> = Api::namespaced(self.client.clone(), namespace);
         Ok(api.get(name).await?)
     }
@@ -534,157 +562,187 @@ pub async fn list_resources(
         }
         "Deployments" => {
             let items = client.list_deployments(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Services" => {
             let items = client.list_services(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Nodes" => {
             let items = client.list_nodes().await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Namespaces" => {
             let items = client.list_namespaces().await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ReplicaSets" => {
             let items = client.list_replicasets(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "StatefulSets" => {
             let items = client.list_statefulsets(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "DaemonSets" => {
             let items = client.list_daemonsets(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Jobs" => {
             let items = client.list_jobs(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "CronJobs" => {
             let items = client.list_cronjobs(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ConfigMaps" => {
             let items = client.list_configmaps(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Secrets" => {
             let items = client.list_secrets(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Ingresses" => {
             let items = client.list_ingresses(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "NetworkPolicies" => {
             let items = client.list_networkpolicies(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "PersistentVolumes" => {
             let items = client.list_persistentvolumes().await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "PersistentVolumeClaims" => {
-            let items = client.list_persistentvolumeclaims(namespace.as_deref()).await?;
-            items.into_iter()
+            let items = client
+                .list_persistentvolumeclaims(namespace.as_deref())
+                .await?;
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "StorageClasses" => {
             let items = client.list_storageclasses().await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Roles" => {
             let items = client.list_roles(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ClusterRoles" => {
             let items = client.list_clusterroles().await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "RoleBindings" => {
             let items = client.list_rolebindings(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ClusterRoleBindings" => {
             let items = client.list_clusterrolebindings().await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ServiceAccounts" => {
             let items = client.list_serviceaccounts(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Endpoints" => {
             let items = client.list_endpoints(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "Events" => {
             let items = client.list_events(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "HorizontalPodAutoscalers" => {
-            let items = client.list_horizontalpodautoscalers(namespace.as_deref()).await?;
-            items.into_iter()
+            let items = client
+                .list_horizontalpodautoscalers(namespace.as_deref())
+                .await?;
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "LimitRanges" => {
             let items = client.list_limitranges(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
         "ResourceQuotas" => {
             let items = client.list_resourcequotas(namespace.as_deref()).await?;
-            items.into_iter()
+            items
+                .into_iter()
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
@@ -695,14 +753,12 @@ pub async fn list_resources(
 }
 
 fn require_namespace(kind: &str) -> K8sError {
-    K8sError::Kube(kube::Error::Api(
-        kube::error::ErrorResponse {
-            status: "Failure".to_string(),
-            message: format!("Namespace required for {}", kind),
-            reason: "BadRequest".to_string(),
-            code: 400,
-        },
-    ))
+    K8sError::Kube(kube::Error::Api(kube::error::ErrorResponse {
+        status: "Failure".to_string(),
+        message: format!("Namespace required for {}", kind),
+        reason: "BadRequest".to_string(),
+        code: 400,
+    }))
 }
 
 #[tauri::command]
@@ -849,8 +905,18 @@ pub async fn get_resource_detail(
     };
 
     let event_supported_kinds = [
-        "Pod", "Deployment", "ReplicaSet", "StatefulSet", "DaemonSet", "Service",
-        "Job", "CronJob", "ConfigMap", "Secret", "PersistentVolume", "PersistentVolumeClaim",
+        "Pod",
+        "Deployment",
+        "ReplicaSet",
+        "StatefulSet",
+        "DaemonSet",
+        "Service",
+        "Job",
+        "CronJob",
+        "ConfigMap",
+        "Secret",
+        "PersistentVolume",
+        "PersistentVolumeClaim",
     ];
 
     let events: Vec<Value> = if event_supported_kinds.contains(&kind.as_str()) {
@@ -909,7 +975,6 @@ pub struct ClusterStats {
     #[serde(rename = "jobCount")]
     pub job_count: usize,
 }
-
 
 fn parse_context_id(context_id: &str) -> (String, String, String, String) {
     if context_id.starts_with("gke_") {

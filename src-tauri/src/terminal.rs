@@ -1,6 +1,8 @@
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use std::collections::HashMap;
+use std::fs;
 use std::io::{Read, Write};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, State};
 use uuid::Uuid;
@@ -11,15 +13,53 @@ use crate::Error;
 pub struct TerminalSession {
     pub writer: Arc<Mutex<Box<dyn Write + Send>>>,
     pub reader: Arc<Mutex<Box<dyn Read + Send>>>,
+    pub temp_kubeconfig: Option<PathBuf>,
 }
 
 pub type TerminalSessions = Arc<Mutex<HashMap<String, TerminalSession>>>;
+
+fn create_temp_kubeconfig(context_name: &str) -> Result<PathBuf, Error> {
+    let temp_dir = std::env::temp_dir();
+    let temp_file = temp_dir.join(format!("swimmer-kubeconfig-{}", Uuid::new_v4()));
+
+    // Read the original kubeconfig
+    let home_dir = std::env::var("HOME")
+        .map_err(|_| Error::Terminal("HOME environment variable not set".to_string()))?;
+    let original_kubeconfig = PathBuf::from(home_dir).join(".kube/config");
+
+    if !original_kubeconfig.exists() {
+        return Err(Error::Terminal("Original kubeconfig not found".to_string()));
+    }
+
+    let kubeconfig_content = fs::read_to_string(&original_kubeconfig)
+        .map_err(|e| Error::Terminal(format!("Failed to read kubeconfig: {}", e)))?;
+
+    // Parse and modify kubeconfig to set current-context
+    let mut config: serde_yaml::Value = serde_yaml::from_str(&kubeconfig_content)
+        .map_err(|e| Error::Terminal(format!("Failed to parse kubeconfig: {}", e)))?;
+
+    if let Some(map) = config.as_mapping_mut() {
+        map.insert(
+            serde_yaml::Value::String("current-context".to_string()),
+            serde_yaml::Value::String(context_name.to_string()),
+        );
+    }
+
+    let modified_content = serde_yaml::to_string(&config)
+        .map_err(|e| Error::Terminal(format!("Failed to serialize kubeconfig: {}", e)))?;
+
+    fs::write(&temp_file, modified_content)
+        .map_err(|e| Error::Terminal(format!("Failed to write temp kubeconfig: {}", e)))?;
+
+    Ok(temp_file)
+}
 
 #[tauri::command]
 pub async fn create_terminal_session(
     sessions: State<'_, TerminalSessions>,
     app_handle: tauri::AppHandle,
     shell_path: String,
+    context_name: Option<String>,
 ) -> Result<String, Error> {
     // Validate shell path exists
     if !std::path::Path::new(&shell_path).exists() {
@@ -30,6 +70,13 @@ pub async fn create_terminal_session(
     }
 
     let session_id = Uuid::new_v4().to_string();
+
+    // Create temp kubeconfig if context is specified
+    let temp_kubeconfig = if let Some(ref ctx) = context_name {
+        Some(create_temp_kubeconfig(ctx)?)
+    } else {
+        None
+    };
 
     let pty_system = native_pty_system();
     let pty_pair = pty_system
@@ -52,6 +99,11 @@ pub async fn create_terminal_session(
         cmd.arg("-o");
         cmd.arg("emacs");
     }
+
+    // Set KUBECONFIG environment variable if temp kubeconfig was created
+    if let Some(ref kubeconfig_path) = temp_kubeconfig {
+        cmd.env("KUBECONFIG", kubeconfig_path.to_string_lossy().as_ref());
+    }
     let _child = pty_pair
         .slave
         .spawn_command(cmd)
@@ -72,6 +124,7 @@ pub async fn create_terminal_session(
     let session = TerminalSession {
         writer,
         reader: Arc::new(Mutex::new(reader)),
+        temp_kubeconfig,
     };
 
     // Start reading from terminal in background
@@ -150,6 +203,11 @@ pub async fn close_terminal_session(
     session_id: String,
 ) -> Result<(), Error> {
     let mut sessions = sessions.lock().unwrap();
-    sessions.remove(&session_id);
+    if let Some(session) = sessions.remove(&session_id) {
+        // Clean up temp kubeconfig file
+        if let Some(kubeconfig_path) = session.temp_kubeconfig {
+            let _ = fs::remove_file(kubeconfig_path);
+        }
+    }
     Ok(())
 }
