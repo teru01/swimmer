@@ -36,6 +36,11 @@ function ClusterOperationPanelComponent({
 }: ClusterOperationPanelComponentProps) {
   const activeTab = panel.tabs.find(tab => tab.clusterContext.id === panel.activeContextId);
 
+  const tabContextMap = new Map<string, string>();
+  panel.tabs.forEach(tab => {
+    tabContextMap.set(tab.id, tab.clusterContext.id);
+  });
+
   const handlePanelClick = () => {
     if (activePanelId !== panel.id && onPanelClick) {
       onPanelClick(panel.id);
@@ -71,6 +76,7 @@ function ClusterOperationPanelComponent({
                 activeTabId={activeTab?.id}
                 activeContextId={activeTab?.clusterContext.id}
                 allViewStates={allClusterViewStates}
+                tabContextMap={tabContextMap}
                 onViewStateChange={onViewStateChange}
               />
             </div>

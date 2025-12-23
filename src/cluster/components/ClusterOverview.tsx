@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './ClusterOverview.css';
 import { gkeProvider } from '../../lib/providers/gke';
 import { eksProvider } from '../../lib/providers/eks';
@@ -8,6 +8,7 @@ import type { ClusterStats } from '../../api/commands';
 import { getContextTags, getTagById, type Tag } from '../../lib/tag';
 
 const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
+const REFRESH_INTERVAL = 30000;
 
 interface ClusterInfo {
   provider: string;
@@ -31,17 +32,23 @@ const fetchClusterInfo = async (contextId: string): Promise<ClusterInfo> => {
 
 interface ClusterOverviewProps {
   contextId: string;
+  isVisible: boolean;
 }
 
-const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
+const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible }) => {
   const [clusterInfo, setClusterInfo] = useState<ClusterInfo | undefined>(undefined);
   const [stats, setStats] = useState<ClusterStats | undefined>(undefined);
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const hasLoadedRef = useRef<boolean>(false);
+  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   useEffect(() => {
     const loadData = async () => {
-      setIsLoading(true);
+      const isFirstLoad = !hasLoadedRef.current;
+      if (isFirstLoad) {
+        setIsLoading(true);
+      }
       try {
         const [info, statsData] = await Promise.all([
           fetchClusterInfo(contextId),
@@ -55,19 +62,33 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
           .map(id => getTagById(id))
           .filter((tag): tag is Tag => tag !== undefined);
         setTags(loadedTags);
+
+        if (isFirstLoad) {
+          hasLoadedRef.current = true;
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error('Failed to load cluster overview:', error);
-      } finally {
-        setIsLoading(false);
+        if (isFirstLoad) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadData();
+
+    intervalRef.current = setInterval(loadData, REFRESH_INTERVAL);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, [contextId]);
 
   if (isLoading) {
     return (
-      <div className="cluster-overview-loading">
+      <div className="cluster-overview-loading" style={{ display: isVisible ? 'flex' : 'none' }}>
         <div className="loading-spinner"></div>
         <span>Loading cluster information...</span>
       </div>
@@ -75,11 +96,15 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId }) => {
   }
 
   if (!clusterInfo || !stats) {
-    return <div className="cluster-overview-error">Failed to load cluster information</div>;
+    return (
+      <div className="cluster-overview-error" style={{ display: isVisible ? 'block' : 'none' }}>
+        Failed to load cluster information
+      </div>
+    );
   }
 
   return (
-    <div className="cluster-overview">
+    <div className="cluster-overview" style={{ display: isVisible ? 'block' : 'none' }}>
       <div className="overview-section cluster-info-section">
         <h2 className="section-title">Cluster Information</h2>
         <div className="info-grid">

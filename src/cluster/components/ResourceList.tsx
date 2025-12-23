@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './ClusterInfoPane.css';
 import { formatAge } from '../../lib/utils';
 import ClusterOverview from './ClusterOverview';
 import { commands } from '../../api/commands';
+
+const REFRESH_INTERVAL = 30000;
 
 export interface KubeResource {
   kind?: string;
@@ -144,8 +146,9 @@ const fetchNamespaces = async (contextId?: string): Promise<string[]> => {
 
 interface ResourceListProps {
   selectedKind: string | undefined;
-  onResourceSelect: (resource: KubeResource) => void; // Pass the whole resource object
+  onResourceSelect: (resource: KubeResource) => void;
   contextId?: string;
+  isVisible: boolean;
 }
 
 /**
@@ -158,12 +161,15 @@ const ResourceList: React.FC<ResourceListProps> = ({
   selectedKind,
   onResourceSelect,
   contextId,
+  isVisible,
 }) => {
   const [namespaces, setNamespaces] = useState<string[]>([]);
-  const [selectedNamespace, setSelectedNamespace] = useState<string>('all'); // 'all' represents All Namespaces
+  const [selectedNamespace, setSelectedNamespace] = useState<string>('all');
   const [resources, setResources] = useState<KubeResource[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const hasLoadedRef = useRef<Map<string, boolean>>(new Map());
+  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Helper function to check if a resource kind is cluster-scoped (not namespaced)
   const isClusterScoped = (kind: string | undefined): boolean => {
@@ -199,7 +205,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
       }
     };
     loadNamespaces();
-  }, [isNamespaced]);
+  }, [isNamespaced, contextId]);
 
   // Fetch resources when selectedKind changes
   useEffect(() => {
@@ -208,23 +214,45 @@ const ResourceList: React.FC<ResourceListProps> = ({
       return;
     }
 
+    const resourceKey = `${selectedKind}-${selectedNamespace}`;
+
     const loadResources = async () => {
-      setIsLoading(true);
+      const isFirstLoad = !hasLoadedRef.current.get(resourceKey);
+      if (isFirstLoad) {
+        setIsLoading(true);
+      }
       setError(undefined);
       try {
         const namespace =
           isNamespaced && selectedNamespace !== 'all' ? selectedNamespace : undefined;
         const fetchedResources = await commands.listResources(contextId, selectedKind, namespace);
         setResources(fetchedResources as KubeResource[]);
+
+        if (isFirstLoad) {
+          hasLoadedRef.current.set(resourceKey, true);
+          setIsLoading(false);
+        }
       } catch (err) {
         console.error(`Failed to fetch ${selectedKind}:`, err);
         setError(`Failed to load ${selectedKind}.`);
-      } finally {
-        setIsLoading(false);
+        if (isFirstLoad) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadResources();
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    intervalRef.current = setInterval(loadResources, REFRESH_INTERVAL);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, [selectedKind, selectedNamespace, isNamespaced, contextId]);
 
   // Filter resources based on selectedNamespace
@@ -581,11 +609,11 @@ const ResourceList: React.FC<ResourceListProps> = ({
   };
 
   if (selectedKind === 'Overview') {
-    return <ClusterOverview contextId={contextId || 'dummy-context-id'} />;
+    return <ClusterOverview contextId={contextId || 'dummy-context-id'} isVisible={isVisible} />;
   }
 
   return (
-    <div className="resource-list-pane">
+    <div className="resource-list-pane" style={{ display: isVisible ? 'block' : 'none' }}>
       <div className="resource-list-controls">
         <div className="controls-left">
           {selectedKind && (

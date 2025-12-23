@@ -45,12 +45,13 @@ interface ClusterInfoPaneProps {
   activeTabId: string | undefined;
   activeContextId: string | undefined;
   allViewStates: Map<string, ClusterViewState>;
+  tabContextMap: Map<string, string>;
   onViewStateChange: (tabId: string, state: ClusterViewState) => void;
 }
 
 interface ClusterViewInstanceProps {
   tabId: string;
-  contextId: string | undefined;
+  contextId: string;
   isVisible: boolean;
   viewState: ClusterViewState;
   onViewStateChange: (state: ClusterViewState) => void;
@@ -151,6 +152,7 @@ function ClusterViewInstance({
                 selectedKind={viewState.selectedKind}
                 onResourceSelect={handleResourceSelect}
                 contextId={contextId}
+                isVisible={isVisible}
               />
             </Panel>
             {viewState.showDetailPane && (
@@ -189,18 +191,21 @@ function ClusterInfoPane({
   activeTabId,
   activeContextId,
   allViewStates,
+  tabContextMap,
   onViewStateChange,
 }: ClusterInfoPaneProps) {
   return (
     <div className="cluster-info-pane-container">
-      {activeTabId ? (
+      {activeTabId && activeContextId ? (
         <>
           {Array.from(allViewStates.entries()).map(([tabId, viewState]) => {
+            const contextId = tabContextMap.get(tabId);
+            if (!contextId) return null;
             return (
               <ClusterViewInstance
                 key={tabId}
                 tabId={tabId}
-                contextId={tabId === activeTabId ? activeContextId : undefined}
+                contextId={contextId}
                 isVisible={tabId === activeTabId}
                 viewState={viewState}
                 onViewStateChange={state => onViewStateChange(tabId, state)}
