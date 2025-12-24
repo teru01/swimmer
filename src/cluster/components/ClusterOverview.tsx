@@ -86,9 +86,13 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
     };
   }, [contextId]);
 
+  if (!isVisible) {
+    return null;
+  }
+
   if (isLoading) {
     return (
-      <div className="cluster-overview-loading" style={{ display: isVisible ? 'flex' : 'none' }}>
+      <div className="cluster-overview-loading">
         <div className="loading-spinner"></div>
         <span>Loading cluster information...</span>
       </div>
@@ -96,15 +100,11 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
   }
 
   if (!clusterInfo || !stats) {
-    return (
-      <div className="cluster-overview-error" style={{ display: isVisible ? 'block' : 'none' }}>
-        Failed to load cluster information
-      </div>
-    );
+    return <div className="cluster-overview-error">Failed to load cluster information</div>;
   }
 
   return (
-    <div className="cluster-overview" style={{ display: isVisible ? 'block' : 'none' }}>
+    <div className="cluster-overview">
       <div className="overview-section cluster-info-section">
         <h2 className="section-title">Cluster Information</h2>
         <div className="info-grid">

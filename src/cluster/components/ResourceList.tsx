@@ -612,8 +612,12 @@ const ResourceList: React.FC<ResourceListProps> = ({
     return <ClusterOverview contextId={contextId || 'dummy-context-id'} isVisible={isVisible} />;
   }
 
+  if (!isVisible) {
+    return null;
+  }
+
   return (
-    <div className="resource-list-pane" style={{ display: isVisible ? 'block' : 'none' }}>
+    <div className="resource-list-pane">
       <div className="resource-list-controls">
         <div className="controls-left">
           {selectedKind && (
