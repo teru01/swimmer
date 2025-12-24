@@ -78,4 +78,22 @@ export const commands = {
   ): Promise<any> => {
     return invoke('get_resource_detail', { context, kind, name, namespace });
   },
+
+  /**
+   * リソースのwatch監視を開始します
+   */
+  startWatchResources: async (
+    context: string | undefined,
+    kind: string,
+    namespace: string | undefined
+  ): Promise<string> => {
+    return invoke('start_watch_resources', { context, kind, namespace });
+  },
+
+  /**
+   * リソースのwatch監視を停止します
+   */
+  stopWatchResources: async (watchId: string): Promise<void> => {
+    return invoke('stop_watch_resources', { watchId });
+  },
 };

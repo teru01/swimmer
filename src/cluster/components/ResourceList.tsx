@@ -3,8 +3,7 @@ import './ClusterInfoPane.css';
 import { formatAge } from '../../lib/utils';
 import ClusterOverview from './ClusterOverview';
 import { commands } from '../../api/commands';
-
-const REFRESH_INTERVAL = 30000;
+import { listen } from '@tauri-apps/api/event';
 
 export interface KubeResource {
   kind?: string;
@@ -168,8 +167,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const [resources, setResources] = useState<KubeResource[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | undefined>(undefined);
-  const hasLoadedRef = useRef<Map<string, boolean>>(new Map());
-  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const hasLoadedRef = useRef<boolean>(false);
+  const watchIdRef = useRef<string | undefined>(undefined);
 
   // Helper function to check if a resource kind is cluster-scoped (not namespaced)
   const isClusterScoped = (kind: string | undefined): boolean => {
@@ -207,60 +206,142 @@ const ResourceList: React.FC<ResourceListProps> = ({
     loadNamespaces();
   }, [isNamespaced, contextId]);
 
-  // Fetch resources when selectedKind changes
+  // Fetch resources when selectedKind or context changes (but NOT when selectedNamespace changes)
   useEffect(() => {
-    if (!selectedKind) {
+    if (!selectedKind || selectedKind === 'Overview') {
       setResources([]);
+      hasLoadedRef.current = false;
       return;
     }
 
-    const resourceKey = `${selectedKind}-${selectedNamespace}`;
-
     const loadResources = async () => {
-      const isFirstLoad = !hasLoadedRef.current.get(resourceKey);
-      if (isFirstLoad) {
-        setIsLoading(true);
-      }
+      setIsLoading(true);
       setError(undefined);
       try {
-        const namespace =
-          isNamespaced && selectedNamespace !== 'all' ? selectedNamespace : undefined;
-        const fetchedResources = await commands.listResources(contextId, selectedKind, namespace);
+        // Always fetch all namespaces to avoid refetching when namespace filter changes
+        const fetchedResources = await commands.listResources(contextId, selectedKind, undefined);
         setResources(fetchedResources as KubeResource[]);
-
-        if (isFirstLoad) {
-          hasLoadedRef.current.set(resourceKey, true);
-          setIsLoading(false);
-        }
+        hasLoadedRef.current = true;
+        setIsLoading(false);
       } catch (err) {
         console.error(`Failed to fetch ${selectedKind}:`, err);
         setError(`Failed to load ${selectedKind}.`);
-        if (isFirstLoad) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     };
 
-    loadResources();
+    const startWatch = async () => {
+      try {
+        // Always watch all namespaces
+        const namespace = undefined;
+        console.info(
+          '[Watch] Starting watch for',
+          selectedKind,
+          'namespace:',
+          namespace,
+          'context:',
+          contextId
+        );
+        const watchId = await commands.startWatchResources(contextId, selectedKind, namespace);
+        console.info('[Watch] Watch started with ID:', watchId);
+        watchIdRef.current = watchId;
 
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+        const unlisten = await listen<{
+          event_type: string;
+          resource: KubeResource;
+        }>(`resource-watch-${watchId}`, event => {
+          const { event_type, resource } = event.payload;
+          console.info(
+            '[Watch Event]',
+            event_type,
+            resource.metadata?.name,
+            resource.metadata?.namespace
+          );
+
+          setResources(prevResources => {
+            console.info('[Watch] Current resources count:', prevResources.length);
+            if (event_type === 'modified') {
+              const exists = prevResources.some(
+                r =>
+                  r.metadata?.name === resource.metadata?.name &&
+                  r.metadata?.namespace === resource.metadata?.namespace
+              );
+              if (!exists) {
+                console.info(
+                  '[Watch] Adding new resource:',
+                  resource.metadata?.name,
+                  'namespace:',
+                  resource.metadata?.namespace
+                );
+                const newResources = [...prevResources, resource];
+                console.info('[Watch] New resources count:', newResources.length);
+                return newResources;
+              }
+              console.info('[Watch] Updating existing resource:', resource.metadata?.name);
+              return prevResources.map(r =>
+                r.metadata?.name === resource.metadata?.name &&
+                r.metadata?.namespace === resource.metadata?.namespace
+                  ? resource
+                  : r
+              );
+            } else if (event_type === 'deleted') {
+              console.info('[Watch] Deleting resource:', resource.metadata?.name);
+              return prevResources.filter(
+                r =>
+                  !(
+                    r.metadata?.name === resource.metadata?.name &&
+                    r.metadata?.namespace === resource.metadata?.namespace
+                  )
+              );
+            }
+            return prevResources;
+          });
+        });
+
+        return unlisten;
+      } catch (err) {
+        console.error('Failed to start watch:', err);
+        return undefined;
+      }
+    };
+
+    // Only load resources if not already loaded
+    if (!hasLoadedRef.current) {
+      loadResources();
     }
-    intervalRef.current = setInterval(loadResources, REFRESH_INTERVAL);
+
+    const unlistenPromise = startWatch();
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+      // Cleanup watch
+      unlistenPromise.then(unlisten => {
+        if (unlisten) {
+          unlisten();
+        }
+      });
+      if (watchIdRef.current) {
+        commands.stopWatchResources(watchIdRef.current);
+        watchIdRef.current = undefined;
       }
     };
-  }, [selectedKind, selectedNamespace, isNamespaced, contextId]);
+  }, [selectedKind, isNamespaced, contextId]);
 
   // Filter resources based on selectedNamespace
   const filteredResources = useMemo(() => {
+    console.info(
+      '[Filter] Resources count:',
+      resources.length,
+      'selectedNamespace:',
+      selectedNamespace,
+      'isNamespaced:',
+      isNamespaced
+    );
     if (!isNamespaced || selectedNamespace === 'all') {
       return resources;
     }
-    return resources.filter(res => res.metadata.namespace === selectedNamespace);
+    const filtered = resources.filter(res => res.metadata.namespace === selectedNamespace);
+    console.info('[Filter] Filtered resources count:', filtered.length);
+    return filtered;
   }, [resources, selectedNamespace, isNamespaced]);
 
   const getColumns = (kind: string | undefined): string[] => {

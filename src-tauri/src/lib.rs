@@ -65,6 +65,7 @@ async fn get_kube_contexts() -> Result<Vec<String>> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let terminal_sessions: TerminalSessions = Arc::new(Mutex::new(HashMap::new()));
+    let watcher_handle: k8s_api::WatcherHandle = Arc::new(Mutex::new(HashMap::new()));
 
     tauri::Builder::default()
         .plugin(
@@ -77,6 +78,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_opener::init())
         .manage(terminal_sessions)
+        .manage(watcher_handle)
         .invoke_handler(tauri::generate_handler![
             get_kube_contexts,
             terminal::create_terminal_session,
@@ -85,7 +87,9 @@ pub fn run() {
             k8s_api::list_resources,
             k8s_api::get_resource_detail,
             k8s_api::get_cluster_overview_info,
-            k8s_api::get_cluster_stats
+            k8s_api::get_cluster_stats,
+            k8s_api::start_watch_resources,
+            k8s_api::stop_watch_resources
         ])
         .setup(|app| {
             use tauri::{menu::*, Emitter};
