@@ -44,9 +44,6 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
     session.terminal.open(terminalRef.current);
     session.fitAddon.fit();
     session.mounted = true;
-
-    // Write context info after terminal is opened
-    session.terminal.writeln(`Context: ${session.clusterContext.id}`);
   }, [session, isVisible]);
 
   // Fit terminal when visibility changes
