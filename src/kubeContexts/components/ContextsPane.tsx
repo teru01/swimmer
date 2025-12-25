@@ -17,6 +17,8 @@ import {
 } from '../../lib/tag';
 import { loadFavorites, toggleFavorite } from '../../lib/favorite';
 import { Menu } from '../../components/ui/Menu';
+import gkeIcon from '../../assets/icons/gke.png';
+import eksIcon from '../../assets/icons/eks.png';
 
 interface ContextsPaneProps {
   selectedContext: ContextNode | undefined;
@@ -26,6 +28,20 @@ interface ContextsPaneProps {
 
 // 使用するプロバイダーのリスト（Othersは最後に配置）
 const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
+
+/**
+ * Get icon for context based on provider
+ */
+const getContextIcon = (provider?: string): string | undefined => {
+  switch (provider) {
+    case 'GKE':
+      return gkeIcon;
+    case 'EKS':
+      return eksIcon;
+    default:
+      return undefined;
+  }
+};
 
 /**
  * Kubernetes contexts tree view component with static hierarchical structure.
@@ -286,7 +302,19 @@ function ContextsPane({
         >
           <div className="node-content">
             {isFolder && <span className="folder-icon">{isExpanded ? '▼' : '▶'}</span>}
-            {isContext && <span className="context-icon">⚙️</span>}
+            {isContext && (
+              <>
+                {getContextIcon(node.clusterContext?.provider) ? (
+                  <img
+                    src={getContextIcon(node.clusterContext?.provider)}
+                    alt={node.clusterContext?.provider}
+                    className="context-icon"
+                  />
+                ) : (
+                  <span className="context-icon">⚙️</span>
+                )}
+              </>
+            )}
             <span className="node-name">{node.name}</span>
             {isContext && node.clusterContext && showContextInfo && (
               <span className="node-context-info">
