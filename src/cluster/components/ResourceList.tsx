@@ -326,7 +326,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     };
   }, [selectedKind, contextId]);
 
-  // Filter resources based on selectedNamespace
+  // Filter and sort resources based on selectedNamespace
   const filteredResources = useMemo(() => {
     console.info(
       '[Filter] Resources count:',
@@ -336,12 +336,28 @@ const ResourceList: React.FC<ResourceListProps> = ({
       'isNamespaced:',
       isNamespaced
     );
-    if (!isNamespaced || selectedNamespace === 'all') {
-      return resources;
+    let result = resources;
+
+    if (isNamespaced && selectedNamespace !== 'all') {
+      result = resources.filter(res => res.metadata.namespace === selectedNamespace);
+      console.info('[Filter] Filtered resources count:', result.length);
     }
-    const filtered = resources.filter(res => res.metadata.namespace === selectedNamespace);
-    console.info('[Filter] Filtered resources count:', filtered.length);
-    return filtered;
+
+    // Sort by namespace (if namespaced), then by name
+    result = [...result].sort((a, b) => {
+      if (isNamespaced) {
+        const nsA = a.metadata.namespace || '';
+        const nsB = b.metadata.namespace || '';
+        if (nsA !== nsB) {
+          return nsA.localeCompare(nsB);
+        }
+      }
+      const nameA = a.metadata.name || '';
+      const nameB = b.metadata.name || '';
+      return nameA.localeCompare(nameB);
+    });
+
+    return result;
   }, [resources, selectedNamespace, isNamespaced]);
 
   const getColumns = (kind: string | undefined): string[] => {
