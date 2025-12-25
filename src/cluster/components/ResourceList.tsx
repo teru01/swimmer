@@ -185,7 +185,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   };
 
   // Determine if the current kind is namespaced
-  const isNamespaced = useMemo(() => !isClusterScoped(selectedKind), [selectedKind]);
+  const isNamespaced = !isClusterScoped(selectedKind);
 
   // Fetch namespaces only if the kind is namespaced (or maybe always fetch?)
   // Let's fetch always for simplicity, but filter UI later.
@@ -204,7 +204,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
       }
     };
     loadNamespaces();
-  }, [isNamespaced, contextId]);
+  }, [selectedKind, contextId]);
 
   // Fetch resources when selectedKind or context changes (but NOT when selectedNamespace changes)
   useEffect(() => {
@@ -324,7 +324,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
         watchIdRef.current = undefined;
       }
     };
-  }, [selectedKind, isNamespaced, contextId]);
+  }, [selectedKind, contextId]);
 
   // Filter resources based on selectedNamespace
   const filteredResources = useMemo(() => {
