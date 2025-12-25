@@ -19,13 +19,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 4px 12px;
   border-bottom: 1px solid #444;
   background-color: #2d2d30;
   color: #cccccc;
   font-size: 12px;
   font-weight: 500;
   flex-shrink: 0;
+}
+
+.terminal-header > span {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .terminal-container {

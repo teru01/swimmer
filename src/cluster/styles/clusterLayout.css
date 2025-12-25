@@ -103,7 +103,7 @@
 }
 
 .cluster-tab.closing {
-  animation: slideOutAndFade 0.2s ease-out forwards;
+  animation: slideOutAndFade 0.05s ease-out forwards;
   pointer-events: none;
 }
 

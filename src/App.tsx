@@ -23,6 +23,23 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleCopy = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+        const selection = window.getSelection();
+        if (selection && selection.toString()) {
+          navigator.clipboard.writeText(selection.toString());
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleCopy);
+
+    return () => {
+      document.removeEventListener('keydown', handleCopy);
+    };
+  }, []);
+
   const handleNavigateToPreferences = (section?: PreferencesSection) => {
     setPreferencesSection(section);
     setCurrentPage('preferences');

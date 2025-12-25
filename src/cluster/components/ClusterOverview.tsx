@@ -109,6 +109,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
         <h2 className="section-title">Cluster Information</h2>
         <div className="info-grid">
           <div className="info-item">
+            <span className="info-label">Context:</span>
+            <span className="info-value">{contextId}</span>
+          </div>
+          <div className="info-item">
             <span className="info-label">Provider:</span>
             <span className="info-value">{clusterInfo.provider}</span>
           </div>

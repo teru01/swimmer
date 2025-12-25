@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -8,6 +8,7 @@ import { listen } from '@tauri-apps/api/event';
 import { debug } from '@tauri-apps/plugin-log';
 import { ClusterContext } from '../../lib/contextTree';
 import { loadPreferences } from '../../lib/fs';
+import { getContextTags, getTagById } from '../../lib/tag';
 
 interface TerminalPaneProps {
   activeTabId: string | undefined;
@@ -70,6 +71,7 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
  */
 function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [contextColor, setContextColor] = useState<string | undefined>(undefined);
 
   // Handle terminal pane resize
   useEffect(() => {
@@ -90,12 +92,27 @@ function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
     };
   }, [activeTabId, allTerminalSessions]);
 
+  useEffect(() => {
+    const activeSession = activeTabId ? allTerminalSessions.get(activeTabId) : undefined;
+    if (activeSession) {
+      const tagIds = getContextTags(activeSession.clusterContext.id);
+      if (tagIds.length > 0) {
+        const firstTag = getTagById(tagIds[0]);
+        setContextColor(firstTag?.color);
+      } else {
+        setContextColor(undefined);
+      }
+    } else {
+      setContextColor(undefined);
+    }
+  }, [activeTabId, allTerminalSessions]);
+
   const activeSession = activeTabId ? allTerminalSessions.get(activeTabId) : undefined;
 
   return (
     <div className="terminal-pane">
       <div className="terminal-header">
-        <span>
+        <span style={{ color: contextColor }}>
           {activeSession ? `Context: ${activeSession.clusterContext.id}` : 'No context selected'}
         </span>
       </div>
@@ -142,6 +159,20 @@ export const createTerminalSession = async (
   // Handle terminal input
   term.onData(data => {
     invoke('write_to_terminal', { sessionId, data }).catch(console.error);
+  });
+
+  // Handle paste (Ctrl+V / Cmd+V)
+  term.attachCustomKeyEventHandler(e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v' && e.type === 'keydown') {
+      navigator.clipboard
+        .readText()
+        .then(text => {
+          term.paste(text);
+        })
+        .catch(console.error);
+      return false;
+    }
+    return true;
   });
 
   // Setup output listener

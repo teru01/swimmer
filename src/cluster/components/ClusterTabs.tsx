@@ -56,7 +56,7 @@ function ClusterTabs({
         next.delete(tab.id);
         return next;
       });
-    }, 200);
+    }, 60);
   };
 
   const getMenuItems = (tab: ClusterContextTab): MenuItem[] => {
