@@ -110,27 +110,81 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
         <div className="info-grid">
           <div className="info-item">
             <span className="info-label">Context:</span>
-            <span className="info-value">{contextId}</span>
+            <div className="info-value-with-copy">
+              <span className="info-value">{contextId}</span>
+              <button
+                className="copy-icon"
+                onClick={() => navigator.clipboard.writeText(contextId)}
+                title="Copy to clipboard"
+              >
+                📋
+              </button>
+            </div>
           </div>
           <div className="info-item">
             <span className="info-label">Provider:</span>
-            <span className="info-value">{clusterInfo.provider}</span>
+            <div className="info-value-with-copy">
+              <span className="info-value">{clusterInfo.provider}</span>
+              <button
+                className="copy-icon"
+                onClick={() => navigator.clipboard.writeText(clusterInfo.provider)}
+                title="Copy to clipboard"
+              >
+                📋
+              </button>
+            </div>
           </div>
           <div className="info-item">
             <span className="info-label">{clusterInfo.projectOrAccountLabel}:</span>
-            <span className="info-value">{clusterInfo.projectOrAccount}</span>
+            <div className="info-value-with-copy">
+              <span className="info-value">{clusterInfo.projectOrAccount}</span>
+              <button
+                className="copy-icon"
+                onClick={() => navigator.clipboard.writeText(clusterInfo.projectOrAccount)}
+                title="Copy to clipboard"
+              >
+                📋
+              </button>
+            </div>
           </div>
           <div className="info-item">
             <span className="info-label">Region:</span>
-            <span className="info-value">{clusterInfo.region}</span>
+            <div className="info-value-with-copy">
+              <span className="info-value">{clusterInfo.region}</span>
+              <button
+                className="copy-icon"
+                onClick={() => navigator.clipboard.writeText(clusterInfo.region)}
+                title="Copy to clipboard"
+              >
+                📋
+              </button>
+            </div>
           </div>
           <div className="info-item">
             <span className="info-label">Cluster Name:</span>
-            <span className="info-value">{clusterInfo.clusterName}</span>
+            <div className="info-value-with-copy">
+              <span className="info-value">{clusterInfo.clusterName}</span>
+              <button
+                className="copy-icon"
+                onClick={() => navigator.clipboard.writeText(clusterInfo.clusterName)}
+                title="Copy to clipboard"
+              >
+                📋
+              </button>
+            </div>
           </div>
           <div className="info-item">
             <span className="info-label">Version:</span>
-            <span className="info-value">{clusterInfo.clusterVersion}</span>
+            <div className="info-value-with-copy">
+              <span className="info-value">{clusterInfo.clusterVersion}</span>
+              <button
+                className="copy-icon"
+                onClick={() => navigator.clipboard.writeText(clusterInfo.clusterVersion)}
+                title="Copy to clipboard"
+              >
+                📋
+              </button>
+            </div>
           </div>
           <div className="info-item">
             <span className="info-label">Tag:</span>

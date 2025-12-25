@@ -655,3 +655,33 @@
   font-size: 16px;
   text-align: center;
 }
+
+.name-cell {
+  position: relative;
+}
+
+.name-cell-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy-icon {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 14px;
+}
+
+.name-cell:hover .copy-icon {
+  opacity: 1;
+}
+
+.copy-icon:hover {
+  opacity: 1;
+  background-color: var(--bg-secondary);
+  border-radius: 3px;
+}

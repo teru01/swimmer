@@ -777,7 +777,25 @@ const ResourceList: React.FC<ResourceListProps> = ({
                 filteredResources.map(resource => (
                   <tr key={resource.metadata.uid} onClick={() => onResourceSelect(resource)}>
                     {columns.map(col => (
-                      <td key={col}>{renderCell(resource, col)}</td>
+                      <td key={col} className={col === 'Name' ? 'name-cell' : ''}>
+                        {col === 'Name' ? (
+                          <div className="name-cell-content">
+                            <span>{renderCell(resource, col)}</span>
+                            <button
+                              className="copy-icon"
+                              onClick={e => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(resource.metadata.name);
+                              }}
+                              title="Copy to clipboard"
+                            >
+                              📋
+                            </button>
+                          </div>
+                        ) : (
+                          renderCell(resource, col)
+                        )}
+                      </td>
                     ))}
                   </tr>
                 ))

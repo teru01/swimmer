@@ -246,3 +246,29 @@
   font-family: var(--vscode-editor-font-family);
   font-size: 12px;
 }
+
+.info-value-with-copy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-value-with-copy .copy-icon {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 14px;
+}
+
+.info-item:hover .copy-icon {
+  opacity: 1;
+}
+
+.info-value-with-copy .copy-icon:hover {
+  opacity: 1;
+  background-color: var(--vscode-list-hoverBackground);
+  border-radius: 3px;
+}
