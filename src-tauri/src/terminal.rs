@@ -18,14 +18,21 @@ pub struct TerminalSession {
 
 pub type TerminalSessions = Arc<Mutex<HashMap<String, TerminalSession>>>;
 
-fn create_temp_kubeconfig(context_name: &str) -> Result<PathBuf, Error> {
+fn create_temp_kubeconfig(
+    context_name: &str,
+    kubeconfig_path: Option<&str>,
+) -> Result<PathBuf, Error> {
     let temp_dir = std::env::temp_dir();
     let temp_file = temp_dir.join(format!("swimmer-kubeconfig-{}", Uuid::new_v4()));
 
     // Read the original kubeconfig
-    let home_dir = std::env::var("HOME")
-        .map_err(|_| Error::Terminal("HOME environment variable not set".to_string()))?;
-    let original_kubeconfig = PathBuf::from(home_dir).join(".kube/config");
+    let original_kubeconfig = if let Some(path) = kubeconfig_path {
+        PathBuf::from(path)
+    } else {
+        let home_dir = std::env::var("HOME")
+            .map_err(|_| Error::Terminal("HOME environment variable not set".to_string()))?;
+        PathBuf::from(home_dir).join(".kube/config")
+    };
 
     if !original_kubeconfig.exists() {
         return Err(Error::Terminal("Original kubeconfig not found".to_string()));
@@ -73,6 +80,7 @@ fn create_temp_kubeconfig(context_name: &str) -> Result<PathBuf, Error> {
 #[tauri::command]
 pub async fn create_terminal_session(
     sessions: State<'_, TerminalSessions>,
+    kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     app_handle: tauri::AppHandle,
     shell_path: String,
     context_name: Option<String>,
@@ -88,8 +96,12 @@ pub async fn create_terminal_session(
     let session_id = Uuid::new_v4().to_string();
 
     // Create temp kubeconfig if context is specified
+    let kc_path = kubeconfig_path
+        .lock()
+        .map_err(|e| Error::Lock(e.to_string()))?
+        .clone();
     let temp_kubeconfig = if let Some(ref ctx) = context_name {
-        Some(create_temp_kubeconfig(ctx)?)
+        Some(create_temp_kubeconfig(ctx, kc_path.as_deref())?)
     } else {
         None
     };
