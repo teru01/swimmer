@@ -8,6 +8,32 @@ import type { ClusterStats } from '../../api/commands';
 import { getContextTags, getTagById, type Tag } from '../../lib/tag';
 
 const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
+
+function CopyIconButton({ value }: { value: string }) {
+  return (
+    <button
+      className="copy-icon"
+      onClick={e => {
+        void navigator.clipboard.writeText(value);
+        e.currentTarget.blur();
+      }}
+      title="Copy to clipboard"
+    >
+      <svg
+        className="copy-icon-img"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+      </svg>
+    </button>
+  );
+}
 import { CLUSTER_OVERVIEW_REFRESH_INTERVAL_MS } from '../../lib/constants';
 
 interface ClusterInfo {
@@ -112,162 +138,42 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
             <span className="info-label">Context:</span>
             <div className="info-value-with-copy">
               <span className="info-value">{contextId}</span>
-              <button
-                className="copy-icon"
-                onClick={e => {
-                  void navigator.clipboard.writeText(contextId);
-                  e.currentTarget.blur();
-                }}
-                title="Copy to clipboard"
-              >
-                <svg
-                  className="copy-icon-img"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-              </button>
+              <CopyIconButton value={contextId} />
             </div>
           </div>
           <div className="info-item">
             <span className="info-label">Provider:</span>
             <div className="info-value-with-copy">
               <span className="info-value">{clusterInfo.provider}</span>
-              <button
-                className="copy-icon"
-                onClick={e => {
-                  void navigator.clipboard.writeText(clusterInfo.provider);
-                  e.currentTarget.blur();
-                }}
-                title="Copy to clipboard"
-              >
-                <svg
-                  className="copy-icon-img"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-              </button>
+              <CopyIconButton value={clusterInfo.provider} />
             </div>
           </div>
           <div className="info-item">
             <span className="info-label">{clusterInfo.projectOrAccountLabel}:</span>
             <div className="info-value-with-copy">
               <span className="info-value">{clusterInfo.projectOrAccount}</span>
-              <button
-                className="copy-icon"
-                onClick={e => {
-                  void navigator.clipboard.writeText(clusterInfo.projectOrAccount);
-                  e.currentTarget.blur();
-                }}
-                title="Copy to clipboard"
-              >
-                <svg
-                  className="copy-icon-img"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-              </button>
+              <CopyIconButton value={clusterInfo.projectOrAccount} />
             </div>
           </div>
           <div className="info-item">
             <span className="info-label">Region:</span>
             <div className="info-value-with-copy">
               <span className="info-value">{clusterInfo.region}</span>
-              <button
-                className="copy-icon"
-                onClick={e => {
-                  void navigator.clipboard.writeText(clusterInfo.region);
-                  e.currentTarget.blur();
-                }}
-                title="Copy to clipboard"
-              >
-                <svg
-                  className="copy-icon-img"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-              </button>
+              <CopyIconButton value={clusterInfo.region} />
             </div>
           </div>
           <div className="info-item">
             <span className="info-label">Cluster Name:</span>
             <div className="info-value-with-copy">
               <span className="info-value">{clusterInfo.clusterName}</span>
-              <button
-                className="copy-icon"
-                onClick={e => {
-                  void navigator.clipboard.writeText(clusterInfo.clusterName);
-                  e.currentTarget.blur();
-                }}
-                title="Copy to clipboard"
-              >
-                <svg
-                  className="copy-icon-img"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-              </button>
+              <CopyIconButton value={clusterInfo.clusterName} />
             </div>
           </div>
           <div className="info-item">
             <span className="info-label">Version:</span>
             <div className="info-value-with-copy">
               <span className="info-value">{clusterInfo.clusterVersion}</span>
-              <button
-                className="copy-icon"
-                onClick={e => {
-                  void navigator.clipboard.writeText(clusterInfo.clusterVersion);
-                  e.currentTarget.blur();
-                }}
-                title="Copy to clipboard"
-              >
-                <svg
-                  className="copy-icon-img"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-              </button>
+              <CopyIconButton value={clusterInfo.clusterVersion} />
             </div>
           </div>
           <div className="info-item">
