@@ -15,7 +15,7 @@ export interface ClusterViewState {
   expandedGroups: Set<string>;
 }
 
-const fetchResourceDetail = async (
+export const fetchResourceDetail = async (
   resource: KubeResource | undefined,
   context: string | undefined
 ): Promise<{ resource: KubeResource; events: KubeResource[] } | undefined> => {
@@ -47,6 +47,7 @@ interface ClusterInfoPaneProps {
   allViewStates: Map<string, ClusterViewState>;
   tabContextMap: Map<string, string>;
   onViewStateChange: (tabId: string, state: ClusterViewState) => void;
+  onNavigateToPodInNewPanel?: (pod: KubeResource, contextId: string) => void;
 }
 
 interface ClusterViewInstanceProps {
@@ -55,6 +56,7 @@ interface ClusterViewInstanceProps {
   isVisible: boolean;
   viewState: ClusterViewState;
   onViewStateChange: (state: ClusterViewState) => void;
+  onNavigateToPodInNewPanel?: (pod: KubeResource, contextId: string) => void;
 }
 
 /**
@@ -65,6 +67,7 @@ function ClusterViewInstance({
   contextId,
   viewState,
   onViewStateChange,
+  onNavigateToPodInNewPanel,
 }: ClusterViewInstanceProps) {
   const handleKindSelect = (kind: string) => {
     onViewStateChange({
@@ -173,6 +176,7 @@ function ClusterViewInstance({
                     isLoading={viewState.isDetailLoading}
                     onClose={handleCloseDetailPane}
                     contextId={contextId}
+                    onNavigateToPodInNewPanel={onNavigateToPodInNewPanel}
                   />
                 </Panel>
               </>
@@ -193,6 +197,7 @@ function ClusterInfoPane({
   allViewStates,
   tabContextMap,
   onViewStateChange,
+  onNavigateToPodInNewPanel,
 }: ClusterInfoPaneProps) {
   return (
     <div className="cluster-info-pane-container">
@@ -209,6 +214,7 @@ function ClusterInfoPane({
                 isVisible={tabId === activeTabId}
                 viewState={viewState}
                 onViewStateChange={state => onViewStateChange(tabId, state)}
+                onNavigateToPodInNewPanel={onNavigateToPodInNewPanel}
               />
             );
           })}

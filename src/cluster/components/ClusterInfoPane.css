@@ -800,3 +800,12 @@
 .status-text.status-error {
   color: #f85149;
 }
+
+.pod-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.pod-row:hover {
+  background-color: var(--bg-tertiary);
+}

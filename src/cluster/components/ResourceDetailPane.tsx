@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ClusterInfoPane.css';
 import { KubeResource } from './ResourceList';
 import { formatAge } from '../../lib/utils';
+import { commands } from '../../api/commands';
 
 interface ResourceDetailPaneProps {
   resource: KubeResource | undefined;
@@ -9,6 +10,7 @@ interface ResourceDetailPaneProps {
   isLoading?: boolean;
   onClose: () => void;
   contextId?: string;
+  onNavigateToPodInNewPanel?: (pod: KubeResource, contextId: string) => void;
 }
 
 // Helper component to render key-value pairs nicely
@@ -81,6 +83,110 @@ const CollapsibleMetadataMap: React.FC<{ map: { [key: string]: string } | undefi
   );
 };
 
+/** Filters pods that match the deployment's selector matchLabels. */
+const filterPodsForDeployment = (
+  pods: KubeResource[],
+  matchLabels: { [key: string]: string }
+): KubeResource[] => {
+  return pods.filter(pod => {
+    const podLabels = pod.metadata.labels || {};
+    return Object.entries(matchLabels).every(([key, value]) => podLabels[key] === value);
+  });
+};
+
+/** Returns the total restart count across all containers in a pod. */
+const getPodRestarts = (pod: KubeResource): number => {
+  const statuses = pod.status?.containerStatuses || [];
+  return statuses.reduce((sum, cs) => sum + (cs.restartCount || 0), 0);
+};
+
+/** Section component that lists pods belonging to a deployment. */
+const DeploymentPodsSection: React.FC<{
+  deployment: KubeResource;
+  contextId: string | undefined;
+  onNavigateToPodInNewPanel?: (pod: KubeResource, contextId: string) => void;
+}> = ({ deployment, contextId, onNavigateToPodInNewPanel }) => {
+  const [pods, setPods] = useState<KubeResource[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const matchLabels = deployment.spec?.selector?.matchLabels;
+  const namespace = deployment.metadata.namespace;
+
+  useEffect(() => {
+    if (!contextId || !matchLabels || Object.keys(matchLabels).length === 0) {
+      setPods([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchPods = async () => {
+      setIsLoading(true);
+      try {
+        const allPods = await commands.listResources(contextId, 'Pods', namespace);
+        if (!cancelled) {
+          setPods(filterPodsForDeployment(allPods as KubeResource[], matchLabels));
+        }
+      } catch (error) {
+        console.error('Failed to fetch pods for deployment:', error);
+        if (!cancelled) {
+          setPods([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchPods();
+    return () => {
+      cancelled = true;
+    };
+  }, [contextId, namespace, matchLabels]);
+
+  const handlePodClick = (pod: KubeResource) => {
+    if (onNavigateToPodInNewPanel && contextId) {
+      onNavigateToPodInNewPanel(pod, contextId);
+    }
+  };
+
+  return (
+    <section className="detail-section">
+      <h4>Pods</h4>
+      {isLoading ? (
+        <div className="detail-value">Loading pods...</div>
+      ) : pods.length === 0 ? (
+        <div className="detail-value">No pods found</div>
+      ) : (
+        <table className="detail-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Restarts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pods.map(pod => (
+              <tr key={pod.metadata.uid} className="pod-row" onClick={() => handlePodClick(pod)}>
+                <td>{pod.metadata.name}</td>
+                <td>
+                  <span
+                    className={`status-badge ${(pod.status?.phase || 'unknown').toLowerCase()}`}
+                  >
+                    {pod.status?.phase || 'Unknown'}
+                  </span>
+                </td>
+                <td>{getPodRestarts(pod)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+};
+
 /**
  * Pane component to display details of the selected resource.
  * @param resource Currently selected resource object.
@@ -92,6 +198,8 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   events: eventsProp = [],
   isLoading,
   onClose,
+  contextId,
+  onNavigateToPodInNewPanel,
 }) => {
   if (isLoading) {
     return (
@@ -173,6 +281,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
           <DetailItem label="Available">{status?.availableReplicas ?? 0}</DetailItem>
           <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
         </section>
+
+        <DeploymentPodsSection
+          deployment={deployment}
+          contextId={contextId}
+          onNavigateToPodInNewPanel={onNavigateToPodInNewPanel}
+        />
 
         <section className="detail-section">
           <h4>Conditions</h4>

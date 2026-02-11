@@ -3,6 +3,7 @@ import ClusterTabs from './ClusterTabs';
 import ClusterInfoPane, { ClusterViewState } from './ClusterInfoPane';
 import TerminalPane, { TerminalSession } from './TerminalPane';
 import { ClusterOperationPanel, ClusterContextTab } from '../types/panel';
+import { KubeResource } from './ResourceList';
 
 interface ClusterOperationPanelComponentProps {
   panel: ClusterOperationPanel;
@@ -16,6 +17,7 @@ interface ClusterOperationPanelComponentProps {
   onSplitRight: (tab: ClusterContextTab) => void;
   onViewStateChange: (tabId: string, state: ClusterViewState) => void;
   onPanelClick?: (panelId: string) => void;
+  onNavigateToPodInNewPanel?: (pod: KubeResource, contextId: string) => void;
 }
 
 /**
@@ -33,6 +35,7 @@ function ClusterOperationPanelComponent({
   onSplitRight,
   onViewStateChange,
   onPanelClick,
+  onNavigateToPodInNewPanel,
 }: ClusterOperationPanelComponentProps) {
   const activeTab = panel.tabs.find(tab => tab.clusterContext.id === panel.activeContextId);
 
@@ -78,6 +81,7 @@ function ClusterOperationPanelComponent({
                 allViewStates={allClusterViewStates}
                 tabContextMap={tabContextMap}
                 onViewStateChange={onViewStateChange}
+                onNavigateToPodInNewPanel={onNavigateToPodInNewPanel}
               />
             </div>
           </Panel>
