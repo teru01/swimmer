@@ -62,13 +62,6 @@
   font-size: 14px;
 }
 
-/* Context action buttons */
-.context-actions {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
 .icon-button {
   display: flex;
   align-items: center;
@@ -379,36 +372,9 @@
   color: var(--color-error);
 }
 
-/* Modal styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background-color: var(--bg-primary);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 24px;
+/* Context-specific modal overrides */
+.contexts-pane .modal {
   width: 500px;
-  max-width: 90vw;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-}
-
-.modal h2 {
-  margin-top: 0;
-  margin-bottom: 16px;
-  font-size: 18px;
-  color: var(--text-primary);
 }
 
 .form-group {
@@ -421,13 +387,6 @@
   font-weight: 500;
   font-size: 14px;
   color: var(--text-secondary);
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 20px;
 }
 
 .primary-button {
@@ -540,7 +499,6 @@
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
   padding-left: 22px;
-  margin-bottom: 4px;
   margin-bottom: 0;
   padding-bottom: 0;
 }

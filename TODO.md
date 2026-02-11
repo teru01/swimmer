@@ -25,11 +25,11 @@
 - [x] lint スクリプトを ESLint v9 flat config 対応に修正 (`package.json`)
 - [x] `release.yml` の `npm install` → `npm ci` に変更
 - [x] App.css のテンプレート残骸を削除 (`.logo`, `.container`, `.row`, `#greet-input` 等)
-- [ ] グローバルCSSの `.modal`, `.modal-overlay`, `.modal-actions` 重複を解消 (`contextsPane.css` と `preferencesPage.css`)
-- [ ] `@keyframes spin` と `.loading-spinner` の重複定義を解消 (`layout.css` と `ClusterInfoPane.css`)
-- [ ] `.context-actions` の同一ファイル内重複を解消 (`contextsPane.css`)
-- [ ] `.resize-handle-vertical` の矛盾する定義を解消 (`resizable.css` と `ClusterInfoPane.css`)
-- [ ] `contextsPane.css` の `.tags-filter-container` で `margin-bottom` が2回定義されている問題を修正
+- [x] グローバルCSSの `.modal`, `.modal-overlay`, `.modal-actions` 重複を解消 (`contextsPane.css` と `preferencesPage.css`)
+- [x] `@keyframes spin` と `.loading-spinner` の重複定義を解消 (`layout.css` と `ClusterInfoPane.css`)
+- [x] `.context-actions` の同一ファイル内重複を解消 (`contextsPane.css`)
+- [x] `.resize-handle-vertical` の矛盾する定義を解消 (`resizable.css` と `ClusterInfoPane.css`)
+- [x] `contextsPane.css` の `.tags-filter-container` で `margin-bottom` が2回定義されている問題を修正
 
 ## Medium (型安全性 / コード品質)
 
