@@ -148,6 +148,7 @@ interface ResourceListProps {
   onResourceSelect: (resource: KubeResource) => void;
   contextId?: string;
   isVisible: boolean;
+  selectedResourceUid?: string;
 }
 
 /**
@@ -161,6 +162,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   onResourceSelect,
   contextId,
   isVisible,
+  selectedResourceUid,
 }) => {
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = useState<string>('all');
@@ -958,21 +960,43 @@ const ResourceList: React.FC<ResourceListProps> = ({
             <tbody>
               {filteredResources.length > 0 ? (
                 filteredResources.map(resource => (
-                  <tr key={resource.metadata.uid} onClick={() => onResourceSelect(resource)}>
+                  <tr
+                    key={resource.metadata.uid}
+                    onClick={() => onResourceSelect(resource)}
+                    className={resource.metadata.uid === selectedResourceUid ? 'selected-row' : ''}
+                  >
                     {columns.map(col => (
-                      <td key={col} className={col === 'Name' ? 'name-cell' : ''}>
-                        {col === 'Name' ? (
+                      <td
+                        key={col}
+                        className={col === 'Name' || col === 'Namespace' ? 'name-cell' : ''}
+                      >
+                        {col === 'Name' || col === 'Namespace' ? (
                           <div className="name-cell-content">
                             <span>{renderCell(resource, col)}</span>
                             <button
                               className="copy-icon"
                               onClick={e => {
                                 e.stopPropagation();
-                                navigator.clipboard.writeText(resource.metadata.name);
+                                navigator.clipboard.writeText(
+                                  col === 'Name'
+                                    ? resource.metadata.name
+                                    : resource.metadata.namespace || ''
+                                );
                               }}
                               title="Copy to clipboard"
                             >
-                              📋
+                              <svg
+                                className="copy-icon-img"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                              </svg>
                             </button>
                           </div>
                         ) : (

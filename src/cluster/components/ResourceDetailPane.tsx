@@ -83,6 +83,50 @@ const CollapsibleMetadataMap: React.FC<{ map: { [key: string]: string } | undefi
   );
 };
 
+const ENV_VARS_COLLAPSE_THRESHOLD = 3;
+const ENV_VARS_INITIAL_DISPLAY = 2;
+
+/** Displays container environment variables that have direct values (not valueFrom). */
+const ContainerEnvVars: React.FC<{ env: { name: string; value?: string; valueFrom?: any }[] }> = ({
+  env,
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const directEnvVars = env.filter(e => !e.valueFrom && e.value !== undefined);
+
+  if (directEnvVars.length === 0) return undefined;
+
+  const shouldCollapse = directEnvVars.length >= ENV_VARS_COLLAPSE_THRESHOLD;
+  const displayedVars =
+    shouldCollapse && !expanded ? directEnvVars.slice(0, ENV_VARS_INITIAL_DISPLAY) : directEnvVars;
+  const hiddenCount = directEnvVars.length - ENV_VARS_INITIAL_DISPLAY;
+
+  return (
+    <div className="env-vars-section">
+      <span className="env-vars-label-col">
+        <span className="detail-label">Env:</span>
+        {shouldCollapse && (
+          <button
+            className="metadata-value-toggle"
+            onClick={() => setExpanded(prev => !prev)}
+            type="button"
+          >
+            {expanded ? 'Hide' : `Show ${hiddenCount} more`}
+          </button>
+        )}
+      </span>
+      <ul className="env-vars-list">
+        {displayedVars.map(e => (
+          <li key={e.name} className="env-var-item">
+            <span className="env-var-name">{e.name}</span>
+            <span className="env-var-separator">=</span>
+            <span className="env-var-value">{e.value}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
 /** Collects unique ConfigMap names referenced by a container. */
 const getContainerConfigMapRefs = (container: any, volumes: any[] | undefined): string[] => {
   const refs = new Set<string>();
@@ -206,6 +250,98 @@ const DeploymentPodsSection: React.FC<{
             {pods.map(pod => (
               <tr key={pod.metadata.uid} className="pod-row" onClick={() => handlePodClick(pod)}>
                 <td>{pod.metadata.name}</td>
+                <td>
+                  <span
+                    className={`status-badge ${(pod.status?.phase || 'unknown').toLowerCase()}`}
+                  >
+                    {pod.status?.phase || 'Unknown'}
+                  </span>
+                </td>
+                <td>{getPodRestarts(pod)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+};
+
+/** Section component that lists pods running on a node. */
+const NodePodsSection: React.FC<{
+  node: KubeResource;
+  contextId: string | undefined;
+  onNavigateToResourceInNewPanel?: (resource: KubeResource, contextId: string) => void;
+}> = ({ node, contextId, onNavigateToResourceInNewPanel }) => {
+  const [pods, setPods] = useState<KubeResource[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const nodeName = node.metadata.name;
+
+  useEffect(() => {
+    if (!contextId || !nodeName) {
+      setPods([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchPods = async () => {
+      setIsLoading(true);
+      try {
+        const allPods = (await commands.listResources(
+          contextId,
+          'Pods',
+          undefined
+        )) as KubeResource[];
+        if (!cancelled) {
+          setPods(allPods.filter(pod => pod.spec?.nodeName === nodeName));
+        }
+      } catch (error) {
+        console.error('Failed to fetch pods for node:', error);
+        if (!cancelled) {
+          setPods([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchPods();
+    return () => {
+      cancelled = true;
+    };
+  }, [contextId, nodeName]);
+
+  const handlePodClick = (pod: KubeResource) => {
+    if (onNavigateToResourceInNewPanel && contextId) {
+      onNavigateToResourceInNewPanel(pod, contextId);
+    }
+  };
+
+  return (
+    <section className="detail-section">
+      <h4>Pods</h4>
+      {isLoading ? (
+        <div className="detail-value">Loading pods...</div>
+      ) : pods.length === 0 ? (
+        <div className="detail-value">No pods found</div>
+      ) : (
+        <table className="detail-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Namespace</th>
+              <th>Status</th>
+              <th>Restarts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pods.map(pod => (
+              <tr key={pod.metadata.uid} className="pod-row" onClick={() => handlePodClick(pod)}>
+                <td>{pod.metadata.name}</td>
+                <td>{pod.metadata.namespace || '-'}</td>
                 <td>
                   <span
                     className={`status-badge ${(pod.status?.phase || 'unknown').toLowerCase()}`}
@@ -422,7 +558,11 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Selector</h4>
-          {<CollapsibleMetadataMap map={spec?.selector?.matchLabels} />}
+          {
+            <CollapsibleMetadataMap
+              map={spec?.selector as unknown as { [key: string]: string } | undefined}
+            />
+          }
         </section>
 
         {renderEvents()}
@@ -450,6 +590,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
           <DetailItem label="OS Image">{status?.nodeInfo?.osImage || '-'}</DetailItem>
           <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
         </section>
+
+        <NodePodsSection
+          node={node}
+          contextId={contextId}
+          onNavigateToResourceInNewPanel={onNavigateToResourceInNewPanel}
+        />
 
         <section className="detail-section">
           <h4>Addresses</h4>
@@ -957,6 +1103,9 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
                   </span>
                 </DetailItem>
                 <DetailItem label="Restart Count">{containerStatus?.restartCount ?? 0}</DetailItem>
+                {container.env && container.env.length > 0 && (
+                  <ContainerEnvVars env={container.env} />
+                )}
                 {container.resources?.limits && (
                   <DetailItem label="Limits">
                     CPU: {container.resources.limits.cpu || '-'}, Memory:{' '}

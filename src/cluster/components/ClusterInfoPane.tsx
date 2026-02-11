@@ -156,6 +156,7 @@ function ClusterViewInstance({
                 onResourceSelect={handleResourceSelect}
                 contextId={contextId}
                 isVisible={isVisible}
+                selectedResourceUid={viewState.selectedResourceDetail?.metadata.uid}
               />
             </Panel>
             {viewState.showDetailPane && (

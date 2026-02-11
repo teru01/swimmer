@@ -356,6 +356,14 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.resource-table tbody tr.selected-row td {
+  background-color: rgba(0, 120, 212, 0.1);
+}
+
+.resource-table tbody tr.selected-row:hover td {
+  background-color: rgba(0, 120, 212, 0.15);
+}
+
 .no-resources-message {
   text-align: center;
   padding: 40px 20px;
@@ -785,6 +793,13 @@
   border-radius: 3px;
 }
 
+.copy-icon-img {
+  width: 14px;
+  height: 14px;
+  display: block;
+  color: var(--text-secondary);
+}
+
 .status-text {
   font-weight: 500;
 }
@@ -808,6 +823,58 @@
 
 .pod-row:hover {
   background-color: var(--bg-tertiary);
+}
+
+.env-vars-section {
+  display: flex;
+  margin-bottom: 4px;
+  align-items: flex-start;
+}
+
+.env-vars-label-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+  min-width: 100px;
+  margin-right: 8px;
+  gap: 2px;
+}
+
+.env-vars-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+}
+
+.env-var-item {
+  display: flex;
+  padding: 2px 8px;
+  background-color: var(--bg-secondary);
+  border-radius: 3px;
+  font-size: 10px;
+  margin-bottom: 2px;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+
+.env-var-name {
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.env-var-separator {
+  color: var(--text-secondary);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.env-var-value {
+  color: var(--text-primary);
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 
 .resource-ref-link {

@@ -282,3 +282,10 @@
   background-color: var(--vscode-list-hoverBackground);
   border-radius: 3px;
 }
+
+.info-value-with-copy .copy-icon-img {
+  width: 14px;
+  height: 14px;
+  display: block;
+  color: var(--text-secondary);
+}
