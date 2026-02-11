@@ -71,6 +71,9 @@ function ContextsPane({
     return saved ? parseInt(saved, 10) : 200;
   });
   const [isResizing, setIsResizing] = useState(false);
+  const [showTagFilter, setShowTagFilter] = useState(true);
+  const [showFavorites, setShowFavorites] = useState(true);
+  const [showClusters, setShowClusters] = useState(true);
 
   useEffect(() => {
     async function loadContexts() {
@@ -381,70 +384,104 @@ function ContextsPane({
         </div>
         {tags.length > 0 && (
           <div className="tags-filter-wrapper">
-            <span className="tags-filter-label">Filter by tag</span>
-            <div className="tags-filter-container">
-              {tags.map(tag => {
-                const isSelected = selectedTagIds.has(tag.id);
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    className={`tag-filter-button ${isSelected ? 'selected' : ''}`}
-                    onClick={() => handleTagFilterClick(tag.id)}
-                    style={{
-                      borderColor: isSelected ? tag.color : 'var(--border-color)',
-                      backgroundColor: isSelected ? tag.color : 'transparent',
-                      color: isSelected ? '#ffffff' : '#000000',
-                    }}
-                  >
-                    <span
-                      className="tag-filter-dot"
-                      style={{ backgroundColor: isSelected ? '#ffffff' : tag.color }}
-                    />
-                    <span className="tag-filter-name">{tag.name}</span>
-                  </button>
-                );
-              })}
+            <div className="section-toggle-header">
+              <button
+                type="button"
+                className="section-toggle-button"
+                onClick={() => setShowTagFilter(prev => !prev)}
+              >
+                {showTagFilter ? '▾' : '▸'}
+              </button>
+              <span className="tags-filter-label">Filter by tag</span>
             </div>
+            {showTagFilter && (
+              <div className="tags-filter-container">
+                {tags.map(tag => {
+                  const isSelected = selectedTagIds.has(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      className={`tag-filter-button ${isSelected ? 'selected' : ''}`}
+                      onClick={() => handleTagFilterClick(tag.id)}
+                      style={{
+                        borderColor: isSelected ? tag.color : 'var(--border-color)',
+                        backgroundColor: isSelected ? tag.color : 'transparent',
+                        color: isSelected ? '#ffffff' : '#000000',
+                      }}
+                    >
+                      <span
+                        className="tag-filter-dot"
+                        style={{ backgroundColor: isSelected ? '#ffffff' : tag.color }}
+                      />
+                      <span className="tag-filter-name">{tag.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      <div className="favorites-section" style={{ height: `${favoritesHeight}px` }}>
+      <div
+        className={`favorites-section ${showFavorites ? '' : 'collapsed'}`}
+        style={showFavorites ? { height: `${favoritesHeight}px` } : undefined}
+      >
         <div className="favorites-header">
+          <button
+            type="button"
+            className="section-toggle-button"
+            onClick={() => setShowFavorites(prev => !prev)}
+          >
+            {showFavorites ? '▾' : '▸'}
+          </button>
           <span className="favorites-label">Favorites</span>
         </div>
-        <div className="favorites-list">
-          {contextTree
-            .flatMap(node => {
-              const collectContexts = (n: ContextNode): ContextNode[] => {
-                if (n.type === NodeType.Context && n.clusterContext) {
-                  return favorites.has(n.clusterContext.id) ? [n] : [];
-                }
-                if (n.type === NodeType.Folder && n.children) {
-                  return n.children.flatMap(collectContexts);
-                }
-                return [];
-              };
-              return collectContexts(node);
-            })
-            .map(node => renderNode(node, 0, true))}
-        </div>
+        {showFavorites && (
+          <div className="favorites-list">
+            {contextTree
+              .flatMap(node => {
+                const collectContexts = (n: ContextNode): ContextNode[] => {
+                  if (n.type === NodeType.Context && n.clusterContext) {
+                    return favorites.has(n.clusterContext.id) ? [n] : [];
+                  }
+                  if (n.type === NodeType.Folder && n.children) {
+                    return n.children.flatMap(collectContexts);
+                  }
+                  return [];
+                };
+                return collectContexts(node);
+              })
+              .map(node => renderNode(node, 0, true))}
+          </div>
+        )}
       </div>
 
-      <div
-        className="resizer"
-        onMouseDown={handleResizeStart}
-        style={{ cursor: isResizing ? 'row-resize' : 'ns-resize' }}
-      />
+      {showFavorites && (
+        <div
+          className="resizer"
+          onMouseDown={handleResizeStart}
+          style={{ cursor: isResizing ? 'row-resize' : 'ns-resize' }}
+        />
+      )}
 
       <div className="context-tree-section">
         <div className="context-tree-header">
+          <button
+            type="button"
+            className="section-toggle-button"
+            onClick={() => setShowClusters(prev => !prev)}
+          >
+            {showClusters ? '▾' : '▸'}
+          </button>
           <span className="context-tree-label">Clusters</span>
         </div>
-        <div className="context-tree-container">
-          {filterNodes(contextTree).map(node => renderNode(node))}
-        </div>
+        {showClusters && (
+          <div className="context-tree-container">
+            {filterNodes(contextTree).map(node => renderNode(node))}
+          </div>
+        )}
       </div>
 
       {contextMenu && (

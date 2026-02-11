@@ -176,6 +176,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const resourceCacheRef = useRef<Map<string, KubeResource[]>>(new Map());
   const watchIdRef = useRef<string | undefined>(undefined);
   const namespaceInputRef = useRef<HTMLInputElement>(null);
+  const selectedKindRef = useRef(selectedKind);
+  selectedKindRef.current = selectedKind;
 
   // Helper function to check if a resource kind is cluster-scoped (not namespaced)
   const isClusterScoped = (kind: string | undefined): boolean => {
@@ -290,14 +292,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
     namespaceInputRef.current?.focus();
   }, []);
 
-  // Sync resources state with cache whenever selectedKind changes
   const updateResources = useCallback(
     (kind: string, updater: (prev: KubeResource[]) => KubeResource[]) => {
-      setResources(prev => {
-        const newResources = updater(prev);
-        resourceCacheRef.current.set(kind, newResources);
-        return newResources;
-      });
+      const cached = resourceCacheRef.current.get(kind) ?? [];
+      const newResources = updater(cached);
+      resourceCacheRef.current.set(kind, newResources);
+      if (selectedKindRef.current === kind) {
+        setResources(newResources);
+      }
     },
     []
   );
@@ -318,6 +320,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     }
 
     const hasCached = !!cached;
+    let cancelled = false;
 
     const loadResources = async () => {
       // Only show loading spinner if there's no cached data
@@ -332,14 +335,18 @@ const ResourceList: React.FC<ResourceListProps> = ({
           undefined
         )) as KubeResource[];
         resourceCacheRef.current.set(selectedKind, fetchedResources);
-        setResources(fetchedResources);
-        setIsLoading(false);
+        if (!cancelled) {
+          setResources(fetchedResources);
+          setIsLoading(false);
+        }
       } catch (err) {
         console.error(`Failed to fetch ${selectedKind}:`, err);
-        if (!hasCached) {
-          setError(`Failed to load ${selectedKind}.`);
+        if (!cancelled) {
+          if (!hasCached) {
+            setError(`Failed to load ${selectedKind}.`);
+          }
+          setIsLoading(false);
         }
-        setIsLoading(false);
       }
     };
 
@@ -400,6 +407,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     const unlistenPromise = startWatch();
 
     return () => {
+      cancelled = true;
       unlistenPromise.then(unlisten => {
         if (unlisten) {
           unlisten();
