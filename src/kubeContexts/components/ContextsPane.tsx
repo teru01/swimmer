@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { PreferencesSection } from '../../preferences/PreferencesPage';
 import { Input } from '../../main/ui';
 import '../styles/contextsPane.css';
@@ -75,6 +75,20 @@ function ContextsPane({
   const [showTagFilter, setShowTagFilter] = useState(true);
   const [showFavorites, setShowFavorites] = useState(true);
   const [showClusters, setShowClusters] = useState(true);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'f') {
+      e.preventDefault();
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleGlobalKeyDown]);
 
   useEffect(() => {
     async function loadContexts() {
@@ -380,7 +394,8 @@ function ContextsPane({
       <div className="contexts-header">
         <div className="contexts-toolbar">
           <Input
-            placeholder="Search contexts..."
+            ref={searchInputRef}
+            placeholder="Search contexts... [Ctrl+Shift+F]"
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
             autoComplete="off"

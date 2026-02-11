@@ -54,6 +54,7 @@ interface ClusterInfoPaneProps {
   tabContextMap: Map<string, string>;
   onViewStateChange: (tabId: string, state: ClusterViewState) => void;
   onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
+  isActivePanel?: boolean;
 }
 
 interface ClusterViewInstanceProps {
@@ -63,6 +64,7 @@ interface ClusterViewInstanceProps {
   viewState: ClusterViewState;
   onViewStateChange: (state: ClusterViewState) => void;
   onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
+  isActivePanel?: boolean;
 }
 
 /**
@@ -74,6 +76,7 @@ function ClusterViewInstance({
   viewState,
   onViewStateChange,
   onNavigateToResourceInNewPanel,
+  isActivePanel,
 }: ClusterViewInstanceProps) {
   const handleKindSelect = (kind: string) => {
     onViewStateChange({
@@ -164,6 +167,7 @@ function ClusterViewInstance({
                 contextId={contextId}
                 isVisible={isVisible}
                 selectedResourceUid={viewState.selectedResourceDetail?.metadata.uid}
+                isActivePanel={isActivePanel}
               />
             </Panel>
             {viewState.showDetailPane && (
@@ -206,6 +210,7 @@ function ClusterInfoPane({
   tabContextMap,
   onViewStateChange,
   onNavigateToResourceInNewPanel,
+  isActivePanel,
 }: ClusterInfoPaneProps) {
   return (
     <div className="cluster-info-pane-container">
@@ -223,6 +228,7 @@ function ClusterInfoPane({
                 viewState={viewState}
                 onViewStateChange={state => onViewStateChange(tabId, state)}
                 onNavigateToResourceInNewPanel={onNavigateToResourceInNewPanel}
+                isActivePanel={isActivePanel && tabId === activeTabId}
               />
             );
           })}

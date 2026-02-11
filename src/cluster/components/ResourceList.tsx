@@ -149,6 +149,7 @@ interface ResourceListProps {
   contextId?: string;
   isVisible: boolean;
   selectedResourceUid?: string;
+  isActivePanel?: boolean;
 }
 
 /**
@@ -163,6 +164,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   contextId,
   isVisible,
   selectedResourceUid,
+  isActivePanel,
 }) => {
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = useState<string>('all');
@@ -176,7 +178,9 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const [fetchError, setFetchError] = useState<string | undefined>(undefined);
   const resourceCacheRef = useRef<Map<string, KubeResource[]>>(new Map());
   const watchIdRef = useRef<string | undefined>(undefined);
+  const [nameFilter, setNameFilter] = useState<string>('');
   const namespaceInputRef = useRef<HTMLInputElement>(null);
+  const nameFilterInputRef = useRef<HTMLInputElement>(null);
   const selectedKindRef = useRef(selectedKind);
   selectedKindRef.current = selectedKind;
 
@@ -206,6 +210,19 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const isNamespaced = !isClusterScoped(selectedKind);
 
+  useEffect(() => {
+    if (!isActivePanel || !isVisible) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'f') {
+        e.preventDefault();
+        nameFilterInputRef.current?.focus();
+        nameFilterInputRef.current?.select();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isActivePanel, isVisible]);
+
   // Clear resource cache when context changes
   useEffect(() => {
     resourceCacheRef.current.clear();
@@ -217,6 +234,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
       if (!isNamespaced) {
         setSelectedNamespace('all');
       }
+      setNameFilter('');
       try {
         const fetchedNamespaces = await fetchNamespaces(contextId);
         setNamespaces(fetchedNamespaces);
@@ -294,13 +312,6 @@ const ResourceList: React.FC<ResourceListProps> = ({
       }
     }
   }, [highlightedIndex]);
-
-  const clearNamespaceInput = useCallback(() => {
-    setNamespaceInput('');
-    setSelectedNamespace('all');
-    setHighlightedIndex(-1);
-    namespaceInputRef.current?.focus();
-  }, []);
 
   const updateResources = useCallback(
     (kind: string, updater: (prev: KubeResource[]) => KubeResource[]) => {
@@ -440,21 +451,17 @@ const ResourceList: React.FC<ResourceListProps> = ({
     };
   }, [selectedKind, contextId, updateResources]);
 
-  // Filter and sort resources based on selectedNamespace
+  // Filter and sort resources based on selectedNamespace and nameFilter
   const filteredResources = useMemo(() => {
-    console.info(
-      '[Filter] Resources count:',
-      resources.length,
-      'selectedNamespace:',
-      selectedNamespace,
-      'isNamespaced:',
-      isNamespaced
-    );
     let result = resources;
 
     if (isNamespaced && selectedNamespace !== 'all') {
-      result = resources.filter(res => res.metadata.namespace === selectedNamespace);
-      console.info('[Filter] Filtered resources count:', result.length);
+      result = result.filter(res => res.metadata.namespace === selectedNamespace);
+    }
+
+    if (nameFilter.trim()) {
+      const lower = nameFilter.toLowerCase();
+      result = result.filter(res => (res.metadata.name || '').toLowerCase().includes(lower));
     }
 
     // Sort by namespace (if namespaced), then by name
@@ -472,7 +479,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     });
 
     return result;
-  }, [resources, selectedNamespace, isNamespaced]);
+  }, [resources, selectedNamespace, isNamespaced, nameFilter]);
 
   const getColumns = (kind: string | undefined): string[] => {
     if (!kind) return [];
@@ -889,71 +896,106 @@ const ResourceList: React.FC<ResourceListProps> = ({
           )}
         </div>
         <div className="controls-right">
+          <div className="name-filter-container">
+            <div className="namespace-input-wrapper">
+              <input
+                ref={nameFilterInputRef}
+                type="text"
+                value={nameFilter}
+                onChange={e => setNameFilter(e.target.value)}
+                placeholder="Filter by name... [Ctrl+F]"
+                className={`namespace-input ${nameFilter ? 'has-value' : ''}`}
+                disabled={isLoading}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+              />
+              {nameFilter && (
+                <button
+                  className="namespace-clear-button"
+                  onClick={() => setNameFilter('')}
+                  type="button"
+                  tabIndex={-1}
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          </div>
           {isNamespaced && (
             <div className="namespace-filter-container">
-              <span className="namespace-label">Namespace:</span>
               <div className="namespace-input-wrapper">
-                <input
-                  ref={namespaceInputRef}
-                  type="text"
-                  value={namespaceInput}
-                  onChange={e => {
-                    setNamespaceInput(e.target.value);
-                    setShowNamespaceSuggestions(true);
+                <div
+                  className="namespace-dropdown-trigger"
+                  onClick={() => {
+                    setShowNamespaceSuggestions(prev => !prev);
+                    setTimeout(() => namespaceInputRef.current?.focus(), 0);
                   }}
-                  onFocus={() => setShowNamespaceSuggestions(true)}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setShowNamespaceSuggestions(false);
-                      setHighlightedIndex(-1);
-                    }, 200);
-                  }}
-                  onKeyDown={handleNamespaceKeyDown}
-                  placeholder="Filter namespaces..."
-                  className={`namespace-input ${namespaceInput ? 'has-value' : ''}`}
-                  disabled={isLoading}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                />
-                {namespaceInput && (
-                  <button
-                    className="namespace-clear-button"
-                    onClick={clearNamespaceInput}
-                    type="button"
-                    tabIndex={-1}
+                >
+                  <span className="namespace-dropdown-value">
+                    {selectedNamespace === 'all' ? 'All Namespaces' : selectedNamespace}
+                  </span>
+                  <svg
+                    className={`namespace-dropdown-arrow ${showNamespaceSuggestions ? 'open' : ''}`}
+                    width="10"
+                    height="10"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
                   >
-                    &times;
-                  </button>
-                )}
-                {showNamespaceSuggestions && filteredNamespaces.length > 0 && (
+                    <path d="M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z" />
+                  </svg>
+                </div>
+                {showNamespaceSuggestions && (
                   <div className="namespace-suggestions" ref={suggestionsRef}>
-                    <div
-                      className={`namespace-suggestion-item ${selectedNamespace === 'all' ? 'selected' : ''} ${highlightedIndex === 0 ? 'highlighted' : ''}`}
-                      onClick={() => {
-                        setSelectedNamespace('all');
-                        setNamespaceInput('');
-                        setShowNamespaceSuggestions(false);
-                        setHighlightedIndex(-1);
-                      }}
-                    >
-                      All Namespaces
+                    <div className="namespace-suggestions-search">
+                      <input
+                        ref={namespaceInputRef}
+                        type="text"
+                        value={namespaceInput}
+                        onChange={e => setNamespaceInput(e.target.value)}
+                        onBlur={() => {
+                          setTimeout(() => {
+                            setShowNamespaceSuggestions(false);
+                            setHighlightedIndex(-1);
+                          }, 200);
+                        }}
+                        onKeyDown={handleNamespaceKeyDown}
+                        placeholder="Filter..."
+                        className="namespace-search-input"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                      />
                     </div>
-                    {filteredNamespaces.map((ns, i) => (
+                    <div className="namespace-suggestions-list">
                       <div
-                        key={ns}
-                        className={`namespace-suggestion-item ${selectedNamespace === ns ? 'selected' : ''} ${highlightedIndex === i + 1 ? 'highlighted' : ''}`}
+                        className={`namespace-suggestion-item ${selectedNamespace === 'all' ? 'selected' : ''} ${highlightedIndex === 0 ? 'highlighted' : ''}`}
                         onClick={() => {
-                          setSelectedNamespace(ns);
-                          setNamespaceInput(ns);
+                          setSelectedNamespace('all');
+                          setNamespaceInput('');
                           setShowNamespaceSuggestions(false);
                           setHighlightedIndex(-1);
                         }}
                       >
-                        {ns}
+                        All Namespaces
                       </div>
-                    ))}
+                      {filteredNamespaces.map((ns, i) => (
+                        <div
+                          key={ns}
+                          className={`namespace-suggestion-item ${selectedNamespace === ns ? 'selected' : ''} ${highlightedIndex === i + 1 ? 'highlighted' : ''}`}
+                          onClick={() => {
+                            setSelectedNamespace(ns);
+                            setNamespaceInput(ns);
+                            setShowNamespaceSuggestions(false);
+                            setHighlightedIndex(-1);
+                          }}
+                        >
+                          {ns}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

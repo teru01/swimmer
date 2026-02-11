@@ -236,28 +236,43 @@
 
 .namespace-input-wrapper {
   position: relative;
-  min-width: 200px;
+  min-width: 180px;
 }
 
-.namespace-input {
-  width: 100%;
-  padding: 6px 10px;
+.namespace-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-size: 11px;
+  cursor: pointer;
   transition: all 0.2s ease;
+  gap: 8px;
+  user-select: none;
 }
 
-.namespace-input.has-value {
-  padding-right: 24px;
-}
-
-.namespace-input:focus {
-  outline: none;
+.namespace-dropdown-trigger:hover {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+}
+
+.namespace-dropdown-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.namespace-dropdown-arrow {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.namespace-dropdown-arrow.open {
+  transform: rotate(180deg);
 }
 
 .namespace-suggestions {
@@ -265,17 +280,44 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  max-height: 300px;
-  overflow-y: auto;
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.namespace-suggestions-search {
+  padding: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.namespace-search-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 11px;
+  box-sizing: border-box;
+}
+
+.namespace-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.namespace-suggestions-list {
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 4px 0;
 }
 
 .namespace-suggestion-item {
-  padding: 8px 12px;
+  padding: 6px 12px;
   font-size: 11px;
   color: var(--text-primary);
   cursor: pointer;
@@ -296,6 +338,33 @@
 .namespace-suggestion-item.selected.highlighted {
   background-color: var(--color-primary);
   opacity: 0.85;
+}
+
+.name-filter-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.namespace-input {
+  width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 11px;
+  transition: all 0.2s ease;
+}
+
+.namespace-input.has-value {
+  padding-right: 24px;
+}
+
+.namespace-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
 }
 
 .namespace-clear-button {

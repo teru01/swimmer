@@ -82,6 +82,7 @@ function ClusterOperationPanelComponent({
                 tabContextMap={tabContextMap}
                 onViewStateChange={onViewStateChange}
                 onNavigateToResourceInNewPanel={onNavigateToResourceInNewPanel}
+                isActivePanel={activePanelId === panel.id}
               />
             </div>
           </Panel>
