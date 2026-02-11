@@ -776,12 +776,38 @@ const ResourceList: React.FC<ResourceListProps> = ({
       case 'Age':
         return formatAge(resource.metadata.creationTimestamp);
       case 'Status': {
-        let statusText: string;
         if (resource.kind === 'Node') {
           const readyCondition = resource.status?.conditions?.find((c: any) => c.type === 'Ready');
-          statusText = readyCondition?.status === 'True' ? 'Ready' : 'NotReady';
-        } else {
-          statusText = resource.status?.phase || '-';
+          const statusText = readyCondition?.status === 'True' ? 'Ready' : 'NotReady';
+          return (
+            <span className={`status-text status-${getStatusCategory(statusText)}`}>
+              {statusText}
+            </span>
+          );
+        }
+        const statusText = resource.status?.phase || '-';
+        const containers = resource.status?.containerStatuses;
+        if (containers && containers.length > 0) {
+          const readyCount = containers.filter(c => c.ready).length;
+          return (
+            <div className="pod-status-cell">
+              <span className={`status-text status-${getStatusCategory(statusText)}`}>
+                {statusText}
+              </span>
+              <div
+                className="container-ready-blocks"
+                title={`${readyCount}/${containers.length} ready`}
+              >
+                {containers.map(c => (
+                  <span
+                    key={c.name}
+                    className={`container-block ${c.ready ? 'ready' : 'not-ready'}`}
+                    title={`${c.name}: ${c.ready ? 'Ready' : 'Not Ready'}`}
+                  />
+                ))}
+              </div>
+            </div>
+          );
         }
         return (
           <span className={`status-text status-${getStatusCategory(statusText)}`}>

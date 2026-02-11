@@ -1104,6 +1104,33 @@ mark.detail-search-highlight-active {
   color: #f85149;
 }
 
+.pod-status-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.container-ready-blocks {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.container-block {
+  display: inline-block;
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.container-block.ready {
+  background-color: #2ea043;
+}
+
+.container-block.not-ready {
+  background-color: #d29922;
+}
+
 .pod-row {
   cursor: pointer;
   transition: background-color 0.15s ease;
