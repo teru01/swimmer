@@ -827,7 +827,10 @@ const ResourceList: React.FC<ResourceListProps> = ({
       case 'IP':
         return resource.status?.podIP || '-';
       case 'Ready':
-        return `${resource.status?.readyReplicas ?? 0}/${resource.status?.replicas ?? 0}`;
+        if (resource.kind === 'StatefulSet') {
+          return `${resource.status?.readyReplicas ?? 0}/${resource.spec?.replicas ?? 0}`;
+        }
+        return `${resource.status?.readyReplicas ?? 0}/${resource.spec?.replicas ?? 0}`;
       case 'Up-to-date':
         return resource.status?.updatedReplicas ?? '-';
       case 'Available':
