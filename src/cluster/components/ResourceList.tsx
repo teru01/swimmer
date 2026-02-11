@@ -202,6 +202,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
     | undefined
   >(undefined);
   const actionDropdownRef = useRef<HTMLDivElement>(null);
+  const selectedRowRef = useRef<HTMLTableRowElement | null>(null);
+  const pendingScrollUidRef = useRef<string | undefined>(undefined);
 
   const selectedKindRef = useRef(selectedKind);
   selectedKindRef.current = selectedKind;
@@ -506,6 +508,19 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
     return result;
   }, [resources, selectedNamespace, isNamespaced, nameFilter]);
+
+  useEffect(() => {
+    if (selectedResourceUid) {
+      pendingScrollUidRef.current = selectedResourceUid;
+    }
+  }, [selectedResourceUid]);
+
+  useEffect(() => {
+    if (pendingScrollUidRef.current && selectedRowRef.current) {
+      selectedRowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      pendingScrollUidRef.current = undefined;
+    }
+  }, [filteredResources, selectedResourceUid]);
 
   const toggleCheck = useCallback((uid: string) => {
     setCheckedUids(prev => {
@@ -1227,6 +1242,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
                 filteredResources.map(resource => (
                   <tr
                     key={resource.metadata.uid}
+                    ref={resource.metadata.uid === selectedResourceUid ? selectedRowRef : undefined}
                     onClick={() => onResourceSelect(resource)}
                     className={resource.metadata.uid === selectedResourceUid ? 'selected-row' : ''}
                   >
