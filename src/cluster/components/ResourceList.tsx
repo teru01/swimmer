@@ -164,11 +164,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
 }) => {
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = useState<string>('all');
+  const [namespaceInput, setNamespaceInput] = useState<string>('');
+  const [showNamespaceSuggestions, setShowNamespaceSuggestions] = useState<boolean>(false);
   const [resources, setResources] = useState<KubeResource[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const hasLoadedRef = useRef<boolean>(false);
   const watchIdRef = useRef<string | undefined>(undefined);
+  const namespaceInputRef = useRef<HTMLInputElement>(null);
 
   // Helper function to check if a resource kind is cluster-scoped (not namespaced)
   const isClusterScoped = (kind: string | undefined): boolean => {
@@ -205,6 +208,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
     };
     loadNamespaces();
   }, [selectedKind, contextId]);
+
+  // Filter namespaces based on input
+  const filteredNamespaces = useMemo(() => {
+    if (!namespaceInput.trim()) {
+      return namespaces;
+    }
+    return namespaces.filter(ns => ns.toLowerCase().includes(namespaceInput.toLowerCase()));
+  }, [namespaces, namespaceInput]);
 
   // Fetch resources when selectedKind or context changes (but NOT when selectedNamespace changes)
   useEffect(() => {
@@ -730,19 +741,52 @@ const ResourceList: React.FC<ResourceListProps> = ({
           {isNamespaced && (
             <div className="namespace-filter-container">
               <span className="namespace-label">Namespace:</span>
-              <select
-                value={selectedNamespace}
-                onChange={e => setSelectedNamespace(e.target.value)}
-                className="namespace-select"
-                disabled={isLoading}
-              >
-                <option value="all">All Namespaces</option>
-                {namespaces.map(ns => (
-                  <option key={ns} value={ns}>
-                    {ns}
-                  </option>
-                ))}
-              </select>
+              <div className="namespace-input-wrapper">
+                <input
+                  ref={namespaceInputRef}
+                  type="text"
+                  value={namespaceInput}
+                  onChange={e => {
+                    setNamespaceInput(e.target.value);
+                    setShowNamespaceSuggestions(true);
+                  }}
+                  onFocus={() => setShowNamespaceSuggestions(true)}
+                  onBlur={() => {
+                    setTimeout(() => setShowNamespaceSuggestions(false), 200);
+                  }}
+                  placeholder="Filter namespaces..."
+                  className="namespace-input"
+                  disabled={isLoading}
+                  autoComplete="off"
+                />
+                {showNamespaceSuggestions && filteredNamespaces.length > 0 && (
+                  <div className="namespace-suggestions">
+                    <div
+                      className={`namespace-suggestion-item ${selectedNamespace === 'all' ? 'selected' : ''}`}
+                      onClick={() => {
+                        setSelectedNamespace('all');
+                        setNamespaceInput('');
+                        setShowNamespaceSuggestions(false);
+                      }}
+                    >
+                      All Namespaces
+                    </div>
+                    {filteredNamespaces.map(ns => (
+                      <div
+                        key={ns}
+                        className={`namespace-suggestion-item ${selectedNamespace === ns ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedNamespace(ns);
+                          setNamespaceInput(ns);
+                          setShowNamespaceSuggestions(false);
+                        }}
+                      >
+                        {ns}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -224,21 +224,58 @@
   font-weight: 500;
 }
 
-.namespace-select {
+.namespace-input-wrapper {
+  position: relative;
+  min-width: 200px;
+}
+
+.namespace-input {
+  width: 100%;
   padding: 6px 10px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  min-width: 160px;
   font-size: 11px;
   transition: all 0.2s ease;
 }
 
-.namespace-select:focus {
+.namespace-input:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+}
+
+.namespace-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.namespace-suggestion-item {
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.namespace-suggestion-item:hover {
+  background-color: var(--hover-color, rgba(0, 120, 212, 0.1));
+}
+
+.namespace-suggestion-item.selected {
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: 500;
 }
 
 .resource-table-container {
@@ -460,13 +497,15 @@
   font-weight: 500;
   color: var(--text-secondary);
   margin-right: 6px;
-  min-width: 80px;
+  flex-shrink: 0;
   font-size: 10px;
 }
 
 .metadata-value {
   color: var(--text-primary);
-  word-break: break-all;
+  flex: 1;
+  overflow-wrap: break-word;
+  word-break: break-word;
   font-size: 10px;
 }
 
