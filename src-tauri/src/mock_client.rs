@@ -1732,4 +1732,17 @@ impl K8sClient for MockK8sClient {
             platform: "linux/amd64".to_string(),
         })
     }
+
+    async fn delete_resource(
+        &self,
+        _kind: &str,
+        _name: &str,
+        _namespace: Option<&str>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    async fn rollout_restart_deployment(&self, _name: &str, _namespace: &str) -> Result<()> {
+        Ok(())
+    }
 }

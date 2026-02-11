@@ -116,4 +116,27 @@ export const commands = {
   listCrdGroups: async (context: string | undefined): Promise<CrdGroup[]> => {
     return invoke('list_crd_groups', { context });
   },
+
+  /**
+   * Kubernetesリソースを削除します
+   */
+  deleteResource: async (
+    context: string | undefined,
+    kind: string,
+    name: string,
+    namespace: string | undefined
+  ): Promise<void> => {
+    return invoke('delete_resource', { context, kind, name, namespace });
+  },
+
+  /**
+   * Deploymentのrollout restartを実行します
+   */
+  rolloutRestartDeployment: async (
+    context: string | undefined,
+    name: string,
+    namespace: string
+  ): Promise<void> => {
+    return invoke('rollout_restart_deployment', { context, name, namespace });
+  },
 };

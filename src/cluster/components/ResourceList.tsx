@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react';
 import './ClusterInfoPane.css';
 import { formatAge } from '../../lib/utils';
 import ClusterOverview from './ClusterOverview';
@@ -183,6 +183,26 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const [nameFilter, setNameFilter] = useState<string>('');
   const namespaceInputRef = useRef<HTMLInputElement>(null);
   const nameFilterInputRef = useRef<HTMLInputElement>(null);
+  const [checkedUids, setCheckedUids] = useState<Set<string>>(new Set());
+  const [showActionDropdown, setShowActionDropdown] = useState(false);
+  const [actionModal, setActionModal] = useState<
+    | {
+        action: 'delete' | 'rolloutRestart';
+        resources: KubeResource[];
+        capturedContext: string | undefined;
+      }
+    | undefined
+  >(undefined);
+  const [actionProgress, setActionProgress] = useState<
+    | {
+        completed: number;
+        total: number;
+        errors: string[];
+      }
+    | undefined
+  >(undefined);
+  const actionDropdownRef = useRef<HTMLDivElement>(null);
+
   const selectedKindRef = useRef(selectedKind);
   selectedKindRef.current = selectedKind;
 
@@ -237,6 +257,10 @@ const ResourceList: React.FC<ResourceListProps> = ({
         setSelectedNamespace('all');
       }
       setNameFilter('');
+      setCheckedUids(new Set());
+      setShowActionDropdown(false);
+      setActionModal(undefined);
+      setActionProgress(undefined);
       try {
         const fetchedNamespaces = await fetchNamespaces(contextId);
         setNamespaces(fetchedNamespaces);
@@ -482,6 +506,133 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
     return result;
   }, [resources, selectedNamespace, isNamespaced, nameFilter]);
+
+  const toggleCheck = useCallback((uid: string) => {
+    setCheckedUids(prev => {
+      const next = new Set(prev);
+      if (next.has(uid)) {
+        next.delete(uid);
+      } else {
+        next.add(uid);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    const allUids = filteredResources.map(r => r.metadata.uid);
+    setCheckedUids(prev => {
+      const allSelected = allUids.every(uid => prev.has(uid));
+      if (allSelected) {
+        return new Set();
+      }
+      return new Set(allUids);
+    });
+  }, [filteredResources]);
+
+  const isAllSelected =
+    filteredResources.length > 0 && filteredResources.every(r => checkedUids.has(r.metadata.uid));
+
+  const getSingularKind = (kind: string): string => {
+    if (kind.startsWith('cr:')) {
+      const parts = kind.slice(3).split('/');
+      return parts[2] || kind;
+    }
+    const mapping: Record<string, string> = {
+      Pods: 'Pod',
+      Deployments: 'Deployment',
+      Services: 'Service',
+      Nodes: 'Node',
+      Namespaces: 'Namespace',
+      ReplicaSets: 'ReplicaSet',
+      StatefulSets: 'StatefulSet',
+      DaemonSets: 'DaemonSet',
+      Jobs: 'Job',
+      CronJobs: 'CronJob',
+      ConfigMaps: 'ConfigMap',
+      Secrets: 'Secret',
+      Ingresses: 'Ingress',
+      NetworkPolicies: 'NetworkPolicy',
+      PersistentVolumes: 'PersistentVolume',
+      PersistentVolumeClaims: 'PersistentVolumeClaim',
+      StorageClasses: 'StorageClass',
+      Roles: 'Role',
+      ClusterRoles: 'ClusterRole',
+      RoleBindings: 'RoleBinding',
+      ClusterRoleBindings: 'ClusterRoleBinding',
+      ServiceAccounts: 'ServiceAccount',
+      Endpoints: 'Endpoints',
+      Events: 'Event',
+      HorizontalPodAutoscalers: 'HorizontalPodAutoscaler',
+      LimitRanges: 'LimitRange',
+      ResourceQuotas: 'ResourceQuota',
+      CRDs: 'CustomResourceDefinition',
+    };
+    return mapping[kind] || kind;
+  };
+
+  const openActionModal = useCallback(
+    (action: 'delete' | 'rolloutRestart') => {
+      const selectedResources = filteredResources.filter(r => checkedUids.has(r.metadata.uid));
+      if (selectedResources.length === 0) return;
+      setActionModal({
+        action,
+        resources: selectedResources,
+        capturedContext: contextId,
+      });
+      setActionProgress(undefined);
+      setShowActionDropdown(false);
+    },
+    [filteredResources, checkedUids, contextId]
+  );
+
+  const executeAction = useCallback(async () => {
+    if (!actionModal) return;
+    const { action, resources, capturedContext } = actionModal;
+    const progress = { completed: 0, total: resources.length, errors: [] as string[] };
+    setActionProgress({ ...progress });
+
+    for (const resource of resources) {
+      try {
+        if (action === 'delete') {
+          const singularKind = selectedKind ? getSingularKind(selectedKind) : '';
+          await commands.deleteResource(
+            capturedContext,
+            singularKind,
+            resource.metadata.name,
+            resource.metadata.namespace
+          );
+        } else if (action === 'rolloutRestart') {
+          if (!resource.metadata.namespace) continue;
+          await commands.rolloutRestartDeployment(
+            capturedContext,
+            resource.metadata.name,
+            resource.metadata.namespace
+          );
+        }
+        progress.completed++;
+      } catch (err) {
+        progress.completed++;
+        progress.errors.push(
+          `${resource.metadata.name}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+      setActionProgress({ ...progress });
+    }
+
+    setCheckedUids(new Set());
+  }, [actionModal, selectedKind]);
+
+  useEffect(() => {
+    if (!showActionDropdown) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (actionDropdownRef.current && !actionDropdownRef.current.contains(e.target as Node)) {
+        setShowActionDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showActionDropdown]);
 
   const getColumns = (kind: string | undefined): string[] => {
     if (!kind) return [];
@@ -896,6 +1047,39 @@ const ResourceList: React.FC<ResourceListProps> = ({
               {fetchError && <span className="fetch-error-badge">{fetchError}</span>}
             </div>
           )}
+          {checkedUids.size > 0 && (
+            <div className="selection-action-bar">
+              <span className="selection-count">
+                {checkedUids.size} {checkedUids.size === 1 ? 'item' : 'items'} selected
+              </span>
+              <div className="action-dropdown" ref={actionDropdownRef}>
+                <button
+                  className="action-dropdown-trigger"
+                  onClick={() => setShowActionDropdown(prev => !prev)}
+                >
+                  Actions ▼
+                </button>
+                {showActionDropdown && (
+                  <div className="action-dropdown-menu">
+                    <div
+                      className="action-dropdown-item action-dropdown-item-danger"
+                      onClick={() => openActionModal('delete')}
+                    >
+                      Delete
+                    </div>
+                    {selectedKind === 'Deployments' && (
+                      <div
+                        className="action-dropdown-item"
+                        onClick={() => openActionModal('rolloutRestart')}
+                      >
+                        Rollout Restart
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         <div className="controls-right">
           <div className="name-filter-container">
@@ -1025,6 +1209,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
           <table className="resource-table">
             <thead>
               <tr>
+                <th className="checkbox-cell">
+                  <input
+                    type="checkbox"
+                    className="header-checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 {columns.map(col => (
                   <th key={col}>{col}</th>
                 ))}
@@ -1038,6 +1230,15 @@ const ResourceList: React.FC<ResourceListProps> = ({
                     onClick={() => onResourceSelect(resource)}
                     className={resource.metadata.uid === selectedResourceUid ? 'selected-row' : ''}
                   >
+                    <td className="checkbox-cell">
+                      <input
+                        type="checkbox"
+                        className={`row-checkbox ${checkedUids.has(resource.metadata.uid) ? 'checked' : ''}`}
+                        checked={checkedUids.has(resource.metadata.uid)}
+                        onChange={() => toggleCheck(resource.metadata.uid)}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </td>
                     {columns.map(col => (
                       <td
                         key={col}
@@ -1081,7 +1282,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={columns.length} className="no-resources-message">
+                  <td colSpan={columns.length + 1} className="no-resources-message">
                     <div className="empty-state">
                       <span className="empty-icon">📭</span>
                       <div>
@@ -1108,6 +1309,113 @@ const ResourceList: React.FC<ResourceListProps> = ({
             <div className="no-selection-title">Select a resource type</div>
             <div className="no-selection-subtitle">
               Choose a resource kind from the sidebar to view its resources
+            </div>
+          </div>
+        </div>
+      )}
+
+      {actionModal && (
+        <div
+          className="action-modal-overlay"
+          onClick={() => !actionProgress && setActionModal(undefined)}
+        >
+          <div className="action-modal" onClick={e => e.stopPropagation()}>
+            <div className="action-modal-header">
+              <h3>
+                {actionModal.action === 'delete'
+                  ? 'Delete Resources'
+                  : 'Rollout Restart Deployments'}
+              </h3>
+              {!actionProgress && (
+                <button className="action-modal-close" onClick={() => setActionModal(undefined)}>
+                  &times;
+                </button>
+              )}
+            </div>
+            <div className="action-modal-context">
+              Context: <strong>{actionModal.capturedContext || 'default'}</strong>
+            </div>
+            <div className="action-modal-resources">
+              <table className="action-modal-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Namespace</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {actionModal.resources.map(r => (
+                    <tr key={r.metadata.uid}>
+                      <td>{r.metadata.name}</td>
+                      <td>{r.metadata.namespace || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {actionProgress && (
+              <div className="action-modal-progress">
+                <div className="action-progress-bar">
+                  <div
+                    className="action-progress-fill"
+                    style={{
+                      width: `${(actionProgress.completed / actionProgress.total) * 100}%`,
+                    }}
+                  />
+                </div>
+                <span className="action-progress-text">
+                  {actionProgress.completed}/{actionProgress.total}
+                </span>
+                {actionProgress.completed === actionProgress.total && (
+                  <div className="action-progress-result">
+                    {actionProgress.errors.length === 0 ? (
+                      <span className="action-result-success">
+                        All {actionProgress.total} resources processed successfully.
+                      </span>
+                    ) : (
+                      <Fragment>
+                        <span className="action-result-partial">
+                          {actionProgress.total - actionProgress.errors.length} succeeded,{' '}
+                          {actionProgress.errors.length} failed.
+                        </span>
+                        <ul className="action-error-list">
+                          {actionProgress.errors.map((err, i) => (
+                            <li key={i}>{err}</li>
+                          ))}
+                        </ul>
+                      </Fragment>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="action-modal-footer">
+              {!actionProgress ? (
+                <Fragment>
+                  <button
+                    className="action-modal-btn action-modal-btn-cancel"
+                    onClick={() => setActionModal(undefined)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className={`action-modal-btn ${actionModal.action === 'delete' ? 'action-modal-btn-danger' : 'action-modal-btn-primary'}`}
+                    onClick={executeAction}
+                  >
+                    {actionModal.action === 'delete' ? 'Delete' : 'Restart'}
+                  </button>
+                </Fragment>
+              ) : actionProgress.completed === actionProgress.total ? (
+                <button
+                  className="action-modal-btn action-modal-btn-primary"
+                  onClick={() => {
+                    setActionModal(undefined);
+                    setActionProgress(undefined);
+                  }}
+                >
+                  Close
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

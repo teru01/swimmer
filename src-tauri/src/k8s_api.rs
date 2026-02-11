@@ -12,7 +12,7 @@ use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, Role, RoleBind
 use k8s_openapi::api::storage::v1::StorageClass;
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::{
-    api::{Api, ApiResource, DynamicObject, ListParams, ObjectList},
+    api::{Api, ApiResource, DeleteParams, DynamicObject, ListParams, ObjectList, Patch, PatchParams},
     config::{Config, InferConfigError, KubeConfigOptions, Kubeconfig, KubeconfigError},
     runtime::watcher,
     Client,
@@ -155,6 +155,13 @@ pub trait K8sClient: Send + Sync {
         namespace: Option<&str>,
     ) -> Result<Value>;
     async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info>;
+    async fn delete_resource(
+        &self,
+        kind: &str,
+        name: &str,
+        namespace: Option<&str>,
+    ) -> Result<()>;
+    async fn rollout_restart_deployment(&self, name: &str, namespace: &str) -> Result<()>;
 }
 
 pub struct RealK8sClient {
@@ -652,6 +659,190 @@ impl K8sClient for RealK8sClient {
 
     async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info> {
         Ok(self.client.apiserver_version().await?)
+    }
+
+    async fn delete_resource(
+        &self,
+        kind: &str,
+        name: &str,
+        namespace: Option<&str>,
+    ) -> Result<()> {
+        let dp = DeleteParams::default();
+        match kind {
+            "Pod" => {
+                let ns = namespace.ok_or_else(|| require_namespace("Pod"))?;
+                let api: Api<Pod> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "Deployment" => {
+                let ns = namespace.ok_or_else(|| require_namespace("Deployment"))?;
+                let api: Api<Deployment> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "Service" => {
+                let ns = namespace.ok_or_else(|| require_namespace("Service"))?;
+                let api: Api<Service> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "ReplicaSet" => {
+                let ns = namespace.ok_or_else(|| require_namespace("ReplicaSet"))?;
+                let api: Api<ReplicaSet> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "StatefulSet" => {
+                let ns = namespace.ok_or_else(|| require_namespace("StatefulSet"))?;
+                let api: Api<StatefulSet> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "DaemonSet" => {
+                let ns = namespace.ok_or_else(|| require_namespace("DaemonSet"))?;
+                let api: Api<DaemonSet> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "Job" => {
+                let ns = namespace.ok_or_else(|| require_namespace("Job"))?;
+                let api: Api<Job> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "CronJob" => {
+                let ns = namespace.ok_or_else(|| require_namespace("CronJob"))?;
+                let api: Api<CronJob> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "ConfigMap" => {
+                let ns = namespace.ok_or_else(|| require_namespace("ConfigMap"))?;
+                let api: Api<ConfigMap> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "Secret" => {
+                let ns = namespace.ok_or_else(|| require_namespace("Secret"))?;
+                let api: Api<Secret> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "Ingress" => {
+                let ns = namespace.ok_or_else(|| require_namespace("Ingress"))?;
+                let api: Api<Ingress> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "NetworkPolicy" => {
+                let ns = namespace.ok_or_else(|| require_namespace("NetworkPolicy"))?;
+                let api: Api<NetworkPolicy> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "PersistentVolume" => {
+                let api: Api<PersistentVolume> = Api::all(self.client.clone());
+                api.delete(name, &dp).await?;
+            }
+            "PersistentVolumeClaim" => {
+                let ns = namespace.ok_or_else(|| require_namespace("PersistentVolumeClaim"))?;
+                let api: Api<PersistentVolumeClaim> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "StorageClass" => {
+                let api: Api<StorageClass> = Api::all(self.client.clone());
+                api.delete(name, &dp).await?;
+            }
+            "Role" => {
+                let ns = namespace.ok_or_else(|| require_namespace("Role"))?;
+                let api: Api<Role> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "ClusterRole" => {
+                let api: Api<ClusterRole> = Api::all(self.client.clone());
+                api.delete(name, &dp).await?;
+            }
+            "RoleBinding" => {
+                let ns = namespace.ok_or_else(|| require_namespace("RoleBinding"))?;
+                let api: Api<RoleBinding> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "ClusterRoleBinding" => {
+                let api: Api<ClusterRoleBinding> = Api::all(self.client.clone());
+                api.delete(name, &dp).await?;
+            }
+            "ServiceAccount" => {
+                let ns = namespace.ok_or_else(|| require_namespace("ServiceAccount"))?;
+                let api: Api<ServiceAccount> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "Namespace" => {
+                let api: Api<Namespace> = Api::all(self.client.clone());
+                api.delete(name, &dp).await?;
+            }
+            "Node" => {
+                let api: Api<Node> = Api::all(self.client.clone());
+                api.delete(name, &dp).await?;
+            }
+            "HorizontalPodAutoscaler" => {
+                let ns = namespace.ok_or_else(|| require_namespace("HorizontalPodAutoscaler"))?;
+                let api: Api<HorizontalPodAutoscaler> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "LimitRange" => {
+                let ns = namespace.ok_or_else(|| require_namespace("LimitRange"))?;
+                let api: Api<LimitRange> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            "ResourceQuota" => {
+                let ns = namespace.ok_or_else(|| require_namespace("ResourceQuota"))?;
+                let api: Api<ResourceQuota> = Api::namespaced(self.client.clone(), ns);
+                api.delete(name, &dp).await?;
+            }
+            cr_kind if cr_kind.starts_with("cr:") => {
+                let parts: Vec<&str> = cr_kind[3..].splitn(4, '/').collect();
+                if parts.len() == 4 {
+                    let ar = ApiResource {
+                        group: parts[0].to_string(),
+                        version: parts[1].to_string(),
+                        api_version: format!("{}/{}", parts[0], parts[1]),
+                        kind: String::new(),
+                        plural: parts[2].to_string(),
+                    };
+                    let api: Api<DynamicObject> = match parts[3] {
+                        "Namespaced" => match namespace {
+                            Some(ns) => Api::namespaced_with(self.client.clone(), ns, &ar),
+                            None => return Err(require_namespace("CustomResource")),
+                        },
+                        _ => Api::all_with(self.client.clone(), &ar),
+                    };
+                    api.delete(name, &dp).await?;
+                }
+            }
+            _ => {
+                return Err(K8sError::Kube(kube::Error::Api(
+                    kube::error::ErrorResponse {
+                        status: "Failure".to_string(),
+                        message: format!("Unsupported resource kind for delete: {}", kind),
+                        reason: "BadRequest".to_string(),
+                        code: 400,
+                    },
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    async fn rollout_restart_deployment(&self, name: &str, namespace: &str) -> Result<()> {
+        let api: Api<Deployment> = Api::namespaced(self.client.clone(), namespace);
+        let now = chrono::Utc::now().to_rfc3339();
+        let patch = serde_json::json!({
+            "spec": {
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": now
+                        }
+                    }
+                }
+            }
+        });
+        api.patch(
+            name,
+            &PatchParams::apply("swimmer"),
+            &Patch::Merge(&patch),
+        )
+        .await?;
+        Ok(())
     }
 }
 
@@ -1552,4 +1743,27 @@ pub async fn stop_watch_resources(
         handle.abort();
     }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_resource(
+    context: Option<String>,
+    kind: String,
+    name: String,
+    namespace: Option<String>,
+) -> Result<()> {
+    let client = create_client(context).await?;
+    client
+        .delete_resource(&kind, &name, namespace.as_deref())
+        .await
+}
+
+#[tauri::command]
+pub async fn rollout_restart_deployment(
+    context: Option<String>,
+    name: String,
+    namespace: String,
+) -> Result<()> {
+    let client = create_client(context).await?;
+    client.rollout_restart_deployment(&name, &namespace).await
 }

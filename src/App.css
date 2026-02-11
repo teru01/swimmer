@@ -6,7 +6,6 @@
 @import './kubeContexts/styles/contextLayout.css';
 @import './cluster/styles/clusterLayout.css';
 @import './cluster/styles/terminalPane.css';
-@import './chat/styles/chatPane.css';
 
 /* グローバルリセットとベーススタイル */
 * {
