@@ -7,6 +7,8 @@
   --bg-secondary: #f8f9fa;
   --bg-tertiary: #e9ecef;
   --bg-quaternary: #dee2e6;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --color-primary-low: rgba(0, 120, 212, 0.1);
   --text-primary: #212529;
   --text-secondary: #6c757d;
   --text-tertiary: #999999;

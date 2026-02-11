@@ -139,6 +139,10 @@ a:hover {
   --bg-secondary: #2d2d30;
   --bg-tertiary: #3e3e42;
   --bg-quaternary: #4a4a4f;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+
+  /* Primary color variants */
+  --color-primary-low: rgba(0, 120, 212, 0.15);
 
   /* Text Colors */
   --text-primary: #ffffff;
