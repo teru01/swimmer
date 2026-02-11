@@ -22,6 +22,20 @@ const DetailItem: React.FC<{ label: string; children: React.ReactNode }> = ({
   </div>
 );
 
+/** Returns a status category string for container state to apply color styling. */
+const getContainerStateCategory = (state: any): string => {
+  if (!state) return 'default';
+  const key = Object.keys(state)[0]?.toLowerCase();
+  if (key === 'running') return 'success';
+  if (key === 'waiting') return 'warning';
+  if (key === 'terminated') {
+    const reason = state.terminated?.reason?.toLowerCase() || '';
+    if (reason === 'completed') return 'success';
+    return 'error';
+  }
+  return 'default';
+};
+
 // Helper to render Labels/Annotations
 const renderMetadataMap = (map: { [key: string]: string } | undefined) => {
   if (!map || Object.keys(map).length === 0) {
@@ -740,9 +754,19 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
                   <DetailItem label="Image">{container.image}</DetailItem>
                   <DetailItem label="Image ID">{containerStatus?.imageID || '-'}</DetailItem>
                   <DetailItem label="State">
-                    {containerStatus?.state ? Object.keys(containerStatus.state)[0] : '-'}
+                    <span
+                      className={`status-text status-${getContainerStateCategory(containerStatus?.state)}`}
+                    >
+                      {containerStatus?.state ? Object.keys(containerStatus.state)[0] : '-'}
+                    </span>
                   </DetailItem>
-                  <DetailItem label="Ready">{containerStatus?.ready ? 'True' : 'False'}</DetailItem>
+                  <DetailItem label="Ready">
+                    <span
+                      className={`status-text status-${containerStatus?.ready ? 'success' : 'error'}`}
+                    >
+                      {containerStatus?.ready ? 'True' : 'False'}
+                    </span>
+                  </DetailItem>
                   <DetailItem label="Restart Count">
                     {containerStatus?.restartCount ?? 0}
                   </DetailItem>
@@ -786,9 +810,19 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
                   </DetailItem>
                 )}
                 <DetailItem label="State">
-                  {containerStatus?.state ? Object.keys(containerStatus.state)[0] : '-'}
+                  <span
+                    className={`status-text status-${getContainerStateCategory(containerStatus?.state)}`}
+                  >
+                    {containerStatus?.state ? Object.keys(containerStatus.state)[0] : '-'}
+                  </span>
                 </DetailItem>
-                <DetailItem label="Ready">{containerStatus?.ready ? 'True' : 'False'}</DetailItem>
+                <DetailItem label="Ready">
+                  <span
+                    className={`status-text status-${containerStatus?.ready ? 'success' : 'error'}`}
+                  >
+                    {containerStatus?.ready ? 'True' : 'False'}
+                  </span>
+                </DetailItem>
                 <DetailItem label="Restart Count">{containerStatus?.restartCount ?? 0}</DetailItem>
                 {container.resources?.limits && (
                   <DetailItem label="Limits">

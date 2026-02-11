@@ -523,6 +523,45 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const columns = getColumns(selectedKind);
 
+  const getStatusCategory = (status: string): string => {
+    const s = status.toLowerCase();
+    const successStatuses = [
+      'running',
+      'ready',
+      'active',
+      'bound',
+      'available',
+      'succeeded',
+      'complete',
+      'completed',
+      'healthy',
+    ];
+    const warningStatuses = [
+      'pending',
+      'waiting',
+      'containerCreating',
+      'containercreating',
+      'terminating',
+      'unknown',
+    ];
+    const errorStatuses = [
+      'failed',
+      'error',
+      'crashloopbackoff',
+      'imagepullbackoff',
+      'errimagepull',
+      'notready',
+      'evicted',
+      'oomkilled',
+      'backoff',
+      'invalid',
+    ];
+    if (successStatuses.includes(s)) return 'success';
+    if (warningStatuses.includes(s)) return 'warning';
+    if (errorStatuses.includes(s)) return 'error';
+    return 'default';
+  };
+
   const renderCell = (resource: KubeResource, column: string) => {
     switch (column) {
       case 'Name':
@@ -531,12 +570,20 @@ const ResourceList: React.FC<ResourceListProps> = ({
         return resource.metadata.namespace || '-';
       case 'Age':
         return formatAge(resource.metadata.creationTimestamp);
-      case 'Status':
+      case 'Status': {
+        let statusText: string;
         if (resource.kind === 'Node') {
           const readyCondition = resource.status?.conditions?.find((c: any) => c.type === 'Ready');
-          return readyCondition?.status === 'True' ? 'Ready' : 'NotReady';
+          statusText = readyCondition?.status === 'True' ? 'Ready' : 'NotReady';
+        } else {
+          statusText = resource.status?.phase || '-';
         }
-        return resource.status?.phase || '-';
+        return (
+          <span className={`status-text status-${getStatusCategory(statusText)}`}>
+            {statusText}
+          </span>
+        );
+      }
       case 'Restarts': {
         const totalRestarts = resource.status?.containerStatuses?.reduce(
           (sum, container) => sum + (container.restartCount || 0),
@@ -835,6 +882,9 @@ const ResourceList: React.FC<ResourceListProps> = ({
                   className={`namespace-input ${namespaceInput ? 'has-value' : ''}`}
                   disabled={isLoading}
                   autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
                 />
                 {namespaceInput && (
                   <button

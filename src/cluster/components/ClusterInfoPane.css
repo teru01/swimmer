@@ -755,3 +755,19 @@
   background-color: var(--bg-secondary);
   border-radius: 3px;
 }
+
+.status-text {
+  font-weight: 500;
+}
+
+.status-text.status-success {
+  color: #2ea043;
+}
+
+.status-text.status-warning {
+  color: #d29922;
+}
+
+.status-text.status-error {
+  color: #f85149;
+}
