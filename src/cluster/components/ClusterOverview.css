@@ -2,8 +2,8 @@
   padding: 20px;
   height: 100%;
   overflow-y: auto;
-  background-color: var(--vscode-editor-background);
-  color: var(--vscode-editor-foreground);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .cluster-overview-loading,
@@ -13,13 +13,13 @@
   justify-content: center;
   height: 100%;
   gap: 12px;
-  color: var(--vscode-descriptionForeground);
+  color: var(--text-secondary);
 }
 
 .overview-section {
   margin-bottom: 24px;
-  background-color: var(--vscode-editorWidget-background);
-  border: 1px solid var(--vscode-panel-border);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 16px;
 }
@@ -28,8 +28,8 @@
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--vscode-editor-foreground);
-  border-bottom: 1px solid var(--vscode-panel-border);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 8px;
 }
 
@@ -45,7 +45,7 @@
   align-items: center;
   gap: 12px;
   padding: 6px 0;
-  border-bottom: 1px solid var(--vscode-panel-border);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .info-item:last-child {
@@ -54,7 +54,7 @@
 
 .info-label {
   font-size: 12px;
-  color: var(--vscode-descriptionForeground);
+  color: var(--text-secondary);
   font-weight: 500;
   min-width: 140px;
   flex-shrink: 0;
@@ -62,8 +62,8 @@
 
 .info-value {
   font-size: 14px;
-  color: var(--vscode-editor-foreground);
-  font-family: var(--vscode-editor-font-family);
+  color: var(--text-primary);
+  font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
 }
 
 .info-item-full {
@@ -107,8 +107,8 @@
 }
 
 .stat-card {
-  background-color: var(--vscode-editor-background);
-  border: 1px solid var(--vscode-panel-border);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 12px;
   text-align: center;
@@ -116,20 +116,20 @@
 
 .stat-label {
   font-size: 12px;
-  color: var(--vscode-descriptionForeground);
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
 .stat-value {
   font-size: 24px;
   font-weight: 600;
-  color: var(--vscode-terminal-ansiGreen);
+  color: var(--color-success);
   margin-bottom: 4px;
 }
 
 .stat-detail {
   font-size: 11px;
-  color: var(--vscode-descriptionForeground);
+  color: var(--text-secondary);
 }
 
 .resources-section {
@@ -145,23 +145,23 @@
 .resource-list-container {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--vscode-panel-border);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   overflow: hidden;
-  background-color: var(--vscode-editor-background);
+  background-color: var(--bg-primary);
 }
 
 .resource-header {
   padding: 12px;
-  background-color: var(--vscode-editorGroupHeader-tabsBackground);
-  border-bottom: 1px solid var(--vscode-panel-border);
+  background-color: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .resource-title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--vscode-editor-foreground);
+  color: var(--text-primary);
 }
 
 .resource-scroll {
@@ -187,44 +187,44 @@
   text-align: left;
   padding: 8px 12px;
   font-weight: 600;
-  color: var(--vscode-descriptionForeground);
-  border-bottom: 1px solid var(--vscode-panel-border);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
   font-size: 12px;
-  background-color: var(--vscode-editorGroupHeader-tabsBackground);
+  background-color: var(--bg-tertiary);
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
 .resource-mini-table th:first-child {
-  border-left: 1px solid var(--vscode-panel-border);
+  border-left: 1px solid var(--border-color);
 }
 
 .resource-mini-table th:last-child {
-  border-right: 1px solid var(--vscode-panel-border);
+  border-right: 1px solid var(--border-color);
 }
 
 .resource-mini-table td {
   padding: 8px 12px;
-  border-bottom: 1px solid var(--vscode-panel-border);
-  color: var(--vscode-editor-foreground);
-  background-color: var(--vscode-editor-background);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
 }
 
 .resource-mini-table td:first-child {
-  border-left: 1px solid var(--vscode-panel-border);
+  border-left: 1px solid var(--border-color);
 }
 
 .resource-mini-table td:last-child {
-  border-right: 1px solid var(--vscode-panel-border);
+  border-right: 1px solid var(--border-color);
 }
 
 .resource-mini-table tbody tr:hover {
-  background-color: var(--vscode-list-hoverBackground);
+  background-color: var(--bg-hover);
 }
 
 .resource-mini-table tbody tr:last-child td {
-  border-bottom: 1px solid var(--vscode-panel-border);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .status-badge {
@@ -238,31 +238,31 @@
 .status-badge.ready,
 .status-badge.running {
   background-color: rgba(22, 163, 74, 0.2);
-  color: var(--vscode-terminal-ansiGreen);
+  color: var(--color-success);
 }
 
 .status-badge.pending {
   background-color: rgba(234, 179, 8, 0.2);
-  color: var(--vscode-terminal-ansiYellow);
+  color: var(--color-warning);
 }
 
 .status-badge.failed {
   background-color: rgba(239, 68, 68, 0.2);
-  color: var(--vscode-terminal-ansiRed);
+  color: var(--color-error);
 }
 
 .status-badge.warning {
   background-color: rgba(234, 179, 8, 0.2);
-  color: var(--vscode-terminal-ansiYellow);
+  color: var(--color-warning);
 }
 
 .status-badge.normal {
   background-color: rgba(22, 163, 74, 0.2);
-  color: var(--vscode-terminal-ansiGreen);
+  color: var(--color-success);
 }
 
 .pod-name {
-  font-family: var(--vscode-editor-font-family);
+  font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
   font-size: 12px;
 }
 
@@ -283,9 +283,10 @@
   outline: none;
 }
 
-.info-value-with-copy .copy-icon:focus {
-  opacity: 0;
-  background: none;
+.info-value-with-copy .copy-icon:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--color-primary);
+  border-radius: 3px;
 }
 
 .info-item:hover .copy-icon {

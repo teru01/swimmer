@@ -3,7 +3,7 @@
 ## Critical (バグ)
 
 - [x] Init Container のステータス参照バグ修正 (`ResourceDetailPane.tsx:1586-1589` — `containerStatuses` → `initContainerStatuses`)
-- [ ] ClusterOverview.css の VSCode テーマ変数をプロジェクトのCSS変数に置換
+- [x] ClusterOverview.css の VSCode テーマ変数をプロジェクトのCSS変数に置換
 - [ ] 未定義CSS変数の定義追加 (`--bg-hover`, `--color-primary-low`)
 - [ ] StatefulSet の Ready カラムの無意味な条件分岐を修正 (`ResourceList.tsx:829-833`)
 
