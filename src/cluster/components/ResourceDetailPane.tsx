@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './ClusterInfoPane.css';
 import { KubeResource } from './ResourceList';
 import { formatAge } from '../../lib/utils';
 import { commands } from '../../api/commands';
+import { stringify as yamlStringify } from 'yaml';
 
 interface ResourceDetailPaneProps {
   resource: KubeResource | undefined;
@@ -503,10 +504,16 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   const [searchText, setSearchText] = useState('');
   const [matchCount, setMatchCount] = useState(0);
   const [currentMatch, setCurrentMatch] = useState(0);
+  const [showRawYaml, setShowRawYaml] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const highlightClass = 'detail-search-highlight';
   const activeHighlightClass = 'detail-search-highlight-active';
+
+  const rawYamlContent = useMemo(() => {
+    if (!resource) return '';
+    return yamlStringify(resource, { lineWidth: 0 });
+  }, [resource]);
 
   const clearHighlights = useCallback(() => {
     if (!contentRef.current) return;
@@ -1690,9 +1697,20 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
           <h3>{resource.metadata.name}</h3>
           <span className="resource-kind-badge">{resourceKind}</span>
         </div>
-        <button onClick={onClose} className="close-button" title="Close details">
-          ✕
-        </button>
+        <div className="detail-header-actions">
+          <label className="yaml-toggle">
+            <span className="yaml-toggle-label">YAML</span>
+            <input
+              type="checkbox"
+              checked={showRawYaml}
+              onChange={e => setShowRawYaml(e.target.checked)}
+            />
+            <span className="yaml-toggle-slider" />
+          </label>
+          <button onClick={onClose} className="close-button" title="Close details">
+            ✕
+          </button>
+        </div>
       </div>
 
       {searchOpen && (
@@ -1752,74 +1770,90 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
       )}
 
       <div className="detail-content" ref={contentRef}>
-        {resourceKind === 'Pod' && renderPodDetails(resource)}
-        {resourceKind === 'Deployment' && renderDeploymentDetails(resource)}
-        {resourceKind === 'ReplicaSet' && renderReplicaSetDetails(resource)}
-        {resourceKind === 'StatefulSet' && renderStatefulSetDetails(resource)}
-        {resourceKind === 'DaemonSet' && renderDaemonSetDetails(resource)}
-        {resourceKind === 'Service' && renderServiceDetails(resource)}
-        {resourceKind === 'Ingress' && renderIngressDetails(resource)}
-        {resourceKind === 'ConfigMap' && renderConfigMapDetails(resource)}
-        {resourceKind === 'Secret' && renderSecretDetails(resource)}
-        {resourceKind === 'Namespace' && renderNamespaceDetails(resource)}
-        {resourceKind === 'Node' && renderNodeDetails(resource)}
-        {![
-          'Pod',
-          'Deployment',
-          'ReplicaSet',
-          'StatefulSet',
-          'DaemonSet',
-          'Service',
-          'Ingress',
-          'ConfigMap',
-          'Secret',
-          'Namespace',
-          'Node',
-        ].includes(resourceKind) && (
-          <div className="fallback-details">
-            <section className="detail-section">
-              <h4>Basic Information</h4>
-              <DetailItem label="Name">{resource.metadata.name}</DetailItem>
-              <DetailItem label="Namespace">{resource.metadata.namespace}</DetailItem>
-              <DetailItem label="Age">{formatAge(resource.metadata.creationTimestamp)}</DetailItem>
-            </section>
-
-            {resource.status?.conditions && resource.status.conditions.length > 0 && (
-              <section className="detail-section">
-                <h4>Conditions</h4>
-                <table className="detail-table">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Last Transition</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {resource.status.conditions.map(c => (
-                      <tr key={c.type}>
-                        <td>{c.type}</td>
-                        <td>{c.status}</td>
-                        <td>{formatAge(c.lastTransitionTime)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </section>
-            )}
-
-            <section className="detail-section">
-              <h4>Labels</h4>
-              {<CollapsibleMetadataMap map={resource.metadata.labels} />}
-            </section>
-
-            <section className="detail-section">
-              <h4>Annotations</h4>
-              {<CollapsibleMetadataMap map={resource.metadata.annotations} />}
-            </section>
-
-            {renderEvents()}
+        {showRawYaml ? (
+          <div className="raw-yaml-wrapper">
+            <pre className="raw-yaml-lines" aria-hidden="true">
+              {rawYamlContent
+                .split('\n')
+                .map((_, i) => i + 1)
+                .join('\n')}
+            </pre>
+            <pre className="raw-yaml-content">{rawYamlContent}</pre>
           </div>
+        ) : (
+          <>
+            {resourceKind === 'Pod' && renderPodDetails(resource)}
+            {resourceKind === 'Deployment' && renderDeploymentDetails(resource)}
+            {resourceKind === 'ReplicaSet' && renderReplicaSetDetails(resource)}
+            {resourceKind === 'StatefulSet' && renderStatefulSetDetails(resource)}
+            {resourceKind === 'DaemonSet' && renderDaemonSetDetails(resource)}
+            {resourceKind === 'Service' && renderServiceDetails(resource)}
+            {resourceKind === 'Ingress' && renderIngressDetails(resource)}
+            {resourceKind === 'ConfigMap' && renderConfigMapDetails(resource)}
+            {resourceKind === 'Secret' && renderSecretDetails(resource)}
+            {resourceKind === 'Namespace' && renderNamespaceDetails(resource)}
+            {resourceKind === 'Node' && renderNodeDetails(resource)}
+            {![
+              'Pod',
+              'Deployment',
+              'ReplicaSet',
+              'StatefulSet',
+              'DaemonSet',
+              'Service',
+              'Ingress',
+              'ConfigMap',
+              'Secret',
+              'Namespace',
+              'Node',
+            ].includes(resourceKind) && (
+              <div className="fallback-details">
+                <section className="detail-section">
+                  <h4>Basic Information</h4>
+                  <DetailItem label="Name">{resource.metadata.name}</DetailItem>
+                  <DetailItem label="Namespace">{resource.metadata.namespace}</DetailItem>
+                  <DetailItem label="Age">
+                    {formatAge(resource.metadata.creationTimestamp)}
+                  </DetailItem>
+                </section>
+
+                {resource.status?.conditions && resource.status.conditions.length > 0 && (
+                  <section className="detail-section">
+                    <h4>Conditions</h4>
+                    <table className="detail-table">
+                      <thead>
+                        <tr>
+                          <th>Type</th>
+                          <th>Status</th>
+                          <th>Last Transition</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {resource.status.conditions.map(c => (
+                          <tr key={c.type}>
+                            <td>{c.type}</td>
+                            <td>{c.status}</td>
+                            <td>{formatAge(c.lastTransitionTime)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </section>
+                )}
+
+                <section className="detail-section">
+                  <h4>Labels</h4>
+                  {<CollapsibleMetadataMap map={resource.metadata.labels} />}
+                </section>
+
+                <section className="detail-section">
+                  <h4>Annotations</h4>
+                  {<CollapsibleMetadataMap map={resource.metadata.annotations} />}
+                </section>
+
+                {renderEvents()}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
