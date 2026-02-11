@@ -26,36 +26,42 @@ export const PreferencesSchema = z.object({
     })
     .default({}),
   // Terminal設定
-  terminal: z.object({
-    shellPath: z.string().default(defaultShellPath),
-    theme: z.object({
-      background: z.string().default('#1e1e1e'),
-      foreground: z.string().default('#d4d4d4'),
-      cursor: z.string().default('#ffffff'),
-      black: z.string().default('#000000'),
-      red: z.string().default('#cd3131'),
-      green: z.string().default('#0dbc79'),
-      yellow: z.string().default('#e5e510'),
-      blue: z.string().default('#2472c8'),
-      magenta: z.string().default('#bc3fbc'),
-      cyan: z.string().default('#11a8cd'),
-      white: z.string().default('#e5e5e5'),
-      brightBlack: z.string().default('#666666'),
-      brightRed: z.string().default('#f14c4c'),
-      brightGreen: z.string().default('#23d18b'),
-      brightYellow: z.string().default('#f5f543'),
-      brightBlue: z.string().default('#3b8eea'),
-      brightMagenta: z.string().default('#d670d6'),
-      brightCyan: z.string().default('#29b8db'),
-      brightWhite: z.string().default('#e5e5e5'),
-    }),
-    fontSize: z.number().default(12),
-    fontFamily: z.string().default('Menlo, Monaco, "Courier New", monospace'),
-  }),
+  terminal: z
+    .object({
+      shellPath: z.string().default(defaultShellPath),
+      theme: z
+        .object({
+          background: z.string().default('#1e1e1e'),
+          foreground: z.string().default('#d4d4d4'),
+          cursor: z.string().default('#ffffff'),
+          black: z.string().default('#000000'),
+          red: z.string().default('#cd3131'),
+          green: z.string().default('#0dbc79'),
+          yellow: z.string().default('#e5e510'),
+          blue: z.string().default('#2472c8'),
+          magenta: z.string().default('#bc3fbc'),
+          cyan: z.string().default('#11a8cd'),
+          white: z.string().default('#e5e5e5'),
+          brightBlack: z.string().default('#666666'),
+          brightRed: z.string().default('#f14c4c'),
+          brightGreen: z.string().default('#23d18b'),
+          brightYellow: z.string().default('#f5f543'),
+          brightBlue: z.string().default('#3b8eea'),
+          brightMagenta: z.string().default('#d670d6'),
+          brightCyan: z.string().default('#29b8db'),
+          brightWhite: z.string().default('#e5e5e5'),
+        })
+        .default({}),
+      fontSize: z.number().default(12),
+      fontFamily: z.string().default('Menlo, Monaco, "Courier New", monospace'),
+    })
+    .default({}),
   // タブ履歴設定
-  tabHistory: z.object({
-    maxSize: z.number().default(100),
-  }),
+  tabHistory: z
+    .object({
+      maxSize: z.number().default(100),
+    })
+    .default({}),
 });
 
 export type Preferences = z.infer<typeof PreferencesSchema>;

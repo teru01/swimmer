@@ -18,6 +18,8 @@ pub enum Error {
     Kube(#[from] kube::config::KubeconfigError),
     #[error("Terminal error: {0}")]
     Terminal(String),
+    #[error("Lock error: {0}")]
+    Lock(String),
 }
 
 impl serde::Serialize for Error {
@@ -56,7 +58,10 @@ async fn get_kube_contexts(
             "custom-context-2".to_string(),
         ])
     } else {
-        let path = kubeconfig_path.lock().unwrap().clone();
+        let path = kubeconfig_path
+            .lock()
+            .map_err(|e| Error::Lock(e.to_string()))?
+            .clone();
         let kubeconfig = if let Some(ref p) = path {
             Kubeconfig::read_from(p).map_err(Error::Kube)?
         } else {
@@ -76,7 +81,9 @@ async fn set_kubeconfig_path(
     kubeconfig_path: tauri::State<'_, KubeconfigPath>,
     path: Option<String>,
 ) -> Result<()> {
-    let mut current = kubeconfig_path.lock().unwrap();
+    let mut current = kubeconfig_path
+        .lock()
+        .map_err(|e| Error::Lock(e.to_string()))?;
     *current = path.filter(|p| !p.is_empty());
     Ok(())
 }
@@ -85,7 +92,10 @@ async fn set_kubeconfig_path(
 async fn get_kubeconfig_path(
     kubeconfig_path: tauri::State<'_, KubeconfigPath>,
 ) -> Result<Option<String>> {
-    Ok(kubeconfig_path.lock().unwrap().clone())
+    Ok(kubeconfig_path
+        .lock()
+        .map_err(|e| Error::Lock(e.to_string()))?
+        .clone())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

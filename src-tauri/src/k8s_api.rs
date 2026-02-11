@@ -40,6 +40,8 @@ pub enum K8sError {
     Serialization(#[from] serde_json::Error),
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("Lock error: {0}")]
+    Lock(String),
 }
 
 impl serde::Serialize for K8sError {
@@ -623,8 +625,8 @@ impl K8sClient for RealK8sClient {
         let values: Vec<Value> = items
             .items
             .into_iter()
-            .map(|item| serde_json::to_value(item).unwrap())
-            .collect();
+            .map(|item| serde_json::to_value(item))
+            .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(values)
     }
 
@@ -862,112 +864,115 @@ pub async fn list_resources(
     kind: String,
     namespace: Option<String>,
 ) -> Result<Vec<Value>> {
-    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let kc_path = kubeconfig_path
+        .lock()
+        .map_err(|e| K8sError::Lock(e.to_string()))?
+        .clone();
     let client = create_client(context, kc_path).await?;
 
     let resources: Vec<Value> = match kind.as_str() {
         "Pods" => {
             let pods = client.list_pods(namespace.as_deref()).await?;
             pods.into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "Deployments" => {
             let items = client.list_deployments(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "Services" => {
             let items = client.list_services(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "Nodes" => {
             let items = client.list_nodes().await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "Namespaces" => {
             let items = client.list_namespaces().await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "ReplicaSets" => {
             let items = client.list_replicasets(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "StatefulSets" => {
             let items = client.list_statefulsets(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "DaemonSets" => {
             let items = client.list_daemonsets(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "Jobs" => {
             let items = client.list_jobs(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "CronJobs" => {
             let items = client.list_cronjobs(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "ConfigMaps" => {
             let items = client.list_configmaps(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "Secrets" => {
             let items = client.list_secrets(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "Ingresses" => {
             let items = client.list_ingresses(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "NetworkPolicies" => {
             let items = client.list_networkpolicies(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "PersistentVolumes" => {
             let items = client.list_persistentvolumes().await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "PersistentVolumeClaims" => {
@@ -976,63 +981,63 @@ pub async fn list_resources(
                 .await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "StorageClasses" => {
             let items = client.list_storageclasses().await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "Roles" => {
             let items = client.list_roles(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "ClusterRoles" => {
             let items = client.list_clusterroles().await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "RoleBindings" => {
             let items = client.list_rolebindings(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "ClusterRoleBindings" => {
             let items = client.list_clusterrolebindings().await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "ServiceAccounts" => {
             let items = client.list_serviceaccounts(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "Endpoints" => {
             let items = client.list_endpoints(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "Events" => {
             let items = client.list_events(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "HorizontalPodAutoscalers" => {
@@ -1041,28 +1046,28 @@ pub async fn list_resources(
                 .await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "LimitRanges" => {
             let items = client.list_limitranges(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "ResourceQuotas" => {
             let items = client.list_resourcequotas(namespace.as_deref()).await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         "CRDs" => {
             let items = client.list_crds().await?;
             items
                 .into_iter()
-                .map(|p| serde_json::to_value(p).unwrap())
+                .filter_map(|p| serde_json::to_value(p).ok())
                 .collect()
         }
         cr_kind if cr_kind.starts_with("cr:") => {
@@ -1104,7 +1109,10 @@ pub async fn get_resource_detail(
     name: String,
     namespace: Option<String>,
 ) -> Result<Value> {
-    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let kc_path = kubeconfig_path
+        .lock()
+        .map_err(|e| K8sError::Lock(e.to_string()))?
+        .clone();
     let client = create_client(context, kc_path).await?;
     let namespace_for_events = namespace.clone();
 
@@ -1288,7 +1296,7 @@ pub async fn get_resource_detail(
             .collect();
         filtered_events
             .into_iter()
-            .map(|e| serde_json::to_value(e).unwrap())
+            .filter_map(|e| serde_json::to_value(e).ok())
             .collect()
     } else {
         vec![]
@@ -1363,7 +1371,10 @@ pub async fn get_cluster_overview_info(
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context_id: String,
 ) -> Result<ClusterOverviewInfo> {
-    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let kc_path = kubeconfig_path
+        .lock()
+        .map_err(|e| K8sError::Lock(e.to_string()))?
+        .clone();
     let client = create_client(Some(context_id.clone()), kc_path).await?;
     let (provider, project_or_account, region, cluster_name) = parse_context_id(&context_id);
 
@@ -1384,7 +1395,10 @@ pub async fn get_cluster_stats(
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context_id: String,
 ) -> Result<ClusterStats> {
-    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let kc_path = kubeconfig_path
+        .lock()
+        .map_err(|e| K8sError::Lock(e.to_string()))?
+        .clone();
     let client = create_client(Some(context_id), kc_path).await?;
 
     let nodes = client.list_nodes().await?;
@@ -1442,7 +1456,10 @@ pub async fn list_crd_groups(
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
 ) -> Result<Vec<CrdGroup>> {
-    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let kc_path = kubeconfig_path
+        .lock()
+        .map_err(|e| K8sError::Lock(e.to_string()))?
+        .clone();
     let client = create_client(context, kc_path).await?;
     let crds = client.list_crds().await?;
 
@@ -1596,15 +1613,19 @@ pub async fn start_watch_resources(
     let watch_id = uuid::Uuid::new_v4().to_string();
     let watch_id_clone = watch_id.clone();
     let app_clone = app.clone();
-    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let kc_path = kubeconfig_path
+        .lock()
+        .map_err(|e| K8sError::Lock(e.to_string()))?
+        .clone();
 
     let handle = tokio::spawn(async move {
-        let client_result = RealK8sClient::new(context, kc_path).await;
-        if let Err(e) = client_result {
-            log::error!("Failed to create client: {}", e);
-            return;
-        }
-        let client = client_result.unwrap().client;
+        let client = match RealK8sClient::new(context, kc_path).await {
+            Ok(c) => c.client,
+            Err(e) => {
+                log::error!("Failed to create client: {}", e);
+                return;
+            }
+        };
 
         log::info!(
             "Starting watch for kind: {}, namespace: {:?}, watch_id: {}",
@@ -1653,7 +1674,7 @@ pub async fn start_watch_resources(
 
     watcher_handle
         .lock()
-        .unwrap()
+        .map_err(|e| K8sError::Lock(e.to_string()))?
         .insert(watch_id.clone(), handle);
     Ok(watch_id)
 }
@@ -1663,7 +1684,11 @@ pub async fn stop_watch_resources(
     watcher_handle: tauri::State<'_, WatcherHandle>,
     watch_id: String,
 ) -> Result<()> {
-    if let Some(handle) = watcher_handle.lock().unwrap().remove(&watch_id) {
+    if let Some(handle) = watcher_handle
+        .lock()
+        .map_err(|e| K8sError::Lock(e.to_string()))?
+        .remove(&watch_id)
+    {
         handle.abort();
     }
     Ok(())
@@ -1677,7 +1702,10 @@ pub async fn delete_resource(
     name: String,
     namespace: Option<String>,
 ) -> Result<()> {
-    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let kc_path = kubeconfig_path
+        .lock()
+        .map_err(|e| K8sError::Lock(e.to_string()))?
+        .clone();
     let client = create_client(context, kc_path).await?;
     client
         .delete_resource(&kind, &name, namespace.as_deref())
@@ -1691,7 +1719,10 @@ pub async fn rollout_restart_deployment(
     name: String,
     namespace: String,
 ) -> Result<()> {
-    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let kc_path = kubeconfig_path
+        .lock()
+        .map_err(|e| K8sError::Lock(e.to_string()))?
+        .clone();
     let client = create_client(context, kc_path).await?;
     client.rollout_restart_deployment(&name, &namespace).await
 }
