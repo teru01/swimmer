@@ -30,6 +30,17 @@ const compat = new FlatCompat({
 });
 
 export default [
+  {
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      '.vscode/**',
+      'public/**',
+      '**/*.d.ts',
+      '**/*.log',
+      '**/*.lock',
+    ],
+  },
   js.configs.recommended,
   ...compat.extends(
     'plugin:react/recommended',
@@ -74,14 +85,5 @@ export default [
       },
     },
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
-    ignores: [
-      'node_modules/**',
-      'dist/**',
-      '.vscode/**',
-      'public/**',
-      '**/*.d.ts',
-      '**/*.log',
-      '**/*.lock',
-    ],
   },
 ];

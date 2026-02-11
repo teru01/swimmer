@@ -42,28 +42,29 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size' 
   suffix?: ReactNode;
 }
 
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ size = 'medium', prefix, suffix, className, ...rest }, ref) => {
-    const sizeClass =
-      size === 'small'
-        ? 'text-xs py-1 px-2 h-6'
-        : size === 'large'
-          ? 'text-base py-2 px-4 h-10'
-          : 'text-sm py-1.5 px-3 h-8';
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input(
+  { size = 'medium', prefix, suffix, className, ...rest },
+  ref
+) {
+  const sizeClass =
+    size === 'small'
+      ? 'text-xs py-1 px-2 h-6'
+      : size === 'large'
+        ? 'text-base py-2 px-4 h-10'
+        : 'text-sm py-1.5 px-3 h-8';
 
-    return (
-      <div className={`relative flex items-center ${className || ''}`}>
-        {prefix && <span className="absolute left-2 text-gray-400">{prefix}</span>}
-        <input
-          ref={ref}
-          className={`w-full ${sizeClass} border border-gray-300 rounded ${prefix ? 'pl-7' : ''} ${suffix ? 'pr-7' : ''}`}
-          {...rest}
-        />
-        {suffix && <span className="absolute right-2 text-gray-400">{suffix}</span>}
-      </div>
-    );
-  }
-);
+  return (
+    <div className={`relative flex items-center ${className || ''}`}>
+      {prefix && <span className="absolute left-2 text-gray-400">{prefix}</span>}
+      <input
+        ref={ref}
+        className={`w-full ${sizeClass} border border-gray-300 rounded ${prefix ? 'pl-7' : ''} ${suffix ? 'pr-7' : ''}`}
+        {...rest}
+      />
+      {suffix && <span className="absolute right-2 text-gray-400">{suffix}</span>}
+    </div>
+  );
+});
 
 // タグコンポーネント
 interface TagProps {

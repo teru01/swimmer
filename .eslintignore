@@ -1,7 +1,0 @@
-node_modules
-dist
-.vscode
-public
-*.d.ts
-*.log
-*.lock 

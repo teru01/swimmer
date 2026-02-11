@@ -45,6 +45,14 @@ export interface KubeResource {
       image: string;
       imageID: string;
     }[];
+    initContainerStatuses?: {
+      name: string;
+      ready: boolean;
+      restartCount: number;
+      state?: any;
+      image: string;
+      imageID: string;
+    }[];
     replicas?: number;
     readyReplicas?: number;
     availableReplicas?: number;

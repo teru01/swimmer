@@ -265,7 +265,6 @@ const DeploymentPodsSection: React.FC<{
       cancelled = true;
       clearInterval(intervalId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contextId, namespace, matchLabelsKey]);
 
   const handlePodClick = (pod: KubeResource) => {
@@ -369,7 +368,6 @@ const ReplicaSetPodsSection: React.FC<{
       cancelled = true;
       clearInterval(intervalId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contextId, namespace, matchLabelsKey, replicaSetName]);
 
   const handlePodClick = (pod: KubeResource) => {
