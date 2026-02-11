@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import './App.css';
 import './styles/layout.css';
 import MainLayout from './main/MainLayout';
 import PreferencesPage, { PreferencesSection } from './preferences/PreferencesPage';
+import bmcLogo from './assets/bmc-logo-yellow.png';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<'main' | 'preferences'>('main');
@@ -54,6 +56,13 @@ function App() {
           initialSection={preferencesSection}
         />
       )}
+      <button
+        className="bmc-button"
+        onClick={() => openUrl('https://buymeacoffee.com/teru01')}
+        title="Buy me a coffee"
+      >
+        <img src={bmcLogo} alt="Buy me a coffee" className="bmc-logo" />
+      </button>
     </div>
   );
 }
