@@ -3,7 +3,7 @@ import { usePreferences } from '../contexts/PreferencesContext';
 import './preferencesPage.css';
 import { loadTags, addTag, deleteTag, createTag, updateTag, Tag, TAG_COLORS } from '../lib/tag';
 
-export type PreferencesSection = 'general' | 'ai-chat' | 'terminal' | 'tags';
+export type PreferencesSection = 'general' | 'terminal' | 'tags';
 
 interface PreferencesPageProps {
   onBack?: () => void;
@@ -29,16 +29,6 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
   const [editingTagId, setEditingTagId] = useState<string | undefined>(undefined);
   const newTagColorDropdownRef = useRef<HTMLDivElement>(null);
   const editingTagDropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-
-  const handleToggleAiChat = async (enabled: boolean) => {
-    await updatePreferences({
-      ...preferences,
-      ui: {
-        ...preferences.ui,
-        showAiChatPane: enabled,
-      },
-    });
-  };
 
   const handleShellPathChange = async (shellPath: string) => {
     await updatePreferences({
@@ -126,12 +116,6 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
             General
           </button>
           <button
-            className={`sidebar-item ${activeSection === 'ai-chat' ? 'active' : ''}`}
-            onClick={() => setActiveSection('ai-chat')}
-          >
-            AI Chat
-          </button>
-          <button
             className={`sidebar-item ${activeSection === 'terminal' ? 'active' : ''}`}
             onClick={() => setActiveSection('terminal')}
           >
@@ -150,31 +134,6 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
             <section className="preferences-section">
               <h2>General</h2>
               <p className="section-description">General settings for the application.</p>
-            </section>
-          )}
-
-          {activeSection === 'ai-chat' && (
-            <section className="preferences-section">
-              <h2>AI Chat</h2>
-              <p className="section-description">Configure AI chat pane visibility and behavior.</p>
-
-              <div className="preference-row">
-                <div className="preference-label-wrapper">
-                  <label htmlFor="ai-chat-enabled">Enable AI Chat Pane</label>
-                  <p className="preference-description">
-                    Show the AI chat pane in the cluster information view.
-                  </p>
-                </div>
-                <label className="switch">
-                  <input
-                    id="ai-chat-enabled"
-                    type="checkbox"
-                    checked={preferences.ui.showAiChatPane}
-                    onChange={e => handleToggleAiChat(e.target.checked)}
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
             </section>
           )}
 

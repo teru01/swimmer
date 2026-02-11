@@ -5,7 +5,6 @@ import ClusterOperationPanelComponent from '../cluster/components/ClusterOperati
 import { ClusterViewState, fetchResourceDetail } from '../cluster/components/ClusterInfoPane';
 import { createTerminalSession, TerminalSession } from '../cluster/components/TerminalPane';
 import { KubeResource } from '../cluster/components/ResourceList';
-import ChatPane from '../chat/components/ChatPane';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { invoke } from '@tauri-apps/api/core';
 import { debug } from '@tauri-apps/plugin-log';
@@ -41,7 +40,6 @@ interface MainLayoutProps {
  * Main Layout Component
  * - Left: Context hierarchy list (full height)
  * - Center: Cluster tabs on top, Cluster information and Terminal below
- * - Right: AI chat
  */
 function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
   const { preferences } = usePreferences();
@@ -434,19 +432,6 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
               ))}
             </PanelGroup>
           </Panel>
-
-          {preferences.ui.showAiChatPane && (
-            <>
-              <PanelResizeHandle className="resize-handle" />
-
-              {/* Right pane: AI chat */}
-              <Panel defaultSize={25} minSize={15}>
-                <div className="chat-pane-container">
-                  <ChatPane selectedClusterContext={selectedContext?.clusterContext} />
-                </div>
-              </Panel>
-            </>
-          )}
         </PanelGroup>
       </div>
     </div>
