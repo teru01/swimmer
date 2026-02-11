@@ -1,183 +1,124 @@
-# Swimmer - Kubernetes Client
+# Swimmer
 
-A modern, user-friendly Kubernetes client built with Tauri, React, and TypeScript.
+A user-friendly Kubernetes GUI client built for the multi-cluster era. Manage dozens of clusters from a single window with an intuitive hierarchical context tree, tabbed workspaces, and an integrated terminal — all running natively on your desktop.
+
+## Why Swimmer?
+
+Modern infrastructure often spans many Kubernetes clusters across multiple cloud providers and regions. Swimmer is designed from the ground up for this reality: its hierarchical context tree, favorites, tags, and split-panel workspaces let you navigate and compare clusters as naturally as browsing folders in a file manager.
 
 ## Features
 
-### 🎯 Cluster Information Management
+### Multi-Cluster Context Management
 
-- **Resource Explorer**: Browse Kubernetes resources organized by categories (Workloads, Network, Storage, etc.)
-- **Interactive Sidebar**: Expandable resource groups with icons for easy navigation
-- **Resource List View**: Table-based display with namespace filtering and search capabilities
-- **Detailed Resource View**: Comprehensive resource details with structured information display
+- **Hierarchical context tree** — Contexts are automatically organized by cloud provider:
+  - **GKE**: Project > Region > Cluster
+  - **EKS**: Account > Region > Cluster
+  - **Others**: Docker Desktop, minikube, kind, and any custom context
+- **Favorites** — Pin frequently used clusters for instant access
+- **Tags** — Attach color-coded tags to contexts and filter by them
+- **Search** — Find any context instantly across all providers
 
-### 🖥️ Terminal Integration
+### Tabbed & Split-Panel Workspaces
 
-- **Real Terminal**: Integrated xterm.js terminal with actual shell functionality
-- **Context Awareness**: Terminal automatically reflects the selected Kubernetes context
-- **Command Execution**: Run kubectl commands and other CLI tools directly
+- Open multiple cluster contexts as tabs within a panel
+- Split panels side-by-side (up to 10) to compare resources across clusters
+- Drag-to-resize panes throughout the UI
+- Per-tab terminal sessions and view states
 
-### 🗂️ Context Management
+### Resource Browser
 
-- **Hierarchical Organization**: Organize contexts in folders for better management
-- **Drag & Drop**: Reorder contexts and folders with intuitive drag-and-drop
-- **Tagging System**: Add tags to contexts for easy filtering and organization
-- **Search & Filter**: Quickly find contexts with text search and tag filters
+Browse and inspect 27+ built-in resource types organized by category:
 
-### 🎨 Modern UI/UX
+| Category | Resources |
+|---|---|
+| Workloads | Pods, Deployments, ReplicaSets, StatefulSets, DaemonSets, Jobs, CronJobs, HPAs |
+| Network | Services, Endpoints, Ingresses, NetworkPolicies |
+| Storage | PersistentVolumes, PersistentVolumeClaims, StorageClasses |
+| Configuration | ConfigMaps, Secrets, LimitRanges, ResourceQuotas |
+| RBAC | Roles, ClusterRoles, RoleBindings, ClusterRoleBindings, ServiceAccounts |
+| Cluster | Nodes, Namespaces, Events |
+| Custom Resources | Dynamically discovered CRDs |
 
-- **Responsive Design**: Clean, modern interface that adapts to different screen sizes
-- **Dark Theme Support**: Eye-friendly dark theme with consistent color scheme
-- **Smooth Animations**: Subtle animations and transitions for better user experience
-- **Accessibility**: Keyboard navigation and screen reader support
+- Namespace filtering with autocomplete
+- Real-time updates via Kubernetes watch API
+- Detailed resource view with metadata, status, conditions, containers, and events
+- Resource operations: delete resources, rollout restart deployments
 
-## Technology Stack
+### Cluster Overview
 
-- **Frontend**: React 18 + TypeScript
-- **Backend**: Rust (Tauri)
-- **Terminal**: xterm.js with real PTY support
-- **UI Components**: Custom components with modern CSS
-- **Layout**: react-resizable-panels for flexible layouts
-- **Build Tool**: Vite
+At-a-glance dashboard showing provider, region, cluster name, Kubernetes version, node readiness, pod status, and more. Auto-refreshes every 30 seconds.
+
+### Integrated Terminal
+
+- Full shell access (zsh, bash, fish, etc.) powered by a real PTY
+- Each cluster tab gets its own independent terminal session
+- Automatically configured with the selected cluster's kubeconfig context
+- Customizable theme, font, and shell path via Preferences
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Desktop Runtime | [Tauri 2](https://tauri.app/) |
+| Frontend | React 18, TypeScript, Vite |
+| Backend | Rust, [kube-rs](https://kube.rs/), tokio |
+| Terminal | xterm.js, portable-pty |
+| Layout | react-resizable-panels |
+
+## Prerequisites
+
+- [Rust](https://www.rust-lang.org/tools/install) (stable)
+- [Node.js](https://nodejs.org/) (v18+)
+- [Tauri prerequisites](https://tauri.app/start/prerequisites/)
+- A valid `~/.kube/config` with one or more contexts
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js 18+
-- Rust 1.70+
-- kubectl (for Kubernetes functionality)
-
-### Installation
-
-1. Clone the repository:
-
 ```bash
-git clone https://github.com/your-username/swimmer.git
-cd swimmer
-```
-
-2. Install dependencies:
-
-```bash
+# Install dependencies
 npm install
-```
 
-3. Start the development server:
-
-```bash
-npm run dev
-```
-
-4. In another terminal, start the Tauri app:
-
-```bash
+# Run in development mode
 npm run tauri dev
+
+# Build for production
+npm run tauri build
 ```
 
-### Building for Production
+## Development
 
 ```bash
-npm run build
-npm run tauri build
+# Type-check
+npx tsc --noEmit
+
+# Lint
+npm run lint
+
+# Format
+npm run format
+
+# Test
+npm run test
 ```
 
 ## Project Structure
 
 ```
-src/
-├── cluster/                 # Cluster information components
-│   ├── components/         # React components for cluster view
-│   │   ├── ClusterInfoPane.tsx
-│   │   ├── ResourceKindSidebar.tsx
-│   │   ├── ResourceList.tsx
-│   │   ├── ResourceDetailPane.tsx
-│   │   └── TerminalPane.tsx
-│   └── styles/            # Component-specific styles
-├── kubeContexts/          # Context management
-├── main/                  # Main layout and UI components
-├── lib/                   # Utility functions and types
-└── styles/               # Global styles
+src/                          # Frontend (React / TypeScript)
+├── main/                     # Main layout, panel logic
+├── cluster/components/       # Resource sidebar, list, detail, overview, terminal
+├── kubeContexts/components/  # Context tree, modals
+├── preferences/              # Settings page
+├── lib/                      # Utilities, providers, tags, favorites
+├── api/                      # Tauri command wrappers
+└── contexts/                 # React context providers
 
-src-tauri/
-├── src/
-│   ├── lib.rs            # Main Tauri backend
-│   └── main.rs           # Entry point
-└── Cargo.toml           # Rust dependencies
+src-tauri/src/                # Backend (Rust)
+├── lib.rs                    # Tauri setup & command registration
+├── k8s_api.rs                # Kubernetes API client & watch
+└── terminal.rs               # PTY terminal session management
 ```
-
-## Key Improvements Made
-
-### 1. Enhanced Terminal
-
-- Replaced mock terminal with real xterm.js implementation
-- Added PTY support for actual shell execution
-- Improved terminal styling and user experience
-
-### 2. Modern UI Design
-
-- Implemented consistent design system with CSS variables
-- Added loading states, error handling, and empty states
-- Improved accessibility and keyboard navigation
-- Added smooth animations and hover effects
-
-### 3. Better Resource Management
-
-- Organized resources by API groups (Workloads, Network, etc.)
-- Added namespace filtering for namespaced resources
-- Implemented proper loading and error states
-- Enhanced resource detail view with structured information
-
-### 4. Code Quality
-
-- Fixed TypeScript errors and improved type safety
-- Removed unused code and imports
-- Added proper error handling throughout the application
-- Implemented consistent coding patterns
-
-### 5. User Experience
-
-- Added intuitive icons for different resource types
-- Implemented responsive design for different screen sizes
-- Added helpful empty states and loading indicators
-- Improved navigation with breadcrumbs and clear hierarchy
-
-## Development
-
-### Running Tests
-
-```bash
-npm test
-```
-
-### Linting
-
-```bash
-npm run lint
-npm run lint:fix
-```
-
-### Formatting
-
-```bash
-npm run format
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [Tauri](https://tauri.app/) for the excellent desktop app framework
-- [xterm.js](https://xtermjs.org/) for terminal emulation
-- [react-resizable-panels](https://github.com/bvaughn/react-resizable-panels) for layout management
-- [react-arborist](https://github.com/brimdata/react-arborist) for tree view functionality
+MIT
