@@ -48,8 +48,24 @@ fn create_temp_kubeconfig(context_name: &str) -> Result<PathBuf, Error> {
     let modified_content = serde_yaml::to_string(&config)
         .map_err(|e| Error::Terminal(format!("Failed to serialize kubeconfig: {}", e)))?;
 
-    fs::write(&temp_file, modified_content)
-        .map_err(|e| Error::Terminal(format!("Failed to write temp kubeconfig: {}", e)))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(&temp_file)
+            .map_err(|e| Error::Terminal(format!("Failed to create temp kubeconfig: {}", e)))?;
+        file.write_all(modified_content.as_bytes())
+            .map_err(|e| Error::Terminal(format!("Failed to write temp kubeconfig: {}", e)))?;
+    }
+    #[cfg(not(unix))]
+    {
+        fs::write(&temp_file, modified_content)
+            .map_err(|e| Error::Terminal(format!("Failed to write temp kubeconfig: {}", e)))?;
+    }
 
     Ok(temp_file)
 }
