@@ -1205,8 +1205,7 @@ where
                     }
                 }
                 Err(e) => {
-                    log::error!("Watch error: {}", e);
-                    break;
+                    log::warn!("Watch error (will retry): {}", e);
                 }
             }
         }

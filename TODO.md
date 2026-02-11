@@ -16,7 +16,7 @@
 ## High (リソースリーク / クリーンアップ)
 
 - [x] temp kubeconfig がカスタム kubeconfig path を無視する問題を修正 (`terminal.rs:28`)
-- [ ] Watch ストリームのエラー時に再接続する仕組みを追加 (`k8s_api.rs:1207-1209`)
+- [x] Watch ストリームのエラー時に再接続する仕組みを追加 (`k8s_api.rs:1207-1209`)
 - [ ] シリアライゼーションエラーの黙殺をログ出力に変更 (`k8s_api.rs` の `filter_map`)
 
 ## High (CSS / 設定)
