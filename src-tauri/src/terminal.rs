@@ -175,7 +175,10 @@ pub async fn create_terminal_session(
         }
     });
 
-    sessions.lock().unwrap().insert(session_id.clone(), session);
+    sessions
+        .lock()
+        .map_err(|e| Error::Lock(e.to_string()))?
+        .insert(session_id.clone(), session);
 
     Ok(session_id)
 }
@@ -187,10 +190,13 @@ pub async fn write_to_terminal(
     session_id: String,
     data: String,
 ) -> Result<(), Error> {
-    let sessions = sessions.lock().unwrap();
+    let sessions = sessions.lock().map_err(|e| Error::Lock(e.to_string()))?;
     if let Some(session) = sessions.get(&session_id) {
         let bytes = data.as_bytes();
-        let mut writer = session.writer.lock().unwrap();
+        let mut writer = session
+            .writer
+            .lock()
+            .map_err(|e| Error::Lock(e.to_string()))?;
         let mut written = 0;
         while written < bytes.len() {
             match writer.write(&bytes[written..]) {
@@ -218,7 +224,7 @@ pub async fn close_terminal_session(
     sessions: State<'_, TerminalSessions>,
     session_id: String,
 ) -> Result<(), Error> {
-    let mut sessions = sessions.lock().unwrap();
+    let mut sessions = sessions.lock().map_err(|e| Error::Lock(e.to_string()))?;
     if let Some(session) = sessions.remove(&session_id) {
         // Clean up temp kubeconfig file
         if let Some(kubeconfig_path) = session.temp_kubeconfig {
