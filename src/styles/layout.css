@@ -2,18 +2,21 @@
  * グローバルなレイアウトスタイル
  */
 
-:root {
+[data-theme='light'] {
   --bg-primary: #ffffff;
   --bg-secondary: #f8f9fa;
   --bg-tertiary: #e9ecef;
+  --bg-quaternary: #dee2e6;
   --text-primary: #212529;
   --text-secondary: #6c757d;
+  --text-tertiary: #999999;
+  --text-disabled: #adb5bd;
   --border-color: #dee2e6;
-  --color-primary: #0078d4;
-  --color-success: #2ecc71;
-  --color-error: #dc3545;
-  --color-warning: #ffc107;
-  --color-info: #17a2b8;
+  --border-color-light: #e9ecef;
+  --border-color-dark: #ced4da;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.07);
 }
 
 /* 基本レイアウト */

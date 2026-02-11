@@ -4,6 +4,14 @@ import { z } from 'zod';
  * アプリケーションの設定スキーマ
  */
 export const PreferencesSchema = z.object({
+  // General設定
+  general: z
+    .object({
+      kubeconfigPath: z.string().default(''),
+      resourceFetchTimeoutSec: z.number().default(10),
+      theme: z.enum(['dark', 'light', 'system']).default('dark'),
+    })
+    .default({}),
   // Terminal設定
   terminal: z.object({
     shellPath: z.string().default('/bin/zsh'),
@@ -43,6 +51,11 @@ export type Preferences = z.infer<typeof PreferencesSchema>;
  * デフォルトの設定値
  */
 export const defaultPreferences: Preferences = {
+  general: {
+    kubeconfigPath: '',
+    resourceFetchTimeoutSec: 10,
+    theme: 'dark',
+  },
   terminal: {
     shellPath: '/bin/zsh',
     theme: {

@@ -10,6 +10,8 @@ use thiserror::Error;
 
 use terminal::TerminalSessions;
 
+pub type KubeconfigPath = Arc<Mutex<Option<String>>>;
+
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Kube error: {0}")]
@@ -30,7 +32,9 @@ impl serde::Serialize for Error {
 type Result<T> = std::result::Result<T, Error>;
 
 #[tauri::command]
-async fn get_kube_contexts() -> Result<Vec<String>> {
+async fn get_kube_contexts(
+    kubeconfig_path: tauri::State<'_, KubeconfigPath>,
+) -> Result<Vec<String>> {
     let use_mock = std::env::var("USE_MOCK")
         .unwrap_or_else(|_| "false".to_string())
         .parse::<bool>()
@@ -52,7 +56,12 @@ async fn get_kube_contexts() -> Result<Vec<String>> {
             "custom-context-2".to_string(),
         ])
     } else {
-        let kubeconfig = Kubeconfig::read().map_err(Error::Kube)?;
+        let path = kubeconfig_path.lock().unwrap().clone();
+        let kubeconfig = if let Some(ref p) = path {
+            Kubeconfig::read_from(p).map_err(Error::Kube)?
+        } else {
+            Kubeconfig::read().map_err(Error::Kube)?
+        };
         let context_names = kubeconfig
             .contexts
             .into_iter()
@@ -62,10 +71,28 @@ async fn get_kube_contexts() -> Result<Vec<String>> {
     }
 }
 
+#[tauri::command]
+async fn set_kubeconfig_path(
+    kubeconfig_path: tauri::State<'_, KubeconfigPath>,
+    path: Option<String>,
+) -> Result<()> {
+    let mut current = kubeconfig_path.lock().unwrap();
+    *current = path.filter(|p| !p.is_empty());
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_kubeconfig_path(
+    kubeconfig_path: tauri::State<'_, KubeconfigPath>,
+) -> Result<Option<String>> {
+    Ok(kubeconfig_path.lock().unwrap().clone())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let terminal_sessions: TerminalSessions = Arc::new(Mutex::new(HashMap::new()));
     let watcher_handle: k8s_api::WatcherHandle = Arc::new(Mutex::new(HashMap::new()));
+    let kubeconfig_path: KubeconfigPath = Arc::new(Mutex::new(None));
 
     tauri::Builder::default()
         .plugin(
@@ -79,8 +106,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(terminal_sessions)
         .manage(watcher_handle)
+        .manage(kubeconfig_path)
         .invoke_handler(tauri::generate_handler![
             get_kube_contexts,
+            set_kubeconfig_path,
+            get_kubeconfig_path,
             terminal::create_terminal_session,
             terminal::write_to_terminal,
             terminal::close_terminal_session,

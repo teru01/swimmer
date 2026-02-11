@@ -12,7 +12,9 @@ use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, Role, RoleBind
 use k8s_openapi::api::storage::v1::StorageClass;
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::{
-    api::{Api, ApiResource, DeleteParams, DynamicObject, ListParams, ObjectList, Patch, PatchParams},
+    api::{
+        Api, ApiResource, DeleteParams, DynamicObject, ListParams, ObjectList, Patch, PatchParams,
+    },
     config::{Config, InferConfigError, KubeConfigOptions, Kubeconfig, KubeconfigError},
     runtime::watcher,
     Client,
@@ -155,12 +157,7 @@ pub trait K8sClient: Send + Sync {
         namespace: Option<&str>,
     ) -> Result<Value>;
     async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info>;
-    async fn delete_resource(
-        &self,
-        kind: &str,
-        name: &str,
-        namespace: Option<&str>,
-    ) -> Result<()>;
+    async fn delete_resource(&self, kind: &str, name: &str, namespace: Option<&str>) -> Result<()>;
     async fn rollout_restart_deployment(&self, name: &str, namespace: &str) -> Result<()>;
 }
 
@@ -169,17 +166,18 @@ pub struct RealK8sClient {
 }
 
 impl RealK8sClient {
-    pub async fn new(context: Option<String>) -> Result<Self> {
+    pub async fn new(context: Option<String>, kubeconfig_path: Option<String>) -> Result<Self> {
         let config = if let Some(ctx) = context {
-            // Load kubeconfig from default location
-            let home_dir = env::var("HOME")
-                .map_err(|e| K8sError::Io(std::io::Error::new(std::io::ErrorKind::NotFound, e)))?;
-            let kubeconfig_path = PathBuf::from(home_dir).join(".kube/config");
+            let kubeconfig = if let Some(ref path) = kubeconfig_path {
+                Kubeconfig::read_from(path)?
+            } else {
+                let home_dir = env::var("HOME").map_err(|e| {
+                    K8sError::Io(std::io::Error::new(std::io::ErrorKind::NotFound, e))
+                })?;
+                let default_path = PathBuf::from(home_dir).join(".kube/config");
+                Kubeconfig::read_from(&default_path)?
+            };
 
-            // Load kubeconfig file
-            let kubeconfig = Kubeconfig::read_from(&kubeconfig_path)?;
-
-            // Create config with specified context
             let config_options = KubeConfigOptions {
                 context: Some(ctx),
                 cluster: None,
@@ -661,12 +659,7 @@ impl K8sClient for RealK8sClient {
         Ok(self.client.apiserver_version().await?)
     }
 
-    async fn delete_resource(
-        &self,
-        kind: &str,
-        name: &str,
-        namespace: Option<&str>,
-    ) -> Result<()> {
+    async fn delete_resource(&self, kind: &str, name: &str, namespace: Option<&str>) -> Result<()> {
         let dp = DeleteParams::default();
         match kind {
             "Pod" => {
@@ -836,19 +829,18 @@ impl K8sClient for RealK8sClient {
                 }
             }
         });
-        api.patch(
-            name,
-            &PatchParams::apply("swimmer"),
-            &Patch::Merge(&patch),
-        )
-        .await?;
+        api.patch(name, &PatchParams::apply("swimmer"), &Patch::Merge(&patch))
+            .await?;
         Ok(())
     }
 }
 
 pub use crate::mock_client::MockK8sClient;
 
-pub async fn create_client(context: Option<String>) -> Result<Box<dyn K8sClient>> {
+pub async fn create_client(
+    context: Option<String>,
+    kubeconfig_path: Option<String>,
+) -> Result<Box<dyn K8sClient>> {
     let use_mock = env::var("USE_MOCK")
         .unwrap_or_else(|_| "false".to_string())
         .parse::<bool>()
@@ -857,17 +849,21 @@ pub async fn create_client(context: Option<String>) -> Result<Box<dyn K8sClient>
     if use_mock {
         Ok(Box::new(MockK8sClient::new()))
     } else {
-        Ok(Box::new(RealK8sClient::new(context).await?))
+        Ok(Box::new(
+            RealK8sClient::new(context, kubeconfig_path).await?,
+        ))
     }
 }
 
 #[tauri::command]
 pub async fn list_resources(
+    kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
     kind: String,
     namespace: Option<String>,
 ) -> Result<Vec<Value>> {
-    let client = create_client(context).await?;
+    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let client = create_client(context, kc_path).await?;
 
     let resources: Vec<Value> = match kind.as_str() {
         "Pods" => {
@@ -1102,12 +1098,14 @@ fn require_namespace(kind: &str) -> K8sError {
 
 #[tauri::command]
 pub async fn get_resource_detail(
+    kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
     kind: String,
     name: String,
     namespace: Option<String>,
 ) -> Result<Value> {
-    let client = create_client(context).await?;
+    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let client = create_client(context, kc_path).await?;
     let namespace_for_events = namespace.clone();
 
     let resource: Value = match kind.as_str() {
@@ -1361,8 +1359,12 @@ fn parse_context_id(context_id: &str) -> (String, String, String, String) {
 }
 
 #[tauri::command]
-pub async fn get_cluster_overview_info(context_id: String) -> Result<ClusterOverviewInfo> {
-    let client = create_client(Some(context_id.clone())).await?;
+pub async fn get_cluster_overview_info(
+    kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
+    context_id: String,
+) -> Result<ClusterOverviewInfo> {
+    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let client = create_client(Some(context_id.clone()), kc_path).await?;
     let (provider, project_or_account, region, cluster_name) = parse_context_id(&context_id);
 
     let version_info = client.apiserver_version().await?;
@@ -1378,8 +1380,12 @@ pub async fn get_cluster_overview_info(context_id: String) -> Result<ClusterOver
 }
 
 #[tauri::command]
-pub async fn get_cluster_stats(context_id: String) -> Result<ClusterStats> {
-    let client = create_client(Some(context_id)).await?;
+pub async fn get_cluster_stats(
+    kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
+    context_id: String,
+) -> Result<ClusterStats> {
+    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let client = create_client(Some(context_id), kc_path).await?;
 
     let nodes = client.list_nodes().await?;
     let total_nodes = nodes.len();
@@ -1432,8 +1438,12 @@ pub async fn get_cluster_stats(context_id: String) -> Result<ClusterStats> {
 }
 
 #[tauri::command]
-pub async fn list_crd_groups(context: Option<String>) -> Result<Vec<CrdGroup>> {
-    let client = create_client(context).await?;
+pub async fn list_crd_groups(
+    kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
+    context: Option<String>,
+) -> Result<Vec<CrdGroup>> {
+    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let client = create_client(context, kc_path).await?;
     let crds = client.list_crds().await?;
 
     let mut groups: HashMap<String, Vec<CrdResourceInfo>> = HashMap::new();
@@ -1641,6 +1651,7 @@ where
 pub async fn start_watch_resources(
     app: AppHandle,
     watcher_handle: tauri::State<'_, WatcherHandle>,
+    kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
     kind: String,
     namespace: Option<String>,
@@ -1654,9 +1665,10 @@ pub async fn start_watch_resources(
     let watch_id = uuid::Uuid::new_v4().to_string();
     let watch_id_clone = watch_id.clone();
     let app_clone = app.clone();
+    let kc_path = kubeconfig_path.lock().unwrap().clone();
 
     let handle = tokio::spawn(async move {
-        let client_result = RealK8sClient::new(context).await;
+        let client_result = RealK8sClient::new(context, kc_path).await;
         if let Err(e) = client_result {
             log::error!("Failed to create client: {}", e);
             return;
@@ -1747,12 +1759,14 @@ pub async fn stop_watch_resources(
 
 #[tauri::command]
 pub async fn delete_resource(
+    kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
     kind: String,
     name: String,
     namespace: Option<String>,
 ) -> Result<()> {
-    let client = create_client(context).await?;
+    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let client = create_client(context, kc_path).await?;
     client
         .delete_resource(&kind, &name, namespace.as_deref())
         .await
@@ -1760,10 +1774,12 @@ pub async fn delete_resource(
 
 #[tauri::command]
 pub async fn rollout_restart_deployment(
+    kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
     name: String,
     namespace: String,
 ) -> Result<()> {
-    let client = create_client(context).await?;
+    let kc_path = kubeconfig_path.lock().unwrap().clone();
+    let client = create_client(context, kc_path).await?;
     client.rollout_restart_deployment(&name, &namespace).await
 }

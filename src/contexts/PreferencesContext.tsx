@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Preferences, defaultPreferences } from '../lib/preferences';
 import { loadPreferences, savePreferences } from '../lib/fs';
+import { commands } from '../api/commands';
 
 interface PreferencesContextType {
   preferences: Preferences;
@@ -16,9 +17,31 @@ export const PreferencesProvider: React.FC<{ children: ReactNode }> = ({ childre
     async function loadPrefs() {
       const prefs = await loadPreferences();
       setPreferences(prefs);
+      if (prefs.general.kubeconfigPath) {
+        await commands.setKubeconfigPath(prefs.general.kubeconfigPath);
+      }
     }
     loadPrefs();
   }, []);
+
+  useEffect(() => {
+    const theme = preferences.general.theme;
+    const applyTheme = (resolved: 'dark' | 'light') => {
+      document.documentElement.setAttribute('data-theme', resolved);
+    };
+
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      applyTheme(mediaQuery.matches ? 'dark' : 'light');
+      const handler = (e: MediaQueryListEvent) => {
+        applyTheme(e.matches ? 'dark' : 'light');
+      };
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    } else {
+      applyTheme(theme);
+    }
+  }, [preferences.general.theme]);
 
   const updatePreferences = async (newPreferences: Preferences) => {
     await savePreferences(newPreferences);

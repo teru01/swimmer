@@ -191,6 +191,40 @@ input:checked + .slider:before {
   border-color: var(--color-primary);
 }
 
+/* Select input */
+.select-input {
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  min-width: 150px;
+  cursor: pointer;
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* Number input */
+.number-input {
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  width: 80px;
+  text-align: right;
+}
+
+.number-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
 /* Tags section */
 .tags-section {
   margin-top: 16px;

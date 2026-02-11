@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePreferences } from '../contexts/PreferencesContext';
+import { commands } from '../api/commands';
 import './preferencesPage.css';
 import { loadTags, addTag, deleteTag, createTag, updateTag, Tag, TAG_COLORS } from '../lib/tag';
 
@@ -30,12 +31,63 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
   const newTagColorDropdownRef = useRef<HTMLDivElement>(null);
   const editingTagDropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
+  const handleKubeconfigPathChange = async (kubeconfigPath: string) => {
+    await updatePreferences({
+      ...preferences,
+      general: {
+        ...preferences.general,
+        kubeconfigPath,
+      },
+    });
+    await commands.setKubeconfigPath(kubeconfigPath || undefined);
+  };
+
+  const handleThemeChange = async (theme: 'dark' | 'light' | 'system') => {
+    await updatePreferences({
+      ...preferences,
+      general: {
+        ...preferences.general,
+        theme,
+      },
+    });
+  };
+
+  const handleTimeoutChange = async (resourceFetchTimeoutSec: number) => {
+    await updatePreferences({
+      ...preferences,
+      general: {
+        ...preferences.general,
+        resourceFetchTimeoutSec,
+      },
+    });
+  };
+
   const handleShellPathChange = async (shellPath: string) => {
     await updatePreferences({
       ...preferences,
       terminal: {
         ...preferences.terminal,
         shellPath,
+      },
+    });
+  };
+
+  const handleFontSizeChange = async (fontSize: number) => {
+    await updatePreferences({
+      ...preferences,
+      terminal: {
+        ...preferences.terminal,
+        fontSize,
+      },
+    });
+  };
+
+  const handleFontFamilyChange = async (fontFamily: string) => {
+    await updatePreferences({
+      ...preferences,
+      terminal: {
+        ...preferences.terminal,
+        fontFamily,
       },
     });
   };
@@ -134,6 +186,59 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
             <section className="preferences-section">
               <h2>General</h2>
               <p className="section-description">General settings for the application.</p>
+
+              <div className="preference-row">
+                <div className="preference-label-wrapper">
+                  <label htmlFor="kubeconfig-path">Kubeconfig Path</label>
+                  <p className="preference-description">
+                    Path to the kubeconfig file. Leave empty to use default (~/.kube/config).
+                  </p>
+                </div>
+                <input
+                  id="kubeconfig-path"
+                  type="text"
+                  value={preferences.general.kubeconfigPath}
+                  onChange={e => handleKubeconfigPathChange(e.target.value)}
+                  placeholder="~/.kube/config"
+                  className="text-input"
+                />
+              </div>
+
+              <div className="preference-row">
+                <div className="preference-label-wrapper">
+                  <label htmlFor="theme-select">Theme</label>
+                  <p className="preference-description">Choose the application color theme.</p>
+                </div>
+                <select
+                  id="theme-select"
+                  value={preferences.general.theme}
+                  onChange={e => handleThemeChange(e.target.value as 'dark' | 'light' | 'system')}
+                  className="select-input"
+                >
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                  <option value="system">System</option>
+                </select>
+              </div>
+
+              <div className="preference-row">
+                <div className="preference-label-wrapper">
+                  <label htmlFor="fetch-timeout">Resource Fetch Timeout (sec)</label>
+                  <p className="preference-description">
+                    Timeout in seconds for fetching Kubernetes resources.
+                  </p>
+                </div>
+                <input
+                  id="fetch-timeout"
+                  type="number"
+                  min={5}
+                  max={60}
+                  step={1}
+                  value={preferences.general.resourceFetchTimeoutSec}
+                  onChange={e => handleTimeoutChange(Number(e.target.value))}
+                  className="number-input"
+                />
+              </div>
             </section>
           )}
 
@@ -155,6 +260,38 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
                   value={preferences.terminal.shellPath}
                   onChange={e => handleShellPathChange(e.target.value)}
                   placeholder="/bin/zsh"
+                  className="text-input"
+                />
+              </div>
+
+              <div className="preference-row">
+                <div className="preference-label-wrapper">
+                  <label htmlFor="font-size">Font Size</label>
+                  <p className="preference-description">Font size for the terminal (8-24).</p>
+                </div>
+                <input
+                  id="font-size"
+                  type="number"
+                  min={8}
+                  max={24}
+                  step={1}
+                  value={preferences.terminal.fontSize}
+                  onChange={e => handleFontSizeChange(Number(e.target.value))}
+                  className="number-input"
+                />
+              </div>
+
+              <div className="preference-row">
+                <div className="preference-label-wrapper">
+                  <label htmlFor="font-family">Font Family</label>
+                  <p className="preference-description">Font family for the terminal.</p>
+                </div>
+                <input
+                  id="font-family"
+                  type="text"
+                  value={preferences.terminal.fontFamily}
+                  onChange={e => handleFontFamilyChange(e.target.value)}
+                  placeholder='Menlo, Monaco, "Courier New", monospace'
                   className="text-input"
                 />
               </div>

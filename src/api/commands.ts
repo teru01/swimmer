@@ -56,6 +56,20 @@ export const commands = {
   },
 
   /**
+   * Kubeconfig パスを設定します
+   */
+  setKubeconfigPath: async (path: string | undefined): Promise<void> => {
+    return invoke('set_kubeconfig_path', { path });
+  },
+
+  /**
+   * 現在の Kubeconfig パスを取得します
+   */
+  getKubeconfigPath: async (): Promise<string | undefined> => {
+    return invoke('get_kubeconfig_path');
+  },
+
+  /**
    * クラスタ概要情報を取得します
    */
   getClusterOverviewInfo: async (contextId: string): Promise<ClusterOverviewInfo> => {

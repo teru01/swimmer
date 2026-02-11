@@ -4,6 +4,7 @@ import { formatAge } from '../../lib/utils';
 import ClusterOverview from './ClusterOverview';
 import { commands } from '../../api/commands';
 import { listen } from '@tauri-apps/api/event';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 export interface KubeResource {
   kind?: string;
@@ -168,6 +169,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   isActivePanel,
   isDetailPaneOpen,
 }) => {
+  const { preferences } = usePreferences();
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = useState<string>('all');
   const [namespaceInput, setNamespaceInput] = useState<string>('');
@@ -372,7 +374,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     const hasCached = !!cached;
     let cancelled = false;
 
-    const FETCH_TIMEOUT_MS = 10000;
+    const FETCH_TIMEOUT_MS = preferences.general.resourceFetchTimeoutSec * 1000;
 
     const loadResources = async () => {
       // Only show loading spinner if there's no cached data
