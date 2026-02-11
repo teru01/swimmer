@@ -171,7 +171,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const [resources, setResources] = useState<KubeResource[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | undefined>(undefined);
-  const hasLoadedRef = useRef<boolean>(false);
+  const resourceCacheRef = useRef<Map<string, KubeResource[]>>(new Map());
   const watchIdRef = useRef<string | undefined>(undefined);
   const namespaceInputRef = useRef<HTMLInputElement>(null);
 
@@ -192,8 +192,11 @@ const ResourceList: React.FC<ResourceListProps> = ({
   // Determine if the current kind is namespaced
   const isNamespaced = !isClusterScoped(selectedKind);
 
-  // Fetch namespaces only if the kind is namespaced (or maybe always fetch?)
-  // Let's fetch always for simplicity, but filter UI later.
+  // Clear resource cache when context changes
+  useEffect(() => {
+    resourceCacheRef.current.clear();
+  }, [contextId]);
+
   useEffect(() => {
     const loadNamespaces = async () => {
       // Reset selection when kind changes to a cluster-scoped one
@@ -285,33 +288,61 @@ const ResourceList: React.FC<ResourceListProps> = ({
     namespaceInputRef.current?.focus();
   }, []);
 
+  // Sync resources state with cache whenever selectedKind changes
+  const updateResources = useCallback(
+    (kind: string, updater: (prev: KubeResource[]) => KubeResource[]) => {
+      setResources(prev => {
+        const newResources = updater(prev);
+        resourceCacheRef.current.set(kind, newResources);
+        return newResources;
+      });
+    },
+    []
+  );
+
   // Fetch resources when selectedKind or context changes (but NOT when selectedNamespace changes)
   useEffect(() => {
     if (!selectedKind || selectedKind === 'Overview') {
       setResources([]);
-      hasLoadedRef.current = false;
       return;
     }
 
+    // Restore from cache immediately if available
+    const cached = resourceCacheRef.current.get(selectedKind);
+    if (cached) {
+      setResources(cached);
+    } else {
+      setResources([]);
+    }
+
+    const hasCached = !!cached;
+
     const loadResources = async () => {
-      setIsLoading(true);
+      // Only show loading spinner if there's no cached data
+      if (!hasCached) {
+        setIsLoading(true);
+      }
       setError(undefined);
       try {
-        // Always fetch all namespaces to avoid refetching when namespace filter changes
-        const fetchedResources = await commands.listResources(contextId, selectedKind, undefined);
-        setResources(fetchedResources as KubeResource[]);
-        hasLoadedRef.current = true;
+        const fetchedResources = (await commands.listResources(
+          contextId,
+          selectedKind,
+          undefined
+        )) as KubeResource[];
+        resourceCacheRef.current.set(selectedKind, fetchedResources);
+        setResources(fetchedResources);
         setIsLoading(false);
       } catch (err) {
         console.error(`Failed to fetch ${selectedKind}:`, err);
-        setError(`Failed to load ${selectedKind}.`);
+        if (!hasCached) {
+          setError(`Failed to load ${selectedKind}.`);
+        }
         setIsLoading(false);
       }
     };
 
     const startWatch = async () => {
       try {
-        // Always watch all namespaces
         const namespace = undefined;
         console.info(
           '[Watch] Starting watch for',
@@ -325,6 +356,9 @@ const ResourceList: React.FC<ResourceListProps> = ({
         console.info('[Watch] Watch started with ID:', watchId);
         watchIdRef.current = watchId;
 
+        // Capture selectedKind for use in the event handler closure
+        const watchKind = selectedKind;
+
         const unlisten = await listen<{
           event_type: string;
           resource: KubeResource;
@@ -337,41 +371,17 @@ const ResourceList: React.FC<ResourceListProps> = ({
             resource.metadata?.namespace
           );
 
-          setResources(prevResources => {
-            console.info('[Watch] Current resources count:', prevResources.length);
+          updateResources(watchKind, prevResources => {
             if (event_type === 'modified') {
-              const exists = prevResources.some(
-                r =>
-                  r.metadata?.name === resource.metadata?.name &&
-                  r.metadata?.namespace === resource.metadata?.namespace
-              );
+              const exists = prevResources.some(r => r.metadata?.uid === resource.metadata?.uid);
               if (!exists) {
-                console.info(
-                  '[Watch] Adding new resource:',
-                  resource.metadata?.name,
-                  'namespace:',
-                  resource.metadata?.namespace
-                );
-                const newResources = [...prevResources, resource];
-                console.info('[Watch] New resources count:', newResources.length);
-                return newResources;
+                return [...prevResources, resource];
               }
-              console.info('[Watch] Updating existing resource:', resource.metadata?.name);
               return prevResources.map(r =>
-                r.metadata?.name === resource.metadata?.name &&
-                r.metadata?.namespace === resource.metadata?.namespace
-                  ? resource
-                  : r
+                r.metadata?.uid === resource.metadata?.uid ? resource : r
               );
             } else if (event_type === 'deleted') {
-              console.info('[Watch] Deleting resource:', resource.metadata?.name);
-              return prevResources.filter(
-                r =>
-                  !(
-                    r.metadata?.name === resource.metadata?.name &&
-                    r.metadata?.namespace === resource.metadata?.namespace
-                  )
-              );
+              return prevResources.filter(r => r.metadata?.uid !== resource.metadata?.uid);
             }
             return prevResources;
           });
@@ -384,15 +394,10 @@ const ResourceList: React.FC<ResourceListProps> = ({
       }
     };
 
-    // Only load resources if not already loaded
-    if (!hasLoadedRef.current) {
-      loadResources();
-    }
-
+    loadResources();
     const unlistenPromise = startWatch();
 
     return () => {
-      // Cleanup watch
       unlistenPromise.then(unlisten => {
         if (unlisten) {
           unlisten();
@@ -403,7 +408,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
         watchIdRef.current = undefined;
       }
     };
-  }, [selectedKind, contextId]);
+  }, [selectedKind, contextId, updateResources]);
 
   // Filter and sort resources based on selectedNamespace
   const filteredResources = useMemo(() => {
