@@ -47,7 +47,7 @@ interface ClusterInfoPaneProps {
   allViewStates: Map<string, ClusterViewState>;
   tabContextMap: Map<string, string>;
   onViewStateChange: (tabId: string, state: ClusterViewState) => void;
-  onNavigateToPodInNewPanel?: (pod: KubeResource, contextId: string) => void;
+  onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
 }
 
 interface ClusterViewInstanceProps {
@@ -56,7 +56,7 @@ interface ClusterViewInstanceProps {
   isVisible: boolean;
   viewState: ClusterViewState;
   onViewStateChange: (state: ClusterViewState) => void;
-  onNavigateToPodInNewPanel?: (pod: KubeResource, contextId: string) => void;
+  onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
 }
 
 /**
@@ -67,7 +67,7 @@ function ClusterViewInstance({
   contextId,
   viewState,
   onViewStateChange,
-  onNavigateToPodInNewPanel,
+  onNavigateToResourceInNewPanel,
 }: ClusterViewInstanceProps) {
   const handleKindSelect = (kind: string) => {
     onViewStateChange({
@@ -176,7 +176,7 @@ function ClusterViewInstance({
                     isLoading={viewState.isDetailLoading}
                     onClose={handleCloseDetailPane}
                     contextId={contextId}
-                    onNavigateToPodInNewPanel={onNavigateToPodInNewPanel}
+                    onNavigateToResourceInNewPanel={onNavigateToResourceInNewPanel}
                   />
                 </Panel>
               </>
@@ -197,7 +197,7 @@ function ClusterInfoPane({
   allViewStates,
   tabContextMap,
   onViewStateChange,
-  onNavigateToPodInNewPanel,
+  onNavigateToResourceInNewPanel,
 }: ClusterInfoPaneProps) {
   return (
     <div className="cluster-info-pane-container">
@@ -214,7 +214,7 @@ function ClusterInfoPane({
                 isVisible={tabId === activeTabId}
                 viewState={viewState}
                 onViewStateChange={state => onViewStateChange(tabId, state)}
-                onNavigateToPodInNewPanel={onNavigateToPodInNewPanel}
+                onNavigateToResourceInNewPanel={onNavigateToResourceInNewPanel}
               />
             );
           })}

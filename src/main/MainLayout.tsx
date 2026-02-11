@@ -310,7 +310,7 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
     addToTabHistory(result.newTab.id);
   };
 
-  const handleSplitRightWithResource = async (pod: KubeResource, contextId: string) => {
+  const handleSplitRightWithResource = async (resource: KubeResource, contextId: string) => {
     const activePanel = panels.find(p => p.id === activePanelId);
     if (!activePanel) return;
 
@@ -321,17 +321,20 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
 
     const result = handleSplitRightLogic({ panels, activePanelId, selectedContext }, activeTab);
     if (!result) {
-      debug('MainLayout: Cannot split for pod navigation, maximum 10 panels reached');
+      debug('MainLayout: Cannot split for resource navigation, maximum 10 panels reached');
       return;
     }
 
-    debug(`MainLayout: Splitting panel for pod navigation. New panel ID: ${result.newPanelId}`);
+    const kind = resource.kind || 'Pod';
+    const selectedKind = `${kind}s`;
 
-    // Set initial cluster view state with Pods selected and loading
+    debug(`MainLayout: Splitting panel for ${kind} navigation. New panel ID: ${result.newPanelId}`);
+
+    // Set initial cluster view state with the resource kind selected and loading
     setClusterViewStates(prev =>
       new Map(prev).set(result.newTab.id, {
         ...createDefaultClusterViewState(),
-        selectedKind: 'Pods',
+        selectedKind,
         showDetailPane: true,
         isDetailLoading: true,
       })
@@ -344,7 +347,7 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
     // Add to tab history
     addToTabHistory(result.newTab.id);
 
-    // Create terminal session and fetch pod detail in parallel
+    // Create terminal session and fetch resource detail in parallel
     const terminalPromise = createTerminalSession(activeTab.clusterContext, result.newTab.id)
       .then(newSession => {
         setTerminalSessions(prev => new Map(prev).set(result.newTab.id, newSession));
@@ -353,13 +356,13 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
         console.error('Failed to create terminal session for split panel:', error);
       });
 
-    const podWithKind: KubeResource = { ...pod, kind: pod.kind || 'Pod' };
-    const detailPromise = fetchResourceDetail(podWithKind, contextId)
+    const resourceWithKind: KubeResource = { ...resource, kind };
+    const detailPromise = fetchResourceDetail(resourceWithKind, contextId)
       .then(detail => {
         setClusterViewStates(prev =>
           new Map(prev).set(result.newTab.id, {
             ...createDefaultClusterViewState(),
-            selectedKind: 'Pods',
+            selectedKind,
             showDetailPane: true,
             isDetailLoading: false,
             selectedResourceDetail: detail?.resource,
@@ -368,11 +371,11 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
         );
       })
       .catch(error => {
-        console.error('Failed to fetch pod detail:', error);
+        console.error('Failed to fetch resource detail:', error);
         setClusterViewStates(prev =>
           new Map(prev).set(result.newTab.id, {
             ...createDefaultClusterViewState(),
-            selectedKind: 'Pods',
+            selectedKind,
             showDetailPane: true,
             isDetailLoading: false,
           })
@@ -421,7 +424,7 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
                       onSplitRight={handleSplitRight}
                       onViewStateChange={handleClusterViewStateChange}
                       onPanelClick={handlePanelClick}
-                      onNavigateToPodInNewPanel={handleSplitRightWithResource}
+                      onNavigateToResourceInNewPanel={handleSplitRightWithResource}
                     />
                   </Panel>
                   {index < panels.length - 1 && (

@@ -10,7 +10,7 @@ interface ResourceDetailPaneProps {
   isLoading?: boolean;
   onClose: () => void;
   contextId?: string;
-  onNavigateToPodInNewPanel?: (pod: KubeResource, contextId: string) => void;
+  onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
 }
 
 // Helper component to render key-value pairs nicely
@@ -83,6 +83,42 @@ const CollapsibleMetadataMap: React.FC<{ map: { [key: string]: string } | undefi
   );
 };
 
+/** Collects unique ConfigMap names referenced by a container. */
+const getContainerConfigMapRefs = (container: any, volumes: any[] | undefined): string[] => {
+  const refs = new Set<string>();
+  container.envFrom?.forEach((ef: any) => {
+    if (ef.configMapRef?.name) refs.add(ef.configMapRef.name);
+  });
+  container.env?.forEach((e: any) => {
+    if (e.valueFrom?.configMapKeyRef?.name) refs.add(e.valueFrom.configMapKeyRef.name);
+  });
+  const mountedVolumeNames = new Set((container.volumeMounts || []).map((vm: any) => vm.name));
+  volumes?.forEach((v: any) => {
+    if (mountedVolumeNames.has(v.name) && v.configMap?.name) {
+      refs.add(v.configMap.name);
+    }
+  });
+  return Array.from(refs);
+};
+
+/** Collects unique Secret names referenced by a container. */
+const getContainerSecretRefs = (container: any, volumes: any[] | undefined): string[] => {
+  const refs = new Set<string>();
+  container.envFrom?.forEach((ef: any) => {
+    if (ef.secretRef?.name) refs.add(ef.secretRef.name);
+  });
+  container.env?.forEach((e: any) => {
+    if (e.valueFrom?.secretKeyRef?.name) refs.add(e.valueFrom.secretKeyRef.name);
+  });
+  const mountedVolumeNames = new Set((container.volumeMounts || []).map((vm: any) => vm.name));
+  volumes?.forEach((v: any) => {
+    if (mountedVolumeNames.has(v.name) && v.secret?.secretName) {
+      refs.add(v.secret.secretName);
+    }
+  });
+  return Array.from(refs);
+};
+
 /** Filters pods that match the deployment's selector matchLabels. */
 const filterPodsForDeployment = (
   pods: KubeResource[],
@@ -104,8 +140,8 @@ const getPodRestarts = (pod: KubeResource): number => {
 const DeploymentPodsSection: React.FC<{
   deployment: KubeResource;
   contextId: string | undefined;
-  onNavigateToPodInNewPanel?: (pod: KubeResource, contextId: string) => void;
-}> = ({ deployment, contextId, onNavigateToPodInNewPanel }) => {
+  onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
+}> = ({ deployment, contextId, onNavigateToResourceInNewPanel }) => {
   const [pods, setPods] = useState<KubeResource[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -145,8 +181,8 @@ const DeploymentPodsSection: React.FC<{
   }, [contextId, namespace, matchLabels]);
 
   const handlePodClick = (pod: KubeResource) => {
-    if (onNavigateToPodInNewPanel && contextId) {
-      onNavigateToPodInNewPanel(pod, contextId);
+    if (onNavigateToResourceInNewPanel && contextId) {
+      onNavigateToResourceInNewPanel(pod, contextId);
     }
   };
 
@@ -199,7 +235,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   isLoading,
   onClose,
   contextId,
-  onNavigateToPodInNewPanel,
+  onNavigateToResourceInNewPanel,
 }) => {
   if (isLoading) {
     return (
@@ -285,7 +321,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
         <DeploymentPodsSection
           deployment={deployment}
           contextId={contextId}
-          onNavigateToPodInNewPanel={onNavigateToPodInNewPanel}
+          onNavigateToResourceInNewPanel={onNavigateToResourceInNewPanel}
         />
 
         <section className="detail-section">
@@ -889,6 +925,8 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             const containerStatus = status?.containerStatuses?.find(
               cs => cs.name === container.name
             );
+            const configMapRefs = getContainerConfigMapRefs(container, spec?.volumes);
+            const secretRefs = getContainerSecretRefs(container, spec?.volumes);
             return (
               <div key={container.name} style={{ marginBottom: '15px' }}>
                 <h5>{container.name}</h5>
@@ -962,6 +1000,64 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
                       : container.startupProbe.exec
                         ? 'exec'
                         : 'tcp-socket'}
+                  </DetailItem>
+                )}
+                {configMapRefs.length > 0 && (
+                  <DetailItem label="ConfigMaps">
+                    {configMapRefs.map((name, idx) => (
+                      <span key={name}>
+                        {idx > 0 && ', '}
+                        <span
+                          className="resource-ref-link"
+                          onClick={() =>
+                            onNavigateToResourceInNewPanel &&
+                            contextId &&
+                            onNavigateToResourceInNewPanel(
+                              {
+                                kind: 'ConfigMap',
+                                metadata: {
+                                  name,
+                                  namespace: metadata.namespace,
+                                  uid: '',
+                                },
+                              },
+                              contextId
+                            )
+                          }
+                        >
+                          {name}
+                        </span>
+                      </span>
+                    ))}
+                  </DetailItem>
+                )}
+                {secretRefs.length > 0 && (
+                  <DetailItem label="Secrets">
+                    {secretRefs.map((name, idx) => (
+                      <span key={name}>
+                        {idx > 0 && ', '}
+                        <span
+                          className="resource-ref-link"
+                          onClick={() =>
+                            onNavigateToResourceInNewPanel &&
+                            contextId &&
+                            onNavigateToResourceInNewPanel(
+                              {
+                                kind: 'Secret',
+                                metadata: {
+                                  name,
+                                  namespace: metadata.namespace,
+                                  uid: '',
+                                },
+                              },
+                              contextId
+                            )
+                          }
+                        >
+                          {name}
+                        </span>
+                      </span>
+                    ))}
                   </DetailItem>
                 )}
               </div>

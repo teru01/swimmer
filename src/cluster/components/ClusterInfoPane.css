@@ -809,3 +809,13 @@
 .pod-row:hover {
   background-color: var(--bg-tertiary);
 }
+
+.resource-ref-link {
+  color: var(--color-primary, #0078d4);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.resource-ref-link:hover {
+  text-decoration: underline;
+}
