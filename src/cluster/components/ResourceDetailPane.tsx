@@ -1584,8 +1584,8 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
           <section className="detail-section">
             <h4>Init Containers</h4>
             {spec.initContainers.map((container: any) => {
-              const containerStatus = status?.containerStatuses?.find(
-                cs => cs.name === container.name
+              const containerStatus = status?.initContainerStatuses?.find(
+                (cs: { name: string }) => cs.name === container.name
               );
               return (
                 <div key={container.name} style={{ marginBottom: '15px' }}>
