@@ -8,7 +8,7 @@ import type { ClusterStats } from '../../api/commands';
 import { getContextTags, getTagById, type Tag } from '../../lib/tag';
 
 const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
-const REFRESH_INTERVAL = 30000;
+import { CLUSTER_OVERVIEW_REFRESH_INTERVAL_MS } from '../../lib/constants';
 
 interface ClusterInfo {
   provider: string;
@@ -77,7 +77,7 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
 
     loadData();
 
-    intervalRef.current = setInterval(loadData, REFRESH_INTERVAL);
+    intervalRef.current = setInterval(loadData, CLUSTER_OVERVIEW_REFRESH_INTERVAL_MS);
 
     return () => {
       if (intervalRef.current) {

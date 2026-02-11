@@ -11,6 +11,7 @@ import { debug } from '@tauri-apps/plugin-log';
 import './resizable.css';
 import { ContextNode, NodeType, newClusterContextNode } from '../lib/contextTree';
 import { usePreferences } from '../contexts/PreferencesContext';
+import { useToast } from '../components/Toast';
 import {
   ClusterOperationPanel,
   ClusterContextTab,
@@ -43,6 +44,7 @@ interface MainLayoutProps {
  */
 function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
   const { preferences } = usePreferences();
+  const { showToast } = useToast();
 
   // include folder
   const [selectedContext, setSelectedContext] = useState<ContextNode | undefined>(undefined);
@@ -113,6 +115,7 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
             setTerminalSessions(prev => new Map(prev).set(activeTab.id, session));
           } catch (error) {
             console.error('Failed to create terminal session:', error);
+            showToast(`Failed to create terminal session: ${error}`);
           }
         }
 
@@ -172,6 +175,7 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
         setTerminalSessions(prev => new Map(prev).set(tab.id, newSession));
       } catch (error) {
         console.error('Failed to reload terminal session:', error);
+        showToast(`Failed to reload terminal session: ${error}`);
       }
     }
   };
@@ -283,6 +287,7 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
       debug(`MainLayout: Terminal session created successfully for tab ${result.newTab.id}`);
     } catch (error) {
       console.error('Failed to create terminal session for split panel:', error);
+      showToast(`Failed to create terminal session: ${error}`);
     }
 
     // Copy cluster view state from source tab
@@ -352,6 +357,7 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
       })
       .catch(error => {
         console.error('Failed to create terminal session for split panel:', error);
+        showToast(`Failed to create terminal session: ${error}`);
       });
 
     const resourceWithKind: KubeResource = { ...resource, kind };
@@ -370,6 +376,7 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
       })
       .catch(error => {
         console.error('Failed to fetch resource detail:', error);
+        showToast(`Failed to fetch resource detail: ${error}`);
         setClusterViewStates(prev =>
           new Map(prev).set(result.newTab.id, {
             ...createDefaultClusterViewState(),

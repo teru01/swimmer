@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { ClusterContextTab } from '../types/panel';
 import { Menu, MenuItem } from '../../components/ui/Menu';
+import { TAB_CLOSE_ANIMATION_MS } from '../../lib/constants';
 
 interface ClusterTabsProps {
   tabs: ClusterContextTab[];
@@ -56,7 +57,7 @@ function ClusterTabs({
         next.delete(tab.id);
         return next;
       });
-    }, 60);
+    }, TAB_CLOSE_ANIMATION_MS);
   };
 
   const getMenuItems = (tab: ClusterContextTab): MenuItem[] => {

@@ -17,6 +17,7 @@ import {
   Tag,
 } from '../../lib/tag';
 import { loadFavorites, toggleFavorite } from '../../lib/favorite';
+import { FAVORITES_DEFAULT_HEIGHT } from '../../lib/constants';
 import { Menu } from '../../components/ui/Menu';
 import gkeIcon from '../../assets/icons/gke.png';
 import eksIcon from '../../assets/icons/eks.png';
@@ -69,7 +70,7 @@ function ContextsPane({
   const [favorites, setFavorites] = useState<Set<string>>(loadFavorites());
   const [favoritesHeight, setFavoritesHeight] = useState<number>(() => {
     const saved = localStorage.getItem('swimmer_favorites_height');
-    return saved ? parseInt(saved, 10) : 200;
+    return saved ? parseInt(saved, 10) : FAVORITES_DEFAULT_HEIGHT;
   });
   const [isResizing, setIsResizing] = useState(false);
   const [showTagFilter, setShowTagFilter] = useState(true);

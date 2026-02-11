@@ -4,6 +4,12 @@ import { KubeResource } from './ResourceList';
 import { formatAge } from '../../lib/utils';
 import { commands } from '../../api/commands';
 import { stringify as yamlStringify } from 'yaml';
+import {
+  COPY_FEEDBACK_DURATION_MS,
+  VALUE_COLLAPSE_THRESHOLD,
+  SEARCH_HIGHLIGHT_DEBOUNCE_MS,
+  RESOURCE_DETAIL_POLL_INTERVAL_MS,
+} from '../../lib/constants';
 
 interface ResourceDetailPaneProps {
   resource: KubeResource | undefined;
@@ -40,8 +46,6 @@ const getContainerStateCategory = (state: any): string => {
   return 'default';
 };
 
-const VALUE_COLLAPSE_THRESHOLD = 80;
-
 /** Tiny inline copy button. */
 const CopyButton: React.FC<{ text: string }> = ({ text }) => {
   const [copied, setCopied] = useState(false);
@@ -49,7 +53,7 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION_MS);
     });
   };
 
@@ -256,7 +260,7 @@ const DeploymentPodsSection: React.FC<{
     };
 
     fetchPods(false);
-    const intervalId = setInterval(() => fetchPods(true), 5000);
+    const intervalId = setInterval(() => fetchPods(true), RESOURCE_DETAIL_POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearInterval(intervalId);
@@ -360,7 +364,7 @@ const ReplicaSetPodsSection: React.FC<{
     };
 
     fetchPods(false);
-    const intervalId = setInterval(() => fetchPods(true), 5000);
+    const intervalId = setInterval(() => fetchPods(true), RESOURCE_DETAIL_POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearInterval(intervalId);
@@ -453,7 +457,7 @@ const NodePodsSection: React.FC<{
     };
 
     fetchPods(false);
-    const intervalId = setInterval(() => fetchPods(true), 5000);
+    const intervalId = setInterval(() => fetchPods(true), RESOURCE_DETAIL_POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearInterval(intervalId);
@@ -678,7 +682,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   useEffect(() => {
     const timeout = setTimeout(() => {
       applyHighlights(searchText);
-    }, 150);
+    }, SEARCH_HIGHLIGHT_DEBOUNCE_MS);
     return () => clearTimeout(timeout);
   }, [searchText, applyHighlights]);
 

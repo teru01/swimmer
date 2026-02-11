@@ -5,6 +5,7 @@ import ResourceDetailPane from './ResourceDetailPane';
 import './ClusterInfoPane.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { commands } from '../../api/commands';
+import { RESOURCE_DETAIL_POLL_INTERVAL_MS } from '../../lib/constants';
 
 export interface ClusterViewState {
   selectedKind: string | undefined;
@@ -109,7 +110,7 @@ function ClusterViewInstance({
       } catch {
         // ポーリング失敗は無視する
       }
-    }, 5000);
+    }, RESOURCE_DETAIL_POLL_INTERVAL_MS);
     return () => clearInterval(intervalId);
   }, [
     viewState.showDetailPane,
