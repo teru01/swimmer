@@ -30,7 +30,7 @@ function App() {
       if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
         const selection = window.getSelection();
         if (selection && selection.toString()) {
-          navigator.clipboard.writeText(selection.toString());
+          navigator.clipboard.writeText(selection.toString()).catch(() => {});
         }
       }
     };

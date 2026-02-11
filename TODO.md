@@ -11,7 +11,7 @@
 
 - [x] `terminal.rs` の `unwrap()` を `map_err` によるエラーハンドリングに置換 (178, 190, 221行目)
 - [x] ログレベルをリリースビルドでは `Info` 以上に変更 (`lib.rs:110`)
-- [ ] `navigator.clipboard.writeText()` の未処理 Promise を修正 (`App.tsx:34`, `ClusterOverview.tsx` 複数箇所)
+- [x] `navigator.clipboard.writeText()` の未処理 Promise を修正 (`App.tsx:34`, `ClusterOverview.tsx` 複数箇所)
 
 ## High (リソースリーク / クリーンアップ)
 
