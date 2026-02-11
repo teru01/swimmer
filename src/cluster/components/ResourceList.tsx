@@ -180,9 +180,11 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const selectedKindRef = useRef(selectedKind);
   selectedKindRef.current = selectedKind;
 
-  // Helper function to check if a resource kind is cluster-scoped (not namespaced)
   const isClusterScoped = (kind: string | undefined): boolean => {
-    if (!kind) return true; // Assume cluster-scoped if no kind selected
+    if (!kind) return true;
+    if (kind.startsWith('cr:')) {
+      return kind.endsWith('/Cluster');
+    }
     return [
       'Nodes',
       'Namespaces',
@@ -194,7 +196,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
     ].includes(kind);
   };
 
-  // Determine if the current kind is namespaced
+  const getKindDisplayName = (kind: string): string => {
+    if (kind.startsWith('cr:')) {
+      const parts = kind.slice(3).split('/');
+      return parts[2] || kind;
+    }
+    return kind;
+  };
+
   const isNamespaced = !isClusterScoped(selectedKind);
 
   // Clear resource cache when context changes
@@ -871,7 +880,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
         <div className="controls-left">
           {selectedKind && (
             <div className="resource-kind-indicator">
-              <span className="kind-label">{selectedKind}</span>
+              <span className="kind-label">{getKindDisplayName(selectedKind)}</span>
               <span className="resource-count">
                 {filteredResources.length} {filteredResources.length === 1 ? 'item' : 'items'}
               </span>

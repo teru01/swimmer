@@ -88,6 +88,7 @@ pub fn run() {
             k8s_api::get_resource_detail,
             k8s_api::get_cluster_overview_info,
             k8s_api::get_cluster_stats,
+            k8s_api::list_crd_groups,
             k8s_api::start_watch_resources,
             k8s_api::stop_watch_resources
         ])

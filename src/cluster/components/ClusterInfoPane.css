@@ -896,3 +896,106 @@
 .resource-ref-link:hover {
   text-decoration: underline;
 }
+
+.cr-sub-group {
+  margin-bottom: 2px;
+}
+
+.cr-sub-group-header {
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.cr-sub-group-header:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.cr-sub-group-header.expanded {
+  color: var(--text-primary);
+}
+
+.cr-kind-list {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0;
+  margin-left: 16px;
+  border-left: 2px solid var(--border-color);
+}
+
+.cr-kind-list li {
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  margin-bottom: 1px;
+  transition: all 0.2s ease;
+  font-size: 11px;
+  color: var(--text-secondary);
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-right: 2px;
+}
+
+.cr-kind-list li::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.cr-kind-list li:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  transform: translateX(2px);
+}
+
+.cr-kind-list li:hover::before {
+  background-color: var(--color-primary);
+}
+
+.cr-kind-list li.selected {
+  background-color: rgba(0, 120, 212, 0.1);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.cr-kind-list li.selected::before {
+  background-color: var(--color-primary);
+}
+
+.cr-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.cr-loading-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.cr-empty {
+  padding: 8px 12px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-style: italic;
+}

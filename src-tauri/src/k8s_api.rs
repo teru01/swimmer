@@ -10,8 +10,9 @@ use k8s_openapi::api::core::v1::{
 use k8s_openapi::api::networking::v1::{Ingress, NetworkPolicy};
 use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, Role, RoleBinding};
 use k8s_openapi::api::storage::v1::StorageClass;
+use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::{
-    api::{Api, ListParams, ObjectList},
+    api::{Api, ApiResource, DynamicObject, ListParams, ObjectList},
     config::{Config, InferConfigError, KubeConfigOptions, Kubeconfig, KubeconfigError},
     runtime::watcher,
     Client,
@@ -49,6 +50,21 @@ impl serde::Serialize for K8sError {
 }
 
 pub type Result<T> = std::result::Result<T, K8sError>;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CrdResourceInfo {
+    pub kind: String,
+    pub plural: String,
+    pub version: String,
+    pub scope: String,
+    pub group: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CrdGroup {
+    pub group: String,
+    pub resources: Vec<CrdResourceInfo>,
+}
 
 #[async_trait]
 pub trait K8sClient: Send + Sync {
@@ -120,6 +136,24 @@ pub trait K8sClient: Send + Sync {
     async fn get_limitrange(&self, name: &str, namespace: &str) -> Result<LimitRange>;
     async fn list_resourcequotas(&self, namespace: Option<&str>) -> Result<Vec<ResourceQuota>>;
     async fn get_resourcequota(&self, name: &str, namespace: &str) -> Result<ResourceQuota>;
+    async fn list_crds(&self) -> Result<Vec<CustomResourceDefinition>>;
+    async fn list_custom_resources(
+        &self,
+        group: &str,
+        version: &str,
+        plural: &str,
+        scope: &str,
+        namespace: Option<&str>,
+    ) -> Result<Vec<Value>>;
+    async fn get_custom_resource(
+        &self,
+        group: &str,
+        version: &str,
+        plural: &str,
+        scope: &str,
+        name: &str,
+        namespace: Option<&str>,
+    ) -> Result<Value>;
     async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info>;
 }
 
@@ -552,6 +586,70 @@ impl K8sClient for RealK8sClient {
         Ok(api.get(name).await?)
     }
 
+    async fn list_crds(&self) -> Result<Vec<CustomResourceDefinition>> {
+        let api: Api<CustomResourceDefinition> = Api::all(self.client.clone());
+        let items: ObjectList<CustomResourceDefinition> = api.list(&ListParams::default()).await?;
+        Ok(items.items)
+    }
+
+    async fn list_custom_resources(
+        &self,
+        group: &str,
+        version: &str,
+        plural: &str,
+        scope: &str,
+        namespace: Option<&str>,
+    ) -> Result<Vec<Value>> {
+        let ar = ApiResource {
+            group: group.to_string(),
+            version: version.to_string(),
+            api_version: format!("{}/{}", group, version),
+            kind: String::new(),
+            plural: plural.to_string(),
+        };
+        let api: Api<DynamicObject> = match scope {
+            "Namespaced" => match namespace {
+                Some(ns) => Api::namespaced_with(self.client.clone(), ns, &ar),
+                None => Api::all_with(self.client.clone(), &ar),
+            },
+            _ => Api::all_with(self.client.clone(), &ar),
+        };
+        let items = api.list(&ListParams::default()).await?;
+        let values: Vec<Value> = items
+            .items
+            .into_iter()
+            .map(|item| serde_json::to_value(item).unwrap())
+            .collect();
+        Ok(values)
+    }
+
+    async fn get_custom_resource(
+        &self,
+        group: &str,
+        version: &str,
+        plural: &str,
+        scope: &str,
+        name: &str,
+        namespace: Option<&str>,
+    ) -> Result<Value> {
+        let ar = ApiResource {
+            group: group.to_string(),
+            version: version.to_string(),
+            api_version: format!("{}/{}", group, version),
+            kind: String::new(),
+            plural: plural.to_string(),
+        };
+        let api: Api<DynamicObject> = match scope {
+            "Namespaced" => match namespace {
+                Some(ns) => Api::namespaced_with(self.client.clone(), ns, &ar),
+                None => return Err(require_namespace("CustomResource")),
+            },
+            _ => Api::all_with(self.client.clone(), &ar),
+        };
+        let item = api.get(name).await?;
+        Ok(serde_json::to_value(item)?)
+    }
+
     async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info> {
         Ok(self.client.apiserver_version().await?)
     }
@@ -773,6 +871,29 @@ pub async fn list_resources(
                 .map(|p| serde_json::to_value(p).unwrap())
                 .collect()
         }
+        "CRDs" => {
+            let items = client.list_crds().await?;
+            items
+                .into_iter()
+                .map(|p| serde_json::to_value(p).unwrap())
+                .collect()
+        }
+        cr_kind if cr_kind.starts_with("cr:") => {
+            let parts: Vec<&str> = cr_kind[3..].splitn(4, '/').collect();
+            if parts.len() == 4 {
+                client
+                    .list_custom_resources(
+                        parts[0],
+                        parts[1],
+                        parts[2],
+                        parts[3],
+                        namespace.as_deref(),
+                    )
+                    .await?
+            } else {
+                vec![]
+            }
+        }
         _ => vec![],
     };
 
@@ -927,6 +1048,23 @@ pub async fn get_resource_detail(
             let ns = namespace.ok_or_else(|| require_namespace("ResourceQuota"))?;
             let item = client.get_resourcequota(&name, &ns).await?;
             serde_json::to_value(item)?
+        }
+        cr_kind if cr_kind.starts_with("cr:") => {
+            let parts: Vec<&str> = cr_kind[3..].splitn(4, '/').collect();
+            if parts.len() == 4 {
+                client
+                    .get_custom_resource(
+                        parts[0],
+                        parts[1],
+                        parts[2],
+                        parts[3],
+                        &name,
+                        namespace.as_deref(),
+                    )
+                    .await?
+            } else {
+                serde_json::json!({})
+            }
         }
         _ => serde_json::json!({}),
     };
@@ -1100,6 +1238,50 @@ pub async fn get_cluster_stats(context_id: String) -> Result<ClusterStats> {
         deployment_count,
         job_count,
     })
+}
+
+#[tauri::command]
+pub async fn list_crd_groups(context: Option<String>) -> Result<Vec<CrdGroup>> {
+    let client = create_client(context).await?;
+    let crds = client.list_crds().await?;
+
+    let mut groups: HashMap<String, Vec<CrdResourceInfo>> = HashMap::new();
+
+    for crd in crds {
+        let group = crd.spec.group.clone();
+        let kind = crd.spec.names.kind.clone();
+        let plural = crd.spec.names.plural.clone();
+        let scope = crd.spec.scope.clone();
+
+        let version = crd
+            .spec
+            .versions
+            .iter()
+            .find(|v| v.served)
+            .map(|v| v.name.clone())
+            .unwrap_or_default();
+
+        let info = CrdResourceInfo {
+            kind,
+            plural,
+            version,
+            scope,
+            group: group.clone(),
+        };
+
+        groups.entry(group).or_default().push(info);
+    }
+
+    let mut result: Vec<CrdGroup> = groups
+        .into_iter()
+        .map(|(group, mut resources)| {
+            resources.sort_by(|a, b| a.kind.cmp(&b.kind));
+            CrdGroup { group, resources }
+        })
+        .collect();
+    result.sort_by(|a, b| a.group.cmp(&b.group));
+
+    Ok(result)
 }
 
 pub type WatcherHandle = Arc<Mutex<HashMap<String, tokio::task::JoinHandle<()>>>>;

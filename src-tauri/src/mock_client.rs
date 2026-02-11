@@ -19,9 +19,12 @@ use k8s_openapi::api::core::v1::{
 use k8s_openapi::api::networking::v1::{Ingress, NetworkPolicy};
 use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, Role, RoleBinding};
 use k8s_openapi::api::storage::v1::StorageClass;
+use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use k8s_openapi::apimachinery::pkg::api::resource::Quantity;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta, Time};
 use std::collections::BTreeMap;
+
+use serde_json::Value;
 
 use crate::k8s_api::{K8sClient, K8sError, Result};
 
@@ -1687,6 +1690,33 @@ impl K8sClient for MockK8sClient {
                 used: Some(hard),
             }),
         })
+    }
+
+    async fn list_crds(&self) -> Result<Vec<CustomResourceDefinition>> {
+        Ok(vec![])
+    }
+
+    async fn list_custom_resources(
+        &self,
+        _group: &str,
+        _version: &str,
+        _plural: &str,
+        _scope: &str,
+        _namespace: Option<&str>,
+    ) -> Result<Vec<Value>> {
+        Ok(vec![])
+    }
+
+    async fn get_custom_resource(
+        &self,
+        _group: &str,
+        _version: &str,
+        _plural: &str,
+        _scope: &str,
+        _name: &str,
+        _namespace: Option<&str>,
+    ) -> Result<Value> {
+        Ok(serde_json::json!({}))
     }
 
     async fn apiserver_version(&self) -> Result<k8s_openapi::apimachinery::pkg::version::Info> {

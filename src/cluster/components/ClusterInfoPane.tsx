@@ -17,12 +17,18 @@ export interface ClusterViewState {
 
 export const fetchResourceDetail = async (
   resource: KubeResource | undefined,
-  context: string | undefined
+  context: string | undefined,
+  selectedKind?: string
 ): Promise<{ resource: KubeResource; events: KubeResource[] } | undefined> => {
   if (!resource) return undefined;
   console.log(`Fetching details for: ${resource.metadata.name}`);
 
-  const kind = resource.kind?.endsWith('s') ? resource.kind.slice(0, -1) : resource.kind;
+  let kind: string | undefined;
+  if (selectedKind?.startsWith('cr:')) {
+    kind = selectedKind;
+  } else {
+    kind = resource.kind?.endsWith('s') ? resource.kind.slice(0, -1) : resource.kind;
+  }
   if (!kind) return { resource, events: [] };
 
   try {
@@ -96,7 +102,7 @@ function ClusterViewInstance({
         selectedResourceEvents: [],
       });
       try {
-        const result = await fetchResourceDetail(resource, contextId);
+        const result = await fetchResourceDetail(resource, contextId, viewState.selectedKind);
         onViewStateChange({
           ...viewState,
           showDetailPane: true,
@@ -145,6 +151,7 @@ function ClusterViewInstance({
             onKindSelect={handleKindSelect}
             expandedGroups={viewState.expandedGroups}
             onExpandedGroupsChange={handleExpandedGroupsChange}
+            contextId={contextId}
           />
         </Panel>
         <PanelResizeHandle className="resize-handle-vertical" />

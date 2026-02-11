@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './ClusterInfoPane.css';
+import { commands, CrdGroup } from '../../api/commands';
 
-// Define resource groups and their kinds
 export const resourceGroups = [
   {
     groupName: 'Overview',
@@ -43,7 +43,7 @@ export const resourceGroups = [
   },
   {
     groupName: 'Custom Resources',
-    kinds: ['CRDs'],
+    kinds: [],
   },
 ];
 
@@ -52,17 +52,19 @@ interface ResourceKindSidebarProps {
   onKindSelect: (kind: string) => void;
   expandedGroups: Set<string>;
   onExpandedGroupsChange: (expandedGroups: Set<string>) => void;
+  contextId?: string;
 }
 
-/**
- * Sidebar component to display list of resource kinds with improved UI
- */
 const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
   selectedKind,
   onKindSelect,
   expandedGroups,
   onExpandedGroupsChange,
+  contextId,
 }) => {
+  const [crdGroups, setCrdGroups] = useState<CrdGroup[]>([]);
+  const [crdLoading, setCrdLoading] = useState(false);
+
   const toggleGroup = (groupName: string) => {
     const newExpanded = new Set(expandedGroups);
     if (newExpanded.has(groupName)) {
@@ -72,6 +74,37 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
     }
     onExpandedGroupsChange(newExpanded);
   };
+
+  useEffect(() => {
+    setCrdGroups([]);
+  }, [contextId]);
+
+  useEffect(() => {
+    if (!expandedGroups.has('Custom Resources')) return;
+    if (crdGroups.length > 0) return;
+
+    let cancelled = false;
+    const load = async () => {
+      setCrdLoading(true);
+      try {
+        const groups = await commands.listCrdGroups(contextId);
+        if (!cancelled) {
+          setCrdGroups(groups);
+        }
+      } catch (err) {
+        console.error('Failed to fetch CRD groups:', err);
+      } finally {
+        if (!cancelled) {
+          setCrdLoading(false);
+        }
+      }
+    };
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [expandedGroups, contextId, crdGroups.length]);
 
   return (
     <div className="resource-kind-sidebar">
@@ -89,6 +122,64 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
                 >
                   {groupName}
                 </div>
+              </div>
+            );
+          }
+
+          if (groupName === 'Custom Resources') {
+            return (
+              <div key={groupName} className="resource-group">
+                <div
+                  className={`group-header ${isExpanded ? 'expanded' : ''}`}
+                  onClick={() => toggleGroup(groupName)}
+                >
+                  <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
+                  {groupName}
+                </div>
+                {isExpanded && (
+                  <div className="kind-list">
+                    {crdLoading && (
+                      <div className="cr-loading">
+                        <div className="cr-loading-spinner"></div>
+                        <span>Loading...</span>
+                      </div>
+                    )}
+                    {!crdLoading && crdGroups.length === 0 && (
+                      <div className="cr-empty">No custom resources</div>
+                    )}
+                    {crdGroups.map(crdGroup => {
+                      const subGroupKey = `CR:${crdGroup.group}`;
+                      const isSubExpanded = expandedGroups.has(subGroupKey);
+                      return (
+                        <div key={crdGroup.group} className="cr-sub-group">
+                          <div
+                            className={`cr-sub-group-header ${isSubExpanded ? 'expanded' : ''}`}
+                            onClick={() => toggleGroup(subGroupKey)}
+                          >
+                            <span className="expand-icon">{isSubExpanded ? '▼' : '▶'}</span>
+                            {crdGroup.group}
+                          </div>
+                          {isSubExpanded && (
+                            <ul className="cr-kind-list">
+                              {crdGroup.resources.map(res => {
+                                const kindKey = `cr:${res.group}/${res.version}/${res.plural}/${res.scope}`;
+                                return (
+                                  <li
+                                    key={kindKey}
+                                    className={selectedKind === kindKey ? 'selected' : ''}
+                                    onClick={() => onKindSelect(kindKey)}
+                                  >
+                                    {res.kind}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           }

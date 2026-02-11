@@ -24,6 +24,19 @@ export interface ClusterStats {
   memoryUsage: string;
 }
 
+export interface CrdResourceInfo {
+  kind: string;
+  plural: string;
+  version: string;
+  scope: string;
+  group: string;
+}
+
+export interface CrdGroup {
+  group: string;
+  resources: CrdResourceInfo[];
+}
+
 /**
  * サポートされている全ての Rust コマンドをラップしたオブジェクト
  */
@@ -95,5 +108,12 @@ export const commands = {
    */
   stopWatchResources: async (watchId: string): Promise<void> => {
     return invoke('stop_watch_resources', { watchId });
+  },
+
+  /**
+   * CRDグループ一覧を取得します
+   */
+  listCrdGroups: async (context: string | undefined): Promise<CrdGroup[]> => {
+    return invoke('list_crd_groups', { context });
   },
 };
