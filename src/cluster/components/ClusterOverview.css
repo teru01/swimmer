@@ -280,15 +280,21 @@
   opacity: 0;
   transition: opacity 0.2s;
   font-size: 14px;
+  outline: none;
+}
+
+.info-value-with-copy .copy-icon:focus {
+  opacity: 0;
+  background: none;
 }
 
 .info-item:hover .copy-icon {
   opacity: 1;
 }
 
-.info-value-with-copy .copy-icon:hover {
+.info-item:hover .copy-icon:hover {
   opacity: 1;
-  background-color: var(--vscode-list-hoverBackground);
+  background-color: var(--bg-tertiary);
   border-radius: 3px;
 }
 

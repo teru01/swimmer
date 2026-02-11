@@ -1069,15 +1069,16 @@ mark.detail-search-highlight-active {
   opacity: 0;
   transition: opacity 0.2s;
   font-size: 14px;
+  outline: none;
 }
 
 .name-cell:hover .copy-icon {
   opacity: 1;
 }
 
-.copy-icon:hover {
+.name-cell:hover .copy-icon:hover {
   opacity: 1;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-tertiary);
   border-radius: 3px;
 }
 

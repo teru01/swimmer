@@ -429,7 +429,7 @@ function ContextsPane({
                       style={{
                         borderColor: isSelected ? tag.color : 'var(--border-color)',
                         backgroundColor: isSelected ? tag.color : 'transparent',
-                        color: isSelected ? '#ffffff' : '#000000',
+                        color: isSelected ? '#ffffff' : 'var(--text-secondary)',
                       }}
                     >
                       <span

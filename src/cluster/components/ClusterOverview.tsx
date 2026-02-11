@@ -114,7 +114,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
               <span className="info-value">{contextId}</span>
               <button
                 className="copy-icon"
-                onClick={() => navigator.clipboard.writeText(contextId)}
+                onClick={e => {
+                  navigator.clipboard.writeText(contextId);
+                  e.currentTarget.blur();
+                }}
                 title="Copy to clipboard"
               >
                 <svg
@@ -138,7 +141,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
               <span className="info-value">{clusterInfo.provider}</span>
               <button
                 className="copy-icon"
-                onClick={() => navigator.clipboard.writeText(clusterInfo.provider)}
+                onClick={e => {
+                  navigator.clipboard.writeText(clusterInfo.provider);
+                  e.currentTarget.blur();
+                }}
                 title="Copy to clipboard"
               >
                 <svg
@@ -162,7 +168,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
               <span className="info-value">{clusterInfo.projectOrAccount}</span>
               <button
                 className="copy-icon"
-                onClick={() => navigator.clipboard.writeText(clusterInfo.projectOrAccount)}
+                onClick={e => {
+                  navigator.clipboard.writeText(clusterInfo.projectOrAccount);
+                  e.currentTarget.blur();
+                }}
                 title="Copy to clipboard"
               >
                 <svg
@@ -186,7 +195,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
               <span className="info-value">{clusterInfo.region}</span>
               <button
                 className="copy-icon"
-                onClick={() => navigator.clipboard.writeText(clusterInfo.region)}
+                onClick={e => {
+                  navigator.clipboard.writeText(clusterInfo.region);
+                  e.currentTarget.blur();
+                }}
                 title="Copy to clipboard"
               >
                 <svg
@@ -210,7 +222,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
               <span className="info-value">{clusterInfo.clusterName}</span>
               <button
                 className="copy-icon"
-                onClick={() => navigator.clipboard.writeText(clusterInfo.clusterName)}
+                onClick={e => {
+                  navigator.clipboard.writeText(clusterInfo.clusterName);
+                  e.currentTarget.blur();
+                }}
                 title="Copy to clipboard"
               >
                 <svg
@@ -234,7 +249,10 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
               <span className="info-value">{clusterInfo.clusterVersion}</span>
               <button
                 className="copy-icon"
-                onClick={() => navigator.clipboard.writeText(clusterInfo.clusterVersion)}
+                onClick={e => {
+                  navigator.clipboard.writeText(clusterInfo.clusterVersion);
+                  e.currentTarget.blur();
+                }}
                 title="Copy to clipboard"
               >
                 <svg
