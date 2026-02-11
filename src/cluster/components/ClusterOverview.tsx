@@ -41,7 +41,7 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const hasLoadedRef = useRef<boolean>(false);
-  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   useEffect(() => {
     const loadData = async () => {

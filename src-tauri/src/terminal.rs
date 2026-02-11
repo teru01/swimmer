@@ -148,7 +148,7 @@ pub async fn create_terminal_session(
     let reader_clone = session.reader.clone();
     let app_handle_clone = app_handle.clone();
 
-    let _read_task = tokio::spawn(async move {
+    let _read_task = tokio::task::spawn_blocking(move || {
         let mut buffer = [0u8; 4096];
         loop {
             let read_result = {

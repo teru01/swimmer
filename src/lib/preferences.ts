@@ -1,5 +1,18 @@
 import { z } from 'zod';
 
+function getDefaultShellPath(): string {
+  const platform = navigator.platform.toLowerCase();
+  if (platform.startsWith('win')) {
+    return 'powershell.exe';
+  }
+  if (platform.startsWith('linux')) {
+    return '/bin/bash';
+  }
+  return '/bin/zsh';
+}
+
+const defaultShellPath = getDefaultShellPath();
+
 /**
  * アプリケーションの設定スキーマ
  */
@@ -14,7 +27,7 @@ export const PreferencesSchema = z.object({
     .default({}),
   // Terminal設定
   terminal: z.object({
-    shellPath: z.string().default('/bin/zsh'),
+    shellPath: z.string().default(defaultShellPath),
     theme: z.object({
       background: z.string().default('#1e1e1e'),
       foreground: z.string().default('#d4d4d4'),
@@ -57,7 +70,7 @@ export const defaultPreferences: Preferences = {
     theme: 'dark',
   },
   terminal: {
-    shellPath: '/bin/zsh',
+    shellPath: defaultShellPath,
     theme: {
       background: '#1e1e1e',
       foreground: '#d4d4d4',
