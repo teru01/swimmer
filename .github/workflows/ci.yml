@@ -25,6 +25,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Format check
+        run: npx prettier --check 'src/**/*.{js,jsx,ts,tsx,css,json}'
+
       - name: Test
         run: npm test
 

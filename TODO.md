@@ -42,10 +42,10 @@
 
 ## Low (改善推奨)
 
-- [ ] CI の release.yml に npm cache と Rust cache を追加
-- [ ] CI にフロントエンドの format チェック (`prettier --check`) を追加
+- [x] CI の release.yml に npm cache と Rust cache を追加
+- [x] CI にフロントエンドの format チェック (`prettier --check`) を追加
 - [ ] `serde_yaml` → `serde_yml` への移行検討
-- [ ] `.copy-icon:focus` で `opacity: 0` → 適切なフォーカススタイルに修正
+- [x] `.copy-icon:focus` で `opacity: 0` → 適切なフォーカススタイルに修正
 
 ## 要確認 (後回し)
 
