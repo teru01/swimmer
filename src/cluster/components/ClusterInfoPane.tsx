@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import ResourceKindSidebar from './ResourceKindSidebar';
 import ResourceList, { KubeResource } from './ResourceList';
 import ResourceDetailPane from './ResourceDetailPane';
@@ -78,6 +78,46 @@ function ClusterViewInstance({
   onNavigateToResourceInNewPanel,
   isActivePanel,
 }: ClusterViewInstanceProps) {
+  const viewStateRef = useRef(viewState);
+  viewStateRef.current = viewState;
+  const onViewStateChangeRef = useRef(onViewStateChange);
+  onViewStateChangeRef.current = onViewStateChange;
+
+  useEffect(() => {
+    if (
+      !viewState.showDetailPane ||
+      !viewState.selectedResourceDetail ||
+      viewState.isDetailLoading
+    ) {
+      return;
+    }
+    const currentUid = viewState.selectedResourceDetail.metadata.uid;
+    const intervalId = setInterval(async () => {
+      try {
+        const result = await fetchResourceDetail(
+          viewStateRef.current.selectedResourceDetail,
+          contextId,
+          viewStateRef.current.selectedKind
+        );
+        if (!result) return;
+        if (viewStateRef.current.selectedResourceDetail?.metadata.uid !== currentUid) return;
+        onViewStateChangeRef.current({
+          ...viewStateRef.current,
+          selectedResourceDetail: result.resource,
+          selectedResourceEvents: result.events,
+        });
+      } catch {
+        // ポーリング失敗は無視する
+      }
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, [
+    viewState.showDetailPane,
+    viewState.selectedResourceDetail?.metadata.uid,
+    viewState.isDetailLoading,
+    contextId,
+  ]);
+
   const handleKindSelect = (kind: string) => {
     onViewStateChange({
       ...viewState,

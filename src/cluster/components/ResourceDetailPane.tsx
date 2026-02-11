@@ -223,39 +223,46 @@ const DeploymentPodsSection: React.FC<{
   const [isLoading, setIsLoading] = useState(false);
 
   const matchLabels = deployment.spec?.selector?.matchLabels;
+  const matchLabelsRef = useRef(matchLabels);
+  matchLabelsRef.current = matchLabels;
+  const matchLabelsKey = JSON.stringify(matchLabels);
   const namespace = deployment.metadata.namespace;
 
   useEffect(() => {
-    if (!contextId || !matchLabels || Object.keys(matchLabels).length === 0) {
+    const labels = matchLabelsRef.current;
+    if (!contextId || !labels || Object.keys(labels).length === 0) {
       setPods([]);
       return;
     }
 
     let cancelled = false;
-    const fetchPods = async () => {
-      setIsLoading(true);
+    const fetchPods = async (silent: boolean) => {
+      if (!silent) setIsLoading(true);
       try {
         const allPods = await commands.listResources(contextId, 'Pods', namespace);
         if (!cancelled) {
-          setPods(filterPodsForDeployment(allPods as KubeResource[], matchLabels));
+          setPods(filterPodsForDeployment(allPods as KubeResource[], matchLabelsRef.current!));
         }
       } catch (error) {
         console.error('Failed to fetch pods for deployment:', error);
-        if (!cancelled) {
+        if (!cancelled && !silent) {
           setPods([]);
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !silent) {
           setIsLoading(false);
         }
       }
     };
 
-    fetchPods();
+    fetchPods(false);
+    const intervalId = setInterval(() => fetchPods(true), 5000);
     return () => {
       cancelled = true;
+      clearInterval(intervalId);
     };
-  }, [contextId, namespace, matchLabels]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contextId, namespace, matchLabelsKey]);
 
   const handlePodClick = (pod: KubeResource) => {
     if (onNavigateToResourceInNewPanel && contextId) {
@@ -310,45 +317,56 @@ const ReplicaSetPodsSection: React.FC<{
   const [isLoading, setIsLoading] = useState(false);
 
   const matchLabels = replicaSet.spec?.selector?.matchLabels;
+  const matchLabelsRef = useRef(matchLabels);
+  matchLabelsRef.current = matchLabels;
+  const matchLabelsKey = JSON.stringify(matchLabels);
   const namespace = replicaSet.metadata.namespace;
+  const replicaSetName = replicaSet.metadata.name;
 
   useEffect(() => {
-    if (!contextId || !matchLabels || Object.keys(matchLabels).length === 0) {
+    const labels = matchLabelsRef.current;
+    if (!contextId || !labels || Object.keys(labels).length === 0) {
       setPods([]);
       return;
     }
 
     let cancelled = false;
-    const fetchPods = async () => {
-      setIsLoading(true);
+    const fetchPods = async (silent: boolean) => {
+      if (!silent) setIsLoading(true);
       try {
         const allPods = await commands.listResources(contextId, 'Pods', namespace);
         if (!cancelled) {
-          const filtered = filterPodsForDeployment(allPods as KubeResource[], matchLabels);
+          const filtered = filterPodsForDeployment(
+            allPods as KubeResource[],
+            matchLabelsRef.current!
+          );
           const owned = filtered.filter(pod =>
             pod.metadata.ownerReferences?.some(
-              ref => ref.kind === 'ReplicaSet' && ref.name === replicaSet.metadata.name
+              ref => ref.kind === 'ReplicaSet' && ref.name === replicaSetName
             )
           );
           setPods(owned);
         }
       } catch (error) {
         console.error('Failed to fetch pods for replicaset:', error);
-        if (!cancelled) {
+        if (!cancelled && !silent) {
           setPods([]);
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !silent) {
           setIsLoading(false);
         }
       }
     };
 
-    fetchPods();
+    fetchPods(false);
+    const intervalId = setInterval(() => fetchPods(true), 5000);
     return () => {
       cancelled = true;
+      clearInterval(intervalId);
     };
-  }, [contextId, namespace, matchLabels, replicaSet.metadata.name]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contextId, namespace, matchLabelsKey, replicaSetName]);
 
   const handlePodClick = (pod: KubeResource) => {
     if (onNavigateToResourceInNewPanel && contextId) {
@@ -411,8 +429,8 @@ const NodePodsSection: React.FC<{
     }
 
     let cancelled = false;
-    const fetchPods = async () => {
-      setIsLoading(true);
+    const fetchPods = async (silent: boolean) => {
+      if (!silent) setIsLoading(true);
       try {
         const allPods = (await commands.listResources(
           contextId,
@@ -424,19 +442,21 @@ const NodePodsSection: React.FC<{
         }
       } catch (error) {
         console.error('Failed to fetch pods for node:', error);
-        if (!cancelled) {
+        if (!cancelled && !silent) {
           setPods([]);
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !silent) {
           setIsLoading(false);
         }
       }
     };
 
-    fetchPods();
+    fetchPods(false);
+    const intervalId = setInterval(() => fetchPods(true), 5000);
     return () => {
       cancelled = true;
+      clearInterval(intervalId);
     };
   }, [contextId, nodeName]);
 
