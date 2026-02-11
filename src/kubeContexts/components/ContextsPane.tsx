@@ -7,6 +7,7 @@ import { gkeProvider } from '../../lib/providers/gke';
 import { eksProvider } from '../../lib/providers/eks';
 import { othersProvider } from '../../lib/providers/others';
 import { commands } from '../../api';
+import { useToast } from '../../components/Toast';
 import {
   loadTags,
   getContextTags,
@@ -63,6 +64,7 @@ function ContextsPane({
   const [searchText, setSearchText] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | undefined>(undefined);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | undefined>(undefined);
   const [attachedTags, setAttachedTags] = useState<string[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
@@ -77,6 +79,7 @@ function ContextsPane({
   const [showFavorites, setShowFavorites] = useState(true);
   const [showClusters, setShowClusters] = useState(true);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
   const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'f') {
@@ -95,12 +98,14 @@ function ContextsPane({
     async function loadContexts() {
       try {
         setLoading(true);
+        setLoadError(undefined);
         const contexts = await commands.getKubeContexts();
         const tree = buildTreeFromContexts(contexts, PROVIDERS);
         setContextTree(tree);
         setExpandedIds(new Set(getAllOpenFolderIds(tree)));
       } catch (error) {
         console.error('Failed to load contexts:', error);
+        setLoadError(String(error));
       } finally {
         setLoading(false);
       }
@@ -277,7 +282,7 @@ function ContextsPane({
       setAttachedTags(prev => prev.filter(id => id !== tagId));
     } else {
       if (attachedTags.length >= MAX_TAGS_PER_CONTEXT) {
-        alert(`Maximum ${MAX_TAGS_PER_CONTEXT} tags per context`);
+        showToast(`Maximum ${MAX_TAGS_PER_CONTEXT} tags per context`, 'info');
         return;
       }
       attachTagToContext(contextId, tagId);
@@ -386,6 +391,17 @@ function ContextsPane({
     return (
       <div className="contexts-pane">
         <div className="loading">Loading contexts...</div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="contexts-pane">
+        <div className="error" style={{ padding: '16px' }}>
+          <p>Failed to load contexts</p>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{loadError}</p>
+        </div>
       </div>
     );
   }

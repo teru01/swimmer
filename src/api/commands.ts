@@ -42,13 +42,6 @@ export interface CrdGroup {
  */
 export const commands = {
   /**
-   * 挨拶メッセージを生成します
-   */
-  greet: (name: string): Promise<string> => {
-    return invoke('greet', { name });
-  },
-
-  /**
    * 利用可能な Kubernetes コンテキストのリストを取得します
    */
   getKubeContexts: async (): Promise<string[]> => {

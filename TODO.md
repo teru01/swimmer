@@ -33,12 +33,12 @@
 
 ## Medium (型安全性 / コード品質)
 
-- [ ] `commands.ts` の `greet` 関数 (テンプレート残骸) を削除
+- [x] `commands.ts` の `greet` 関数 (テンプレート残骸) を削除
 - [ ] `ClusterOverview.tsx` のコピーアイコンSVG 6箇所重複を共通コンポーネントに抽出
-- [ ] `console.log` デバッグ出力の削除 (`ClusterInfoPane.tsx:25`)
-- [ ] `alert()` を Toast 通知に置換 (`ContextsPane.tsx:280`)
-- [ ] `PreferencesContext.tsx` の `loadPrefs` にエラーハンドリングを追加
-- [ ] `ContextsPane.tsx` のコンテキスト読み込み失敗時にUIエラー表示を追加
+- [x] `console.log` デバッグ出力の削除 (`ClusterInfoPane.tsx:25`)
+- [x] `alert()` を Toast 通知に置換 (`ContextsPane.tsx:280`)
+- [x] `PreferencesContext.tsx` の `loadPrefs` にエラーハンドリングを追加
+- [x] `ContextsPane.tsx` のコンテキスト読み込み失敗時にUIエラー表示を追加
 
 ## Low (改善推奨)
 

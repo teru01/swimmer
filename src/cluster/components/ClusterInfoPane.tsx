@@ -22,7 +22,6 @@ export const fetchResourceDetail = async (
   selectedKind?: string
 ): Promise<{ resource: KubeResource; events: KubeResource[] } | undefined> => {
   if (!resource) return undefined;
-  console.log(`Fetching details for: ${resource.metadata.name}`);
 
   let kind: string | undefined;
   if (selectedKind?.startsWith('cr:')) {

@@ -15,10 +15,14 @@ export const PreferencesProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   useEffect(() => {
     async function loadPrefs() {
-      const prefs = await loadPreferences();
-      setPreferences(prefs);
-      if (prefs.general.kubeconfigPath) {
-        await commands.setKubeconfigPath(prefs.general.kubeconfigPath);
+      try {
+        const prefs = await loadPreferences();
+        setPreferences(prefs);
+        if (prefs.general.kubeconfigPath) {
+          await commands.setKubeconfigPath(prefs.general.kubeconfigPath);
+        }
+      } catch (e) {
+        console.error('Failed to load preferences:', e);
       }
     }
     loadPrefs();
