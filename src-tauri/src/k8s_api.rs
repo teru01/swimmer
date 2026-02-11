@@ -1493,14 +1493,9 @@ struct ResourceWatchEvent {
     resource: Value,
 }
 
-async fn watch_namespaced_or_all<T>(
-    app: AppHandle,
-    client: Client,
-    namespace: Option<String>,
-    watch_id: String,
-) -> Result<()>
+fn run_watcher<T>(app: AppHandle, api: Api<T>, watch_id: String)
 where
-    T: kube::Resource<Scope = kube::core::NamespaceResourceScope>
+    T: kube::Resource
         + serde::de::DeserializeOwned
         + serde::Serialize
         + Clone
@@ -1509,20 +1504,7 @@ where
         + 'static,
     <T as kube::Resource>::DynamicType: Default,
 {
-    log::info!(
-        "watch_namespaced_or_all: namespace={:?}, watch_id={}",
-        namespace,
-        watch_id
-    );
-
-    let api: Api<T> = if let Some(ns) = namespace.as_deref() {
-        Api::namespaced(client, ns)
-    } else {
-        Api::all(client)
-    };
-
-    let watcher_config = watcher::Config::default();
-    let stream = watcher(api, watcher_config);
+    let stream = watcher(api, watcher::Config::default());
 
     tokio::spawn(async move {
         log::info!("Watch stream task started for watch_id: {}", watch_id);
@@ -1533,30 +1515,13 @@ where
                 Ok(event) => {
                     use kube::runtime::watcher::Event;
                     let (event_type, resource) = match event {
-                        Event::Apply(obj) => {
-                            log::debug!("Watch Apply event");
-                            ("modified", obj)
-                        }
-                        Event::Delete(obj) => {
-                            log::debug!("Watch Delete event");
-                            ("deleted", obj)
-                        }
-                        Event::Init => {
-                            log::debug!("Watch Init event");
-                            continue;
-                        }
-                        Event::InitApply(obj) => {
-                            log::debug!("Watch InitApply event");
-                            ("modified", obj)
-                        }
-                        Event::InitDone => {
-                            log::debug!("Watch InitDone event");
-                            continue;
-                        }
+                        Event::Apply(obj) => ("modified", obj),
+                        Event::Delete(obj) => ("deleted", obj),
+                        Event::InitApply(obj) => ("modified", obj),
+                        Event::Init | Event::InitDone => continue,
                     };
 
                     if let Ok(value) = serde_json::to_value(&resource) {
-                        log::debug!("Emitting {} event for watch_id: {}", event_type, watch_id);
                         let _ = app.emit(
                             &format!("resource-watch-{}", watch_id),
                             ResourceWatchEvent {
@@ -1573,11 +1538,32 @@ where
             }
         }
     });
-
-    Ok(())
 }
 
-async fn watch_cluster_scoped<T>(app: AppHandle, client: Client, watch_id: String) -> Result<()>
+fn watch_namespaced_or_all<T>(
+    app: AppHandle,
+    client: Client,
+    namespace: Option<String>,
+    watch_id: String,
+) where
+    T: kube::Resource<Scope = kube::core::NamespaceResourceScope>
+        + serde::de::DeserializeOwned
+        + serde::Serialize
+        + Clone
+        + std::fmt::Debug
+        + Send
+        + 'static,
+    <T as kube::Resource>::DynamicType: Default,
+{
+    let api: Api<T> = if let Some(ns) = namespace.as_deref() {
+        Api::namespaced(client, ns)
+    } else {
+        Api::all(client)
+    };
+    run_watcher(app, api, watch_id);
+}
+
+fn watch_cluster_scoped<T>(app: AppHandle, client: Client, watch_id: String)
 where
     T: kube::Resource<Scope = kube::core::ClusterResourceScope>
         + serde::de::DeserializeOwned
@@ -1588,63 +1574,8 @@ where
         + 'static,
     <T as kube::Resource>::DynamicType: Default,
 {
-    log::info!("watch_cluster_scoped: watch_id={}", watch_id);
-
     let api: Api<T> = Api::all(client);
-    let watcher_config = watcher::Config::default();
-    let stream = watcher(api, watcher_config);
-
-    tokio::spawn(async move {
-        log::info!("Watch stream task started for watch_id: {}", watch_id);
-        futures::pin_mut!(stream);
-        while let Some(result) = stream.next().await {
-            log::debug!("Watch stream received event for watch_id: {}", watch_id);
-            match result {
-                Ok(event) => {
-                    use kube::runtime::watcher::Event;
-                    let (event_type, resource) = match event {
-                        Event::Apply(obj) => {
-                            log::debug!("Watch Apply event");
-                            ("modified", obj)
-                        }
-                        Event::Delete(obj) => {
-                            log::debug!("Watch Delete event");
-                            ("deleted", obj)
-                        }
-                        Event::Init => {
-                            log::debug!("Watch Init event");
-                            continue;
-                        }
-                        Event::InitApply(obj) => {
-                            log::debug!("Watch InitApply event");
-                            ("modified", obj)
-                        }
-                        Event::InitDone => {
-                            log::debug!("Watch InitDone event");
-                            continue;
-                        }
-                    };
-
-                    if let Ok(value) = serde_json::to_value(&resource) {
-                        log::debug!("Emitting {} event for watch_id: {}", event_type, watch_id);
-                        let _ = app.emit(
-                            &format!("resource-watch-{}", watch_id),
-                            ResourceWatchEvent {
-                                event_type: event_type.to_string(),
-                                resource: value,
-                            },
-                        );
-                    }
-                }
-                Err(e) => {
-                    log::error!("Watch error: {}", e);
-                    break;
-                }
-            }
-        }
-    });
-
-    Ok(())
+    run_watcher(app, api, watch_id);
 }
 
 #[tauri::command]
@@ -1682,61 +1613,42 @@ pub async fn start_watch_resources(
             watch_id_clone
         );
 
-        let result: Result<()> = match kind.as_str() {
-            "Pods" => {
-                watch_namespaced_or_all::<Pod>(app_clone, client, namespace, watch_id_clone).await
-            }
+        match kind.as_str() {
+            "Pods" => watch_namespaced_or_all::<Pod>(app_clone, client, namespace, watch_id_clone),
             "Deployments" => {
                 watch_namespaced_or_all::<Deployment>(app_clone, client, namespace, watch_id_clone)
-                    .await
             }
             "Services" => {
                 watch_namespaced_or_all::<Service>(app_clone, client, namespace, watch_id_clone)
-                    .await
             }
-            "Nodes" => watch_cluster_scoped::<Node>(app_clone, client, watch_id_clone).await,
-            "Namespaces" => {
-                watch_cluster_scoped::<Namespace>(app_clone, client, watch_id_clone).await
-            }
+            "Nodes" => watch_cluster_scoped::<Node>(app_clone, client, watch_id_clone),
+            "Namespaces" => watch_cluster_scoped::<Namespace>(app_clone, client, watch_id_clone),
             "ReplicaSets" => {
                 watch_namespaced_or_all::<ReplicaSet>(app_clone, client, namespace, watch_id_clone)
-                    .await
             }
             "StatefulSets" => {
                 watch_namespaced_or_all::<StatefulSet>(app_clone, client, namespace, watch_id_clone)
-                    .await
             }
             "DaemonSets" => {
                 watch_namespaced_or_all::<DaemonSet>(app_clone, client, namespace, watch_id_clone)
-                    .await
             }
-            "Jobs" => {
-                watch_namespaced_or_all::<Job>(app_clone, client, namespace, watch_id_clone).await
-            }
+            "Jobs" => watch_namespaced_or_all::<Job>(app_clone, client, namespace, watch_id_clone),
             "CronJobs" => {
                 watch_namespaced_or_all::<CronJob>(app_clone, client, namespace, watch_id_clone)
-                    .await
             }
             "ConfigMaps" => {
                 watch_namespaced_or_all::<ConfigMap>(app_clone, client, namespace, watch_id_clone)
-                    .await
             }
             "Secrets" => {
                 watch_namespaced_or_all::<Secret>(app_clone, client, namespace, watch_id_clone)
-                    .await
             }
             "Ingresses" => {
                 watch_namespaced_or_all::<Ingress>(app_clone, client, namespace, watch_id_clone)
-                    .await
             }
             _ => {
                 log::warn!("Unsupported resource kind for watch: {}", kind);
-                Ok(())
             }
         };
-        if let Err(e) = result {
-            log::error!("Watch task error: {}", e);
-        }
     });
 
     watcher_handle
