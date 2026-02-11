@@ -240,6 +240,10 @@
   transition: all 0.2s ease;
 }
 
+.namespace-input.has-value {
+  padding-right: 24px;
+}
+
 .namespace-input:focus {
   outline: none;
   border-color: var(--color-primary);
@@ -268,7 +272,8 @@
   transition: background-color 0.15s ease;
 }
 
-.namespace-suggestion-item:hover {
+.namespace-suggestion-item:hover,
+.namespace-suggestion-item.highlighted {
   background-color: var(--hover-color, rgba(0, 120, 212, 0.1));
 }
 
@@ -276,6 +281,32 @@
   background-color: var(--color-primary);
   color: white;
   font-weight: 500;
+}
+
+.namespace-suggestion-item.selected.highlighted {
+  background-color: var(--color-primary);
+  opacity: 0.85;
+}
+
+.namespace-clear-button {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.namespace-clear-button:hover {
+  color: var(--text-primary);
 }
 
 .resource-table-container {

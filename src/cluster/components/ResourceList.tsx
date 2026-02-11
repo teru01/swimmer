@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import './ClusterInfoPane.css';
 import { formatAge } from '../../lib/utils';
 import ClusterOverview from './ClusterOverview';
@@ -166,6 +166,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const [selectedNamespace, setSelectedNamespace] = useState<string>('all');
   const [namespaceInput, setNamespaceInput] = useState<string>('');
   const [showNamespaceSuggestions, setShowNamespaceSuggestions] = useState<boolean>(false);
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
   const [resources, setResources] = useState<KubeResource[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -216,6 +218,72 @@ const ResourceList: React.FC<ResourceListProps> = ({
     }
     return namespaces.filter(ns => ns.toLowerCase().includes(namespaceInput.toLowerCase()));
   }, [namespaces, namespaceInput]);
+
+  const totalSuggestions = filteredNamespaces.length + 1; // +1 for "All Namespaces"
+
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [namespaceInput]);
+
+  const handleNamespaceKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!showNamespaceSuggestions) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          setShowNamespaceSuggestions(true);
+          setHighlightedIndex(0);
+          e.preventDefault();
+        }
+        return;
+      }
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setHighlightedIndex(prev => (prev + 1) % totalSuggestions);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setHighlightedIndex(prev => (prev - 1 + totalSuggestions) % totalSuggestions);
+          break;
+        case 'Enter': {
+          e.preventDefault();
+          if (highlightedIndex < 0) break;
+          if (highlightedIndex === 0) {
+            setSelectedNamespace('all');
+            setNamespaceInput('');
+          } else {
+            const ns = filteredNamespaces[highlightedIndex - 1];
+            setSelectedNamespace(ns);
+            setNamespaceInput(ns);
+          }
+          setShowNamespaceSuggestions(false);
+          setHighlightedIndex(-1);
+          break;
+        }
+        case 'Escape':
+          setShowNamespaceSuggestions(false);
+          setHighlightedIndex(-1);
+          break;
+      }
+    },
+    [showNamespaceSuggestions, totalSuggestions, highlightedIndex, filteredNamespaces]
+  );
+
+  useEffect(() => {
+    if (highlightedIndex >= 0 && suggestionsRef.current) {
+      const items = suggestionsRef.current.querySelectorAll('.namespace-suggestion-item');
+      if (items[highlightedIndex]) {
+        items[highlightedIndex].scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex]);
+
+  const clearNamespaceInput = useCallback(() => {
+    setNamespaceInput('');
+    setSelectedNamespace('all');
+    setHighlightedIndex(-1);
+    namespaceInputRef.current?.focus();
+  }, []);
 
   // Fetch resources when selectedKind or context changes (but NOT when selectedNamespace changes)
   useEffect(() => {
@@ -752,33 +820,49 @@ const ResourceList: React.FC<ResourceListProps> = ({
                   }}
                   onFocus={() => setShowNamespaceSuggestions(true)}
                   onBlur={() => {
-                    setTimeout(() => setShowNamespaceSuggestions(false), 200);
+                    setTimeout(() => {
+                      setShowNamespaceSuggestions(false);
+                      setHighlightedIndex(-1);
+                    }, 200);
                   }}
+                  onKeyDown={handleNamespaceKeyDown}
                   placeholder="Filter namespaces..."
-                  className="namespace-input"
+                  className={`namespace-input ${namespaceInput ? 'has-value' : ''}`}
                   disabled={isLoading}
                   autoComplete="off"
                 />
+                {namespaceInput && (
+                  <button
+                    className="namespace-clear-button"
+                    onClick={clearNamespaceInput}
+                    type="button"
+                    tabIndex={-1}
+                  >
+                    &times;
+                  </button>
+                )}
                 {showNamespaceSuggestions && filteredNamespaces.length > 0 && (
-                  <div className="namespace-suggestions">
+                  <div className="namespace-suggestions" ref={suggestionsRef}>
                     <div
-                      className={`namespace-suggestion-item ${selectedNamespace === 'all' ? 'selected' : ''}`}
+                      className={`namespace-suggestion-item ${selectedNamespace === 'all' ? 'selected' : ''} ${highlightedIndex === 0 ? 'highlighted' : ''}`}
                       onClick={() => {
                         setSelectedNamespace('all');
                         setNamespaceInput('');
                         setShowNamespaceSuggestions(false);
+                        setHighlightedIndex(-1);
                       }}
                     >
                       All Namespaces
                     </div>
-                    {filteredNamespaces.map(ns => (
+                    {filteredNamespaces.map((ns, i) => (
                       <div
                         key={ns}
-                        className={`namespace-suggestion-item ${selectedNamespace === ns ? 'selected' : ''}`}
+                        className={`namespace-suggestion-item ${selectedNamespace === ns ? 'selected' : ''} ${highlightedIndex === i + 1 ? 'highlighted' : ''}`}
                         onClick={() => {
                           setSelectedNamespace(ns);
                           setNamespaceInput(ns);
                           setShowNamespaceSuggestions(false);
+                          setHighlightedIndex(-1);
                         }}
                       >
                         {ns}
