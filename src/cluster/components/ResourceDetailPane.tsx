@@ -40,6 +40,33 @@ const getContainerStateCategory = (state: any): string => {
 
 const VALUE_COLLAPSE_THRESHOLD = 80;
 
+/** Tiny inline copy button. */
+const CopyButton: React.FC<{ text: string }> = ({ text }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <button className="metadata-copy-btn" onClick={handleCopy} type="button" title="Copy">
+      {copied ? (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z" />
+        </svg>
+      ) : (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25z" />
+          <path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25z" />
+        </svg>
+      )}
+    </button>
+  );
+};
+
 /** A single metadata entry whose value collapses when it exceeds the threshold. */
 const MetadataEntry: React.FC<{ entryKey: string; value: string }> = ({ entryKey, value }) => {
   const [expanded, setExpanded] = useState(false);
@@ -48,7 +75,14 @@ const MetadataEntry: React.FC<{ entryKey: string; value: string }> = ({ entryKey
   return (
     <li>
       <span className="metadata-key-col">
-        <span className="metadata-key">{entryKey}:</span>
+        <span className="metadata-key">{entryKey}</span>
+        <CopyButton text={entryKey} />
+      </span>
+      <span className="metadata-value-col">
+        <span className={`metadata-value ${isLong && !expanded ? 'value-collapsed' : ''}`}>
+          {value}
+        </span>
+        <CopyButton text={value} />
         {isLong && (
           <button
             className="metadata-value-toggle"
@@ -58,9 +92,6 @@ const MetadataEntry: React.FC<{ entryKey: string; value: string }> = ({ entryKey
             {expanded ? 'Hide' : 'Show'}
           </button>
         )}
-      </span>
-      <span className={`metadata-value ${isLong && !expanded ? 'value-collapsed' : ''}`}>
-        {value}
       </span>
     </li>
   );
@@ -1428,11 +1459,6 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             </section>
 
             {renderEvents()}
-
-            <section className="detail-section">
-              <h4>Raw Data</h4>
-              <pre className="json-display">{JSON.stringify(resource, null, 2)}</pre>
-            </section>
           </div>
         )}
       </div>
