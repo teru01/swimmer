@@ -173,6 +173,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const [resources, setResources] = useState<KubeResource[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [fetchError, setFetchError] = useState<string | undefined>(undefined);
   const resourceCacheRef = useRef<Map<string, KubeResource[]>>(new Map());
   const watchIdRef = useRef<string | undefined>(undefined);
   const namespaceInputRef = useRef<HTMLInputElement>(null);
@@ -308,6 +309,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   useEffect(() => {
     if (!selectedKind || selectedKind === 'Overview') {
       setResources([]);
+      setFetchError(undefined);
       return;
     }
 
@@ -322,18 +324,22 @@ const ResourceList: React.FC<ResourceListProps> = ({
     const hasCached = !!cached;
     let cancelled = false;
 
+    const FETCH_TIMEOUT_MS = 10000;
+
     const loadResources = async () => {
       // Only show loading spinner if there's no cached data
       if (!hasCached) {
         setIsLoading(true);
       }
       setError(undefined);
+      setFetchError(undefined);
       try {
-        const fetchedResources = (await commands.listResources(
-          contextId,
-          selectedKind,
-          undefined
-        )) as KubeResource[];
+        const fetchedResources = (await Promise.race([
+          commands.listResources(contextId, selectedKind, undefined),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Request timed out')), FETCH_TIMEOUT_MS)
+          ),
+        ])) as KubeResource[];
         resourceCacheRef.current.set(selectedKind, fetchedResources);
         if (!cancelled) {
           setResources(fetchedResources);
@@ -342,9 +348,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
       } catch (err) {
         console.error(`Failed to fetch ${selectedKind}:`, err);
         if (!cancelled) {
+          const message =
+            err instanceof Error && err.message === 'Request timed out'
+              ? `Fetch timed out`
+              : `Failed to load`;
           if (!hasCached) {
             setError(`Failed to load ${selectedKind}.`);
           }
+          setFetchError(message);
           setIsLoading(false);
         }
       }
@@ -864,6 +875,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
               <span className="resource-count">
                 {filteredResources.length} {filteredResources.length === 1 ? 'item' : 'items'}
               </span>
+              {fetchError && <span className="fetch-error-badge">{fetchError}</span>}
             </div>
           )}
         </div>
