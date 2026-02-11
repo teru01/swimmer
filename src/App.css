@@ -103,14 +103,6 @@ a:hover {
   background: var(--text-secondary);
 }
 
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafb);
-}
-
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -177,39 +169,6 @@ a:hover {
   --transition-fast: 0.15s ease;
   --transition-normal: 0.2s ease;
   --transition-slow: 0.3s ease;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-h1 {
-  text-align: center;
-}
-
-#greet-input {
-  margin-right: 5px;
 }
 
 .bmc-button {
