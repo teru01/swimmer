@@ -13,6 +13,7 @@ import {
   attachTagToContext,
   detachTagFromContext,
   MAX_TAGS_PER_CONTEXT,
+  TAGS_CHANGED_EVENT,
   Tag,
 } from '../../lib/tag';
 import { loadFavorites, toggleFavorite } from '../../lib/favorite';
@@ -93,6 +94,12 @@ function ContextsPane({
     setTags(loadTags());
     setFavorites(loadFavorites());
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const handleTagsChanged = () => setTags(loadTags());
+    window.addEventListener(TAGS_CHANGED_EVENT, handleTagsChanged);
+    return () => window.removeEventListener(TAGS_CHANGED_EVENT, handleTagsChanged);
   }, []);
 
   useEffect(() => {

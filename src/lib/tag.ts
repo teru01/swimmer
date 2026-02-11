@@ -46,9 +46,12 @@ export function loadTags(): Tag[] {
   }
 }
 
+export const TAGS_CHANGED_EVENT = 'swimmer:tags-changed';
+
 export function saveTags(tags: Tag[]): void {
   try {
     localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
+    window.dispatchEvent(new Event(TAGS_CHANGED_EVENT));
   } catch (error) {
     console.error('Failed to save tags:', error);
   }
