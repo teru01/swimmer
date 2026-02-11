@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './ClusterInfoPane.css';
 import { KubeResource } from './ResourceList';
 import { formatAge } from '../../lib/utils';
@@ -36,18 +36,46 @@ const getContainerStateCategory = (state: any): string => {
   return 'default';
 };
 
-// Helper to render Labels/Annotations
-const renderMetadataMap = (map: { [key: string]: string } | undefined) => {
+const VALUE_COLLAPSE_THRESHOLD = 80;
+
+/** A single metadata entry whose value collapses when it exceeds the threshold. */
+const MetadataEntry: React.FC<{ entryKey: string; value: string }> = ({ entryKey, value }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = value.length > VALUE_COLLAPSE_THRESHOLD;
+
+  return (
+    <li>
+      <span className="metadata-key">{entryKey}:</span>
+      {isLong ? (
+        <span className="metadata-value collapsible-value">
+          <span className={expanded ? 'value-expanded' : 'value-collapsed'}>{value}</span>
+          <button
+            className="metadata-value-toggle"
+            onClick={() => setExpanded(prev => !prev)}
+            type="button"
+          >
+            {expanded ? 'Hide' : 'Show'}
+          </button>
+        </span>
+      ) : (
+        <span className="metadata-value">{value}</span>
+      )}
+    </li>
+  );
+};
+
+/** Renders a metadata map with long values collapsed by default. */
+const CollapsibleMetadataMap: React.FC<{ map: { [key: string]: string } | undefined }> = ({
+  map,
+}) => {
   if (!map || Object.keys(map).length === 0) {
     return <span className="detail-value">-</span>;
   }
+
   return (
     <ul className="metadata-list">
       {Object.entries(map).map(([key, value]) => (
-        <li key={key}>
-          <span className="metadata-key">{key}:</span>
-          <span className="metadata-value">{value}</span>
-        </li>
+        <MetadataEntry key={key} entryKey={key} value={value} />
       ))}
     </ul>
   );
@@ -147,12 +175,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
 
         <section className="detail-section">
           <h4>Selector</h4>
-          {renderMetadataMap(spec?.selector?.matchLabels)}
+          {<CollapsibleMetadataMap map={spec?.selector?.matchLabels} />}
         </section>
 
         <section className="detail-section">
@@ -207,12 +235,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
 
         <section className="detail-section">
           <h4>Selector</h4>
-          {renderMetadataMap(spec?.selector?.matchLabels)}
+          {<CollapsibleMetadataMap map={spec?.selector?.matchLabels} />}
         </section>
 
         <section className="detail-section">
@@ -296,12 +324,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Capacity</h4>
-          {renderMetadataMap(status?.capacity)}
+          {<CollapsibleMetadataMap map={status?.capacity} />}
         </section>
 
         <section className="detail-section">
           <h4>Allocatable</h4>
-          {renderMetadataMap(status?.allocatable)}
+          {<CollapsibleMetadataMap map={status?.allocatable} />}
         </section>
 
         <section className="detail-section">
@@ -334,7 +362,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
         {renderEvents()}
       </>
@@ -362,12 +390,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
 
         <section className="detail-section">
           <h4>Selector</h4>
-          {renderMetadataMap(spec?.selector?.matchLabels)}
+          {<CollapsibleMetadataMap map={spec?.selector?.matchLabels} />}
         </section>
 
         {status?.conditions && status.conditions.length > 0 && (
@@ -417,12 +445,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
 
         <section className="detail-section">
           <h4>Selector</h4>
-          {renderMetadataMap(spec?.selector?.matchLabels)}
+          {<CollapsibleMetadataMap map={spec?.selector?.matchLabels} />}
         </section>
 
         {status?.conditions && status.conditions.length > 0 && (
@@ -473,12 +501,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
 
         <section className="detail-section">
           <h4>Selector</h4>
-          {renderMetadataMap(spec?.selector?.matchLabels)}
+          {<CollapsibleMetadataMap map={spec?.selector?.matchLabels} />}
         </section>
 
         {status?.conditions && status.conditions.length > 0 && (
@@ -531,12 +559,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
 
         <section className="detail-section">
           <h4>Annotations</h4>
-          {renderMetadataMap(metadata.annotations)}
+          {<CollapsibleMetadataMap map={metadata.annotations} />}
         </section>
 
         {spec?.rules && spec.rules.length > 0 && (
@@ -590,12 +618,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
 
         <section className="detail-section">
           <h4>Annotations</h4>
-          {renderMetadataMap(metadata.annotations)}
+          {<CollapsibleMetadataMap map={metadata.annotations} />}
         </section>
 
         {data && Object.keys(data).length > 0 && (
@@ -630,12 +658,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
 
         <section className="detail-section">
           <h4>Annotations</h4>
-          {renderMetadataMap(metadata.annotations)}
+          {<CollapsibleMetadataMap map={metadata.annotations} />}
         </section>
 
         {data && Object.keys(data).length > 0 && (
@@ -669,12 +697,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
 
         <section className="detail-section">
           <h4>Annotations</h4>
-          {renderMetadataMap(metadata.annotations)}
+          {<CollapsibleMetadataMap map={metadata.annotations} />}
         </section>
 
         {status?.conditions && status.conditions.length > 0 && (
@@ -733,12 +761,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
         <section className="detail-section">
           <h4>Labels</h4>
-          {renderMetadataMap(metadata.labels)}
+          {<CollapsibleMetadataMap map={metadata.labels} />}
         </section>
 
         <section className="detail-section">
           <h4>Annotations</h4>
-          {renderMetadataMap(metadata.annotations)}
+          {<CollapsibleMetadataMap map={metadata.annotations} />}
         </section>
 
         {spec?.initContainers && spec.initContainers.length > 0 && (
@@ -927,7 +955,7 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
         {(pod as any).spec?.nodeSelector && (
           <section className="detail-section">
             <h4>Node-Selectors</h4>
-            {renderMetadataMap((pod as any).spec.nodeSelector)}
+            {<CollapsibleMetadataMap map={(pod as any).spec.nodeSelector} />}
           </section>
         )}
 
@@ -998,12 +1026,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
             <section className="detail-section">
               <h4>Labels</h4>
-              {renderMetadataMap(resource.metadata.labels)}
+              {<CollapsibleMetadataMap map={resource.metadata.labels} />}
             </section>
 
             <section className="detail-section">
               <h4>Annotations</h4>
-              {renderMetadataMap(resource.metadata.annotations)}
+              {<CollapsibleMetadataMap map={resource.metadata.annotations} />}
             </section>
 
             {resource.status?.conditions && resource.status.conditions.length > 0 && (
