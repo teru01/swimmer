@@ -298,6 +298,99 @@ const DeploymentPodsSection: React.FC<{
   );
 };
 
+/** Section component that lists pods belonging to a replicaset. */
+const ReplicaSetPodsSection: React.FC<{
+  replicaSet: KubeResource;
+  contextId: string | undefined;
+  onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
+}> = ({ replicaSet, contextId, onNavigateToResourceInNewPanel }) => {
+  const [pods, setPods] = useState<KubeResource[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const matchLabels = replicaSet.spec?.selector?.matchLabels;
+  const namespace = replicaSet.metadata.namespace;
+
+  useEffect(() => {
+    if (!contextId || !matchLabels || Object.keys(matchLabels).length === 0) {
+      setPods([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchPods = async () => {
+      setIsLoading(true);
+      try {
+        const allPods = await commands.listResources(contextId, 'Pods', namespace);
+        if (!cancelled) {
+          const filtered = filterPodsForDeployment(allPods as KubeResource[], matchLabels);
+          const owned = filtered.filter(pod =>
+            pod.metadata.ownerReferences?.some(
+              ref => ref.kind === 'ReplicaSet' && ref.name === replicaSet.metadata.name
+            )
+          );
+          setPods(owned);
+        }
+      } catch (error) {
+        console.error('Failed to fetch pods for replicaset:', error);
+        if (!cancelled) {
+          setPods([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchPods();
+    return () => {
+      cancelled = true;
+    };
+  }, [contextId, namespace, matchLabels, replicaSet.metadata.name]);
+
+  const handlePodClick = (pod: KubeResource) => {
+    if (onNavigateToResourceInNewPanel && contextId) {
+      onNavigateToResourceInNewPanel(pod, contextId);
+    }
+  };
+
+  return (
+    <section className="detail-section">
+      <h4>Pods</h4>
+      {isLoading ? (
+        <div className="detail-value">Loading pods...</div>
+      ) : pods.length === 0 ? (
+        <div className="detail-value">No pods found</div>
+      ) : (
+        <table className="detail-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Restarts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pods.map(pod => (
+              <tr key={pod.metadata.uid} className="pod-row" onClick={() => handlePodClick(pod)}>
+                <td>{pod.metadata.name}</td>
+                <td>
+                  <span
+                    className={`status-badge ${(pod.status?.phase || 'unknown').toLowerCase()}`}
+                  >
+                    {pod.status?.phase || 'Unknown'}
+                  </span>
+                </td>
+                <td>{getPodRestarts(pod)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+};
+
 /** Section component that lists pods running on a node. */
 const NodePodsSection: React.FC<{
   node: KubeResource;
@@ -708,15 +801,43 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
           <DetailItem label="Name">{metadata.name}</DetailItem>
           <DetailItem label="Namespace">{metadata.namespace}</DetailItem>
           <DetailItem label="Controlled By">
-            {metadata.ownerReferences?.[0]
-              ? `${metadata.ownerReferences[0].kind}/${metadata.ownerReferences[0].name}`
-              : '-'}
+            {metadata.ownerReferences?.[0] ? (
+              <span
+                className="resource-ref-link"
+                onClick={() => {
+                  const owner = metadata.ownerReferences![0];
+                  if (onNavigateToResourceInNewPanel && contextId) {
+                    onNavigateToResourceInNewPanel(
+                      {
+                        kind: owner.kind,
+                        metadata: {
+                          name: owner.name,
+                          namespace: metadata.namespace,
+                          uid: owner.uid || '',
+                        },
+                      },
+                      contextId
+                    );
+                  }
+                }}
+              >
+                {`${metadata.ownerReferences[0].kind}/${metadata.ownerReferences[0].name}`}
+              </span>
+            ) : (
+              '-'
+            )}
           </DetailItem>
           <DetailItem label="Replicas">{spec?.replicas ?? 0}</DetailItem>
           <DetailItem label="Current">{status?.replicas ?? 0}</DetailItem>
           <DetailItem label="Ready">{status?.readyReplicas ?? 0}</DetailItem>
           <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
         </section>
+
+        <ReplicaSetPodsSection
+          replicaSet={rs}
+          contextId={contextId}
+          onNavigateToResourceInNewPanel={onNavigateToResourceInNewPanel}
+        />
 
         {status?.conditions && status.conditions.length > 0 && (
           <section className="detail-section">
@@ -1089,9 +1210,31 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
               '-'}
           </DetailItem>
           <DetailItem label="Controlled By">
-            {metadata.ownerReferences?.[0]
-              ? `${metadata.ownerReferences[0].kind}/${metadata.ownerReferences[0].name}`
-              : '-'}
+            {metadata.ownerReferences?.[0] ? (
+              <span
+                className="resource-ref-link"
+                onClick={() => {
+                  const owner = metadata.ownerReferences![0];
+                  if (onNavigateToResourceInNewPanel && contextId) {
+                    onNavigateToResourceInNewPanel(
+                      {
+                        kind: owner.kind,
+                        metadata: {
+                          name: owner.name,
+                          namespace: metadata.namespace,
+                          uid: owner.uid || '',
+                        },
+                      },
+                      contextId
+                    );
+                  }
+                }}
+              >
+                {`${metadata.ownerReferences[0].kind}/${metadata.ownerReferences[0].name}`}
+              </span>
+            ) : (
+              '-'
+            )}
           </DetailItem>
           <DetailItem label="QoS Class">{(pod as any).status?.qosClass || '-'}</DetailItem>
         </section>
