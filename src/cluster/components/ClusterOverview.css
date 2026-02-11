@@ -242,6 +242,16 @@
   color: var(--vscode-terminal-ansiRed);
 }
 
+.status-badge.warning {
+  background-color: rgba(234, 179, 8, 0.2);
+  color: var(--vscode-terminal-ansiYellow);
+}
+
+.status-badge.normal {
+  background-color: rgba(22, 163, 74, 0.2);
+  color: var(--vscode-terminal-ansiGreen);
+}
+
 .pod-name {
   font-family: var(--vscode-editor-font-family);
   font-size: 12px;
