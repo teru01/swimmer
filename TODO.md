@@ -21,9 +21,9 @@
 
 ## High (CSS / 設定)
 
-- [ ] ESLint設定の重複解消 (`.eslintrc.json` を削除し `eslint.config.mjs` のみにする)
-- [ ] lint スクリプトを ESLint v9 flat config 対応に修正 (`package.json`)
-- [ ] `release.yml` の `npm install` → `npm ci` に変更
+- [x] ESLint設定の重複解消 (`.eslintrc.json` を削除し `eslint.config.mjs` のみにする)
+- [x] lint スクリプトを ESLint v9 flat config 対応に修正 (`package.json`)
+- [x] `release.yml` の `npm install` → `npm ci` に変更
 - [ ] App.css のテンプレート残骸を削除 (`.logo`, `.container`, `.row`, `#greet-input` 等)
 - [ ] グローバルCSSの `.modal`, `.modal-overlay`, `.modal-actions` 重複を解消 (`contextsPane.css` と `preferencesPage.css`)
 - [ ] `@keyframes spin` と `.loading-spinner` の重複定義を解消 (`layout.css` と `ClusterInfoPane.css`)
