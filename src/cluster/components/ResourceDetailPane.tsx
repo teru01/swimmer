@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './ClusterInfoPane.css';
 import { KubeResource } from './ResourceList';
 import { formatAge } from '../../lib/utils';
@@ -11,6 +11,7 @@ interface ResourceDetailPaneProps {
   onClose: () => void;
   contextId?: string;
   onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
+  isActivePanel?: boolean;
 }
 
 // Helper component to render key-value pairs nicely
@@ -496,7 +497,167 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   onClose,
   contextId,
   onNavigateToResourceInNewPanel,
+  isActivePanel,
 }) => {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [matchCount, setMatchCount] = useState(0);
+  const [currentMatch, setCurrentMatch] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const highlightClass = 'detail-search-highlight';
+  const activeHighlightClass = 'detail-search-highlight-active';
+
+  const clearHighlights = useCallback(() => {
+    if (!contentRef.current) return;
+    const marks = contentRef.current.querySelectorAll(`mark.${highlightClass}`);
+    marks.forEach(mark => {
+      const parent = mark.parentNode;
+      if (parent) {
+        parent.replaceChild(document.createTextNode(mark.textContent || ''), mark);
+        parent.normalize();
+      }
+    });
+  }, []);
+
+  const applyHighlights = useCallback(
+    (query: string) => {
+      clearHighlights();
+      if (!contentRef.current || !query.trim()) {
+        setMatchCount(0);
+        setCurrentMatch(0);
+        return;
+      }
+
+      const walker = document.createTreeWalker(contentRef.current, NodeFilter.SHOW_TEXT, {
+        acceptNode: node => {
+          const parent = node.parentElement;
+          if (parent && (parent.tagName === 'MARK' || parent.closest('.detail-search-bar'))) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
+
+      const textNodes: Text[] = [];
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        textNodes.push(node as Text);
+      }
+
+      const lowerQuery = query.toLowerCase();
+      let total = 0;
+
+      for (const textNode of textNodes) {
+        const text = textNode.textContent || '';
+        const lowerText = text.toLowerCase();
+        if (!lowerText.includes(lowerQuery)) continue;
+
+        const frag = document.createDocumentFragment();
+        let lastIdx = 0;
+        let idx = lowerText.indexOf(lowerQuery, lastIdx);
+
+        while (idx !== -1) {
+          if (idx > lastIdx) {
+            frag.appendChild(document.createTextNode(text.slice(lastIdx, idx)));
+          }
+          const mark = document.createElement('mark');
+          mark.className = highlightClass;
+          mark.dataset.matchIndex = String(total);
+          mark.textContent = text.slice(idx, idx + query.length);
+          frag.appendChild(mark);
+          total++;
+          lastIdx = idx + query.length;
+          idx = lowerText.indexOf(lowerQuery, lastIdx);
+        }
+
+        if (lastIdx < text.length) {
+          frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+        }
+
+        textNode.parentNode?.replaceChild(frag, textNode);
+      }
+
+      setMatchCount(total);
+      setCurrentMatch(total > 0 ? 1 : 0);
+
+      if (total > 0) {
+        const first = contentRef.current.querySelector(
+          `mark.${highlightClass}[data-match-index="0"]`
+        );
+        first?.classList.add(activeHighlightClass);
+        first?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    },
+    [clearHighlights]
+  );
+
+  const jumpToMatch = useCallback(
+    (index: number) => {
+      if (!contentRef.current || matchCount === 0) return;
+      const marks = contentRef.current.querySelectorAll(`mark.${highlightClass}`);
+      marks.forEach(m => m.classList.remove(activeHighlightClass));
+      const target = marks[index - 1];
+      if (target) {
+        target.classList.add(activeHighlightClass);
+        target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    },
+    [matchCount]
+  );
+
+  const handleSearchNext = useCallback(() => {
+    if (matchCount === 0) return;
+    const next = currentMatch >= matchCount ? 1 : currentMatch + 1;
+    setCurrentMatch(next);
+    jumpToMatch(next);
+  }, [currentMatch, matchCount, jumpToMatch]);
+
+  const handleSearchPrev = useCallback(() => {
+    if (matchCount === 0) return;
+    const prev = currentMatch <= 1 ? matchCount : currentMatch - 1;
+    setCurrentMatch(prev);
+    jumpToMatch(prev);
+  }, [currentMatch, matchCount, jumpToMatch]);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setSearchText('');
+    clearHighlights();
+    setMatchCount(0);
+    setCurrentMatch(0);
+  }, [clearHighlights]);
+
+  useEffect(() => {
+    if (!isActivePanel) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'f') {
+        e.preventDefault();
+        setSearchOpen(true);
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        }, 0);
+      }
+      if (e.key === 'Escape' && searchOpen) {
+        e.preventDefault();
+        closeSearch();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isActivePanel, searchOpen, closeSearch]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      applyHighlights(searchText);
+    }, 150);
+    return () => clearTimeout(timeout);
+  }, [searchText, applyHighlights]);
+
+  useEffect(() => {
+    closeSearch();
+  }, [resource?.metadata?.uid]);
   if (isLoading) {
     return (
       <div className="resource-detail-pane loading">
@@ -1534,7 +1695,63 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
         </button>
       </div>
 
-      <div className="detail-content">
+      {searchOpen && (
+        <div className="detail-search-bar">
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                  handleSearchPrev();
+                } else {
+                  handleSearchNext();
+                }
+              }
+            }}
+            placeholder="Search..."
+            className="detail-search-input"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <span className="detail-search-count">
+            {matchCount > 0 ? `${currentMatch}/${matchCount}` : 'No results'}
+          </span>
+          <button
+            className="detail-search-nav-btn"
+            onClick={handleSearchPrev}
+            title="Previous (Shift+Enter)"
+            type="button"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M3.22 9.78a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1-1.06 1.06L8 6.06 4.28 9.78a.75.75 0 0 1-1.06 0z" />
+            </svg>
+          </button>
+          <button
+            className="detail-search-nav-btn"
+            onClick={handleSearchNext}
+            title="Next (Enter)"
+            type="button"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M12.78 6.22a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L3.22 7.28a.75.75 0 0 1 1.06-1.06L8 9.94l3.72-3.72a.75.75 0 0 1 1.06 0z" />
+            </svg>
+          </button>
+          <button
+            className="detail-search-close-btn"
+            onClick={closeSearch}
+            title="Close (Esc)"
+            type="button"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      <div className="detail-content" ref={contentRef}>
         {resourceKind === 'Pod' && renderPodDetails(resource)}
         {resourceKind === 'Deployment' && renderDeploymentDetails(resource)}
         {resourceKind === 'ReplicaSet' && renderReplicaSetDetails(resource)}

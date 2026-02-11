@@ -150,6 +150,7 @@ interface ResourceListProps {
   isVisible: boolean;
   selectedResourceUid?: string;
   isActivePanel?: boolean;
+  isDetailPaneOpen?: boolean;
 }
 
 /**
@@ -165,6 +166,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   isVisible,
   selectedResourceUid,
   isActivePanel,
+  isDetailPaneOpen,
 }) => {
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = useState<string>('all');
@@ -211,7 +213,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const isNamespaced = !isClusterScoped(selectedKind);
 
   useEffect(() => {
-    if (!isActivePanel || !isVisible) return;
+    if (!isActivePanel || !isVisible || isDetailPaneOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'f') {
         e.preventDefault();
@@ -221,7 +223,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isActivePanel, isVisible]);
+  }, [isActivePanel, isVisible, isDetailPaneOpen]);
 
   // Clear resource cache when context changes
   useEffect(() => {

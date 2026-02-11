@@ -518,6 +518,104 @@
   overflow-y: auto;
 }
 
+.detail-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  animation: detail-search-slide-in 0.15s ease-out;
+}
+
+@keyframes detail-search-slide-in {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 40px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+}
+
+.detail-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 11px;
+}
+
+.detail-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.1);
+}
+
+.detail-search-count {
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  min-width: 55px;
+  text-align: center;
+}
+
+.detail-search-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+}
+
+.detail-search-nav-btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.detail-search-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.detail-search-close-btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+mark.detail-search-highlight {
+  background-color: rgba(255, 200, 0, 0.4);
+  color: inherit;
+  padding: 0;
+  border-radius: 2px;
+}
+
+mark.detail-search-highlight-active {
+  background-color: rgba(255, 150, 0, 0.7);
+  outline: 1px solid rgba(255, 120, 0, 0.6);
+}
+
 .resource-detail-pane.loading,
 .resource-detail-pane.empty {
   display: flex;

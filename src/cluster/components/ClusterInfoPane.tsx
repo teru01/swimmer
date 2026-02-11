@@ -168,6 +168,7 @@ function ClusterViewInstance({
                 isVisible={isVisible}
                 selectedResourceUid={viewState.selectedResourceDetail?.metadata.uid}
                 isActivePanel={isActivePanel}
+                isDetailPaneOpen={viewState.showDetailPane}
               />
             </Panel>
             {viewState.showDetailPane && (
@@ -189,6 +190,7 @@ function ClusterViewInstance({
                     onClose={handleCloseDetailPane}
                     contextId={contextId}
                     onNavigateToResourceInNewPanel={onNavigateToResourceInNewPanel}
+                    isActivePanel={isActivePanel && isVisible}
                   />
                 </Panel>
               </>
