@@ -320,20 +320,22 @@ const getPodRestarts = (pod: KubeResource): number => {
   return statuses.reduce((sum, cs) => sum + (cs.restartCount || 0), 0);
 };
 
-/** Section component that lists pods belonging to a deployment. */
-const DeploymentPodsSection: React.FC<{
-  deployment: KubeResource;
+/** Section component that lists pods matching selector labels with optional owner filter. */
+const MatchedPodsSection: React.FC<{
+  resource: KubeResource;
   contextId: string | undefined;
+  ownerFilter?: { kind: string; name: string };
   onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
-}> = ({ deployment, contextId, onNavigateToResourceInNewPanel }) => {
+}> = ({ resource, contextId, ownerFilter, onNavigateToResourceInNewPanel }) => {
   const [pods, setPods] = useState<KubeResource[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const matchLabels = deployment.spec?.selector?.matchLabels;
+  const matchLabels = resource.spec?.selector?.matchLabels;
   const matchLabelsRef = useRef(matchLabels);
   matchLabelsRef.current = matchLabels;
   const matchLabelsKey = JSON.stringify(matchLabels);
-  const namespace = deployment.metadata.namespace;
+  const namespace = resource.metadata.namespace;
+  const ownerFilterKey = ownerFilter ? `${ownerFilter.kind}/${ownerFilter.name}` : '';
 
   useEffect(() => {
     const labels = matchLabelsRef.current;
@@ -348,117 +350,21 @@ const DeploymentPodsSection: React.FC<{
       try {
         const allPods = await commands.listResources(contextId, 'Pods', namespace);
         if (!cancelled) {
-          setPods(filterPodsForDeployment(allPods as KubeResource[], matchLabelsRef.current!));
-        }
-      } catch (error) {
-        console.error('Failed to fetch pods for deployment:', error);
-        if (!cancelled && !silent) {
-          setPods([]);
-        }
-      } finally {
-        if (!cancelled && !silent) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchPods(false);
-    const intervalId = setInterval(() => fetchPods(true), RESOURCE_DETAIL_POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(intervalId);
-    };
-  }, [contextId, namespace, matchLabelsKey]);
-
-  const handlePodClick = (pod: KubeResource) => {
-    if (onNavigateToResourceInNewPanel && contextId) {
-      onNavigateToResourceInNewPanel(pod, contextId);
-    }
-  };
-
-  return (
-    <section className="detail-section">
-      <h4>Pods</h4>
-      {isLoading ? (
-        <div className="detail-value">Loading pods...</div>
-      ) : pods.length === 0 ? (
-        <div className="detail-value">No pods found</div>
-      ) : (
-        <table className="detail-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Status</th>
-              <th>Restarts</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pods.map(pod => (
-              <tr key={pod.metadata.uid} className="pod-row" onClick={() => handlePodClick(pod)}>
-                <td>
-                  <HighlightedText text={pod.metadata.name} />
-                </td>
-                <td>
-                  <span
-                    className={`status-badge ${(pod.status?.phase || 'unknown').toLowerCase()}`}
-                  >
-                    <HighlightedText text={pod.status?.phase || 'Unknown'} />
-                  </span>
-                </td>
-                <td>
-                  <HighlightedText text={String(getPodRestarts(pod))} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
-  );
-};
-
-/** Section component that lists pods belonging to a replicaset. */
-const ReplicaSetPodsSection: React.FC<{
-  replicaSet: KubeResource;
-  contextId: string | undefined;
-  onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
-}> = ({ replicaSet, contextId, onNavigateToResourceInNewPanel }) => {
-  const [pods, setPods] = useState<KubeResource[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const matchLabels = replicaSet.spec?.selector?.matchLabels;
-  const matchLabelsRef = useRef(matchLabels);
-  matchLabelsRef.current = matchLabels;
-  const matchLabelsKey = JSON.stringify(matchLabels);
-  const namespace = replicaSet.metadata.namespace;
-  const replicaSetName = replicaSet.metadata.name;
-
-  useEffect(() => {
-    const labels = matchLabelsRef.current;
-    if (!contextId || !labels || Object.keys(labels).length === 0) {
-      setPods([]);
-      return;
-    }
-
-    let cancelled = false;
-    const fetchPods = async (silent: boolean) => {
-      if (!silent) setIsLoading(true);
-      try {
-        const allPods = await commands.listResources(contextId, 'Pods', namespace);
-        if (!cancelled) {
-          const filtered = filterPodsForDeployment(
+          let filtered = filterPodsForDeployment(
             allPods as KubeResource[],
             matchLabelsRef.current!
           );
-          const owned = filtered.filter(pod =>
-            pod.metadata.ownerReferences?.some(
-              ref => ref.kind === 'ReplicaSet' && ref.name === replicaSetName
-            )
-          );
-          setPods(owned);
+          if (ownerFilter) {
+            filtered = filtered.filter(pod =>
+              pod.metadata.ownerReferences?.some(
+                ref => ref.kind === ownerFilter.kind && ref.name === ownerFilter.name
+              )
+            );
+          }
+          setPods(filtered);
         }
       } catch (error) {
-        console.error('Failed to fetch pods for replicaset:', error);
+        console.error('Failed to fetch pods:', error);
         if (!cancelled && !silent) {
           setPods([]);
         }
@@ -475,7 +381,7 @@ const ReplicaSetPodsSection: React.FC<{
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [contextId, namespace, matchLabelsKey, replicaSetName]);
+  }, [contextId, namespace, matchLabelsKey, ownerFilterKey]);
 
   const handlePodClick = (pod: KubeResource) => {
     if (onNavigateToResourceInNewPanel && contextId) {
@@ -830,8 +736,8 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
           <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
         </section>
 
-        <DeploymentPodsSection
-          deployment={deployment}
+        <MatchedPodsSection
+          resource={deployment}
           contextId={contextId}
           onNavigateToResourceInNewPanel={onNavigateToResourceInNewPanel}
         />
@@ -1115,9 +1021,10 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
           <DetailItem label="Age">{formatAge(metadata.creationTimestamp)}</DetailItem>
         </section>
 
-        <ReplicaSetPodsSection
-          replicaSet={rs}
+        <MatchedPodsSection
+          resource={rs}
           contextId={contextId}
+          ownerFilter={{ kind: 'ReplicaSet', name: rs.metadata.name }}
           onNavigateToResourceInNewPanel={onNavigateToResourceInNewPanel}
         />
 
