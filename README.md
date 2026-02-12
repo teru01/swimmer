@@ -1,6 +1,28 @@
-# Swimmer
+<p align="center">
+  <img src="src/assets/swimmer_icon.png" alt="Swimmer" width="256" />
+</p>
 
-A user-friendly Kubernetes GUI client built for the multi-cluster era. Manage dozens of clusters from a single window with an intuitive hierarchical context tree, tabbed workspaces, and an integrated terminal — all running natively on your desktop.
+<h1 align="center">Swimmer</h1>
+
+<p align="center">
+  A user-friendly Kubernetes GUI client built for the multi-cluster era.
+</p>
+
+## Table of Contents
+
+- [What is Swimmer?](#what-is-swimmer)
+- [Why Swimmer?](#why-swimmer)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+- [Development](#development)
+- [Project Structure](#project-structure)
+- [License](#license)
+
+## What is Swimmer?
+
+Swimmer is a native desktop application for managing multiple Kubernetes clusters from a single window. It provides an intuitive hierarchical context tree, tabbed workspaces with split-panel layouts, a built-in resource browser covering 27+ resource types, and an integrated terminal — all powered by Tauri and Rust for fast, lightweight performance.
 
 ## Why Swimmer?
 
