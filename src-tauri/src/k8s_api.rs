@@ -573,6 +573,19 @@ async fn get_or_create_client(
     }
 }
 
+fn serialize_resources<T: serde::Serialize>(items: Vec<T>) -> Vec<Value> {
+    items
+        .into_iter()
+        .filter_map(|item| match serde_json::to_value(item) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                log::warn!("Failed to serialize resource: {}", e);
+                None
+            }
+        })
+        .collect()
+}
+
 #[tauri::command]
 pub async fn list_resources(
     client_pool: tauri::State<'_, K8sClientPool>,
@@ -588,373 +601,52 @@ pub async fn list_resources(
     let client = get_or_create_client(&client_pool, context, kc_path).await?;
 
     let resources: Vec<Value> = match kind.as_str() {
-        "Pods" => {
-            let pods = client.list_pods(namespace.as_deref()).await?;
-            pods.into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "Deployments" => {
-            let items = client.list_deployments(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "Services" => {
-            let items = client.list_services(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "Nodes" => {
-            let items = client.list_nodes().await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "Namespaces" => {
-            let items = client.list_namespaces().await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "ReplicaSets" => {
-            let items = client.list_replicasets(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
+        "Pods" => serialize_resources(client.list_pods(namespace.as_deref()).await?),
+        "Deployments" => serialize_resources(client.list_deployments(namespace.as_deref()).await?),
+        "Services" => serialize_resources(client.list_services(namespace.as_deref()).await?),
+        "Nodes" => serialize_resources(client.list_nodes().await?),
+        "Namespaces" => serialize_resources(client.list_namespaces().await?),
+        "ReplicaSets" => serialize_resources(client.list_replicasets(namespace.as_deref()).await?),
         "StatefulSets" => {
-            let items = client.list_statefulsets(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
+            serialize_resources(client.list_statefulsets(namespace.as_deref()).await?)
         }
-        "DaemonSets" => {
-            let items = client.list_daemonsets(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "Jobs" => {
-            let items = client.list_jobs(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "CronJobs" => {
-            let items = client.list_cronjobs(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "ConfigMaps" => {
-            let items = client.list_configmaps(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "Secrets" => {
-            let items = client.list_secrets(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "Ingresses" => {
-            let items = client.list_ingresses(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
+        "DaemonSets" => serialize_resources(client.list_daemonsets(namespace.as_deref()).await?),
+        "Jobs" => serialize_resources(client.list_jobs(namespace.as_deref()).await?),
+        "CronJobs" => serialize_resources(client.list_cronjobs(namespace.as_deref()).await?),
+        "ConfigMaps" => serialize_resources(client.list_configmaps(namespace.as_deref()).await?),
+        "Secrets" => serialize_resources(client.list_secrets(namespace.as_deref()).await?),
+        "Ingresses" => serialize_resources(client.list_ingresses(namespace.as_deref()).await?),
         "NetworkPolicies" => {
-            let items = client.list_networkpolicies(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
+            serialize_resources(client.list_networkpolicies(namespace.as_deref()).await?)
         }
-        "PersistentVolumes" => {
-            let items = client.list_persistentvolumes().await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "PersistentVolumeClaims" => {
-            let items = client
+        "PersistentVolumes" => serialize_resources(client.list_persistentvolumes().await?),
+        "PersistentVolumeClaims" => serialize_resources(
+            client
                 .list_persistentvolumeclaims(namespace.as_deref())
-                .await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "StorageClasses" => {
-            let items = client.list_storageclasses().await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "Roles" => {
-            let items = client.list_roles(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "ClusterRoles" => {
-            let items = client.list_clusterroles().await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
+                .await?,
+        ),
+        "StorageClasses" => serialize_resources(client.list_storageclasses().await?),
+        "Roles" => serialize_resources(client.list_roles(namespace.as_deref()).await?),
+        "ClusterRoles" => serialize_resources(client.list_clusterroles().await?),
         "RoleBindings" => {
-            let items = client.list_rolebindings(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
+            serialize_resources(client.list_rolebindings(namespace.as_deref()).await?)
         }
-        "ClusterRoleBindings" => {
-            let items = client.list_clusterrolebindings().await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
+        "ClusterRoleBindings" => serialize_resources(client.list_clusterrolebindings().await?),
         "ServiceAccounts" => {
-            let items = client.list_serviceaccounts(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
+            serialize_resources(client.list_serviceaccounts(namespace.as_deref()).await?)
         }
-        "Endpoints" => {
-            let items = client.list_endpoints(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "Events" => {
-            let items = client.list_events(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "HorizontalPodAutoscalers" => {
-            let items = client
+        "Endpoints" => serialize_resources(client.list_endpoints(namespace.as_deref()).await?),
+        "Events" => serialize_resources(client.list_events(namespace.as_deref()).await?),
+        "HorizontalPodAutoscalers" => serialize_resources(
+            client
                 .list_horizontalpodautoscalers(namespace.as_deref())
-                .await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
-        "LimitRanges" => {
-            let items = client.list_limitranges(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
+                .await?,
+        ),
+        "LimitRanges" => serialize_resources(client.list_limitranges(namespace.as_deref()).await?),
         "ResourceQuotas" => {
-            let items = client.list_resourcequotas(namespace.as_deref()).await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
+            serialize_resources(client.list_resourcequotas(namespace.as_deref()).await?)
         }
-        "CRDs" => {
-            let items = client.list_crds().await?;
-            items
-                .into_iter()
-                .filter_map(|p| match serde_json::to_value(p) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("Failed to serialize resource: {}", e);
-                        None
-                    }
-                })
-                .collect()
-        }
+        "CRDs" => serialize_resources(client.list_crds().await?),
         cr_kind if cr_kind.starts_with("cr:") => {
             let parts: Vec<&str> = cr_kind[3..].splitn(4, '/').collect();
             if parts.len() == 4 {
