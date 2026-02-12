@@ -25,8 +25,24 @@ use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 use thiserror::Error;
+
+const CLIENT_CACHE_TTL: Duration = Duration::from_secs(300);
+
+#[derive(Hash, Eq, PartialEq, Clone)]
+pub(crate) struct ClientCacheKey {
+    context: Option<String>,
+    kubeconfig_path: Option<String>,
+}
+
+pub(crate) struct CachedClient {
+    client: Client,
+    created_at: Instant,
+}
+
+pub type K8sClientPool = Arc<Mutex<HashMap<ClientCacheKey, CachedClient>>>;
 
 #[derive(Debug, Error)]
 pub enum K8sError {
@@ -495,7 +511,43 @@ define_k8s_impl!(
 
 pub use crate::mock_client::MockK8sClient;
 
-pub async fn create_client(
+async fn get_or_create_raw_client(
+    pool: &K8sClientPool,
+    context: Option<String>,
+    kubeconfig_path: Option<String>,
+) -> Result<Client> {
+    let key = ClientCacheKey {
+        context: context.clone(),
+        kubeconfig_path: kubeconfig_path.clone(),
+    };
+
+    {
+        let mut pool_guard = pool.lock().map_err(|e| K8sError::Lock(e.to_string()))?;
+        pool_guard.retain(|_, v| v.created_at.elapsed() < CLIENT_CACHE_TTL);
+        if let Some(cached) = pool_guard.get(&key) {
+            return Ok(cached.client.clone());
+        }
+    }
+
+    let real_client = RealK8sClient::new(context, kubeconfig_path).await?;
+    let client = real_client.client.clone();
+
+    {
+        let mut pool_guard = pool.lock().map_err(|e| K8sError::Lock(e.to_string()))?;
+        pool_guard.insert(
+            key,
+            CachedClient {
+                client: client.clone(),
+                created_at: Instant::now(),
+            },
+        );
+    }
+
+    Ok(client)
+}
+
+async fn get_or_create_client(
+    pool: &K8sClientPool,
     context: Option<String>,
     kubeconfig_path: Option<String>,
 ) -> Result<Box<dyn K8sClient>> {
@@ -507,14 +559,14 @@ pub async fn create_client(
     if use_mock {
         Ok(Box::new(MockK8sClient::new()))
     } else {
-        Ok(Box::new(
-            RealK8sClient::new(context, kubeconfig_path).await?,
-        ))
+        let client = get_or_create_raw_client(pool, context, kubeconfig_path).await?;
+        Ok(Box::new(RealK8sClient { client }))
     }
 }
 
 #[tauri::command]
 pub async fn list_resources(
+    client_pool: tauri::State<'_, K8sClientPool>,
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
     kind: String,
@@ -524,7 +576,7 @@ pub async fn list_resources(
         .lock()
         .map_err(|e| K8sError::Lock(e.to_string()))?
         .clone();
-    let client = create_client(context, kc_path).await?;
+    let client = get_or_create_client(&client_pool, context, kc_path).await?;
 
     let resources: Vec<Value> = match kind.as_str() {
         "Pods" => {
@@ -927,6 +979,7 @@ fn require_namespace(kind: &str) -> K8sError {
 
 #[tauri::command]
 pub async fn get_resource_detail(
+    client_pool: tauri::State<'_, K8sClientPool>,
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
     kind: String,
@@ -937,7 +990,7 @@ pub async fn get_resource_detail(
         .lock()
         .map_err(|e| K8sError::Lock(e.to_string()))?
         .clone();
-    let client = create_client(context, kc_path).await?;
+    let client = get_or_create_client(&client_pool, context, kc_path).await?;
     let namespace_for_events = namespace.clone();
 
     let resource: Value = match kind.as_str() {
@@ -1192,6 +1245,7 @@ fn parse_context_id(context_id: &str) -> (String, String, String, String) {
 
 #[tauri::command]
 pub async fn get_cluster_overview_info(
+    client_pool: tauri::State<'_, K8sClientPool>,
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context_id: String,
 ) -> Result<ClusterOverviewInfo> {
@@ -1199,7 +1253,7 @@ pub async fn get_cluster_overview_info(
         .lock()
         .map_err(|e| K8sError::Lock(e.to_string()))?
         .clone();
-    let client = create_client(Some(context_id.clone()), kc_path).await?;
+    let client = get_or_create_client(&client_pool, Some(context_id.clone()), kc_path).await?;
     let (provider, project_or_account, region, cluster_name) = parse_context_id(&context_id);
 
     let version_info = client.apiserver_version().await?;
@@ -1216,6 +1270,7 @@ pub async fn get_cluster_overview_info(
 
 #[tauri::command]
 pub async fn get_cluster_stats(
+    client_pool: tauri::State<'_, K8sClientPool>,
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context_id: String,
 ) -> Result<ClusterStats> {
@@ -1223,7 +1278,7 @@ pub async fn get_cluster_stats(
         .lock()
         .map_err(|e| K8sError::Lock(e.to_string()))?
         .clone();
-    let client = create_client(Some(context_id), kc_path).await?;
+    let client = get_or_create_client(&client_pool, Some(context_id), kc_path).await?;
 
     let nodes = client.list_nodes().await?;
     let total_nodes = nodes.len();
@@ -1277,6 +1332,7 @@ pub async fn get_cluster_stats(
 
 #[tauri::command]
 pub async fn list_crd_groups(
+    client_pool: tauri::State<'_, K8sClientPool>,
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
 ) -> Result<Vec<CrdGroup>> {
@@ -1284,7 +1340,7 @@ pub async fn list_crd_groups(
         .lock()
         .map_err(|e| K8sError::Lock(e.to_string()))?
         .clone();
-    let client = create_client(context, kc_path).await?;
+    let client = get_or_create_client(&client_pool, context, kc_path).await?;
     let crds = client.list_crds().await?;
 
     let mut groups: HashMap<String, Vec<CrdResourceInfo>> = HashMap::new();
@@ -1422,6 +1478,7 @@ where
 pub async fn start_watch_resources(
     app: AppHandle,
     watcher_handle: tauri::State<'_, WatcherHandle>,
+    client_pool: tauri::State<'_, K8sClientPool>,
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
     kind: String,
@@ -1441,15 +1498,9 @@ pub async fn start_watch_resources(
         .map_err(|e| K8sError::Lock(e.to_string()))?
         .clone();
 
-    let handle = tokio::spawn(async move {
-        let client = match RealK8sClient::new(context, kc_path).await {
-            Ok(c) => c.client,
-            Err(e) => {
-                log::error!("Failed to create client: {}", e);
-                return;
-            }
-        };
+    let client = get_or_create_raw_client(&client_pool, context, kc_path).await?;
 
+    let handle = tokio::spawn(async move {
         log::info!(
             "Starting watch for kind: {}, namespace: {:?}, watch_id: {}",
             kind,
@@ -1519,6 +1570,7 @@ pub async fn stop_watch_resources(
 
 #[tauri::command]
 pub async fn delete_resource(
+    client_pool: tauri::State<'_, K8sClientPool>,
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
     kind: String,
@@ -1529,7 +1581,7 @@ pub async fn delete_resource(
         .lock()
         .map_err(|e| K8sError::Lock(e.to_string()))?
         .clone();
-    let client = create_client(context, kc_path).await?;
+    let client = get_or_create_client(&client_pool, context, kc_path).await?;
     client
         .delete_resource(&kind, &name, namespace.as_deref())
         .await
@@ -1537,6 +1589,7 @@ pub async fn delete_resource(
 
 #[tauri::command]
 pub async fn rollout_restart_deployment(
+    client_pool: tauri::State<'_, K8sClientPool>,
     kubeconfig_path: tauri::State<'_, crate::KubeconfigPath>,
     context: Option<String>,
     name: String,
@@ -1546,6 +1599,6 @@ pub async fn rollout_restart_deployment(
         .lock()
         .map_err(|e| K8sError::Lock(e.to_string()))?
         .clone();
-    let client = create_client(context, kc_path).await?;
+    let client = get_or_create_client(&client_pool, context, kc_path).await?;
     client.rollout_restart_deployment(&name, &namespace).await
 }

@@ -79,12 +79,17 @@ async fn get_kube_contexts(
 #[tauri::command]
 async fn set_kubeconfig_path(
     kubeconfig_path: tauri::State<'_, KubeconfigPath>,
+    client_pool: tauri::State<'_, k8s_api::K8sClientPool>,
     path: Option<String>,
 ) -> Result<()> {
     let mut current = kubeconfig_path
         .lock()
         .map_err(|e| Error::Lock(e.to_string()))?;
     *current = path.filter(|p| !p.is_empty());
+    client_pool
+        .lock()
+        .map_err(|e| Error::Lock(e.to_string()))?
+        .clear();
     Ok(())
 }
 
@@ -103,6 +108,7 @@ pub fn run() {
     let terminal_sessions: TerminalSessions = Arc::new(Mutex::new(HashMap::new()));
     let watcher_handle: k8s_api::WatcherHandle = Arc::new(Mutex::new(HashMap::new()));
     let kubeconfig_path: KubeconfigPath = Arc::new(Mutex::new(None));
+    let client_pool: k8s_api::K8sClientPool = Arc::new(Mutex::new(HashMap::new()));
 
     tauri::Builder::default()
         .plugin(
@@ -121,6 +127,7 @@ pub fn run() {
         .manage(terminal_sessions)
         .manage(watcher_handle)
         .manage(kubeconfig_path)
+        .manage(client_pool)
         .invoke_handler(tauri::generate_handler![
             get_kube_contexts,
             set_kubeconfig_path,
