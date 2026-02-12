@@ -199,10 +199,13 @@ a:hover {
   --transition-slow: 0.3s ease;
 }
 
-.bmc-button {
+.sponsor-button {
   position: fixed;
   bottom: 12px;
   right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 25px;
   height: 25px;
   border-radius: 50%;
@@ -210,19 +213,17 @@ a:hover {
   padding: 0;
   cursor: pointer;
   background: transparent;
+  color: #db61a2;
   opacity: 0.4;
   transition: opacity 0.2s ease;
   z-index: 9999;
 }
 
-.bmc-button:hover {
+.sponsor-button:hover,
+.sponsor-button:focus,
+.sponsor-button:active {
   opacity: 1;
-}
-
-.bmc-logo {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
+  background: transparent;
+  outline: none;
+  box-shadow: none;
 }
