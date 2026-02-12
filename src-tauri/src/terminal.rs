@@ -1,4 +1,4 @@
-use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use portable_pty::{native_pty_system, Child, CommandBuilder, PtySize};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};
@@ -9,10 +9,10 @@ use uuid::Uuid;
 
 use crate::Error;
 
-// Terminal session management
 pub struct TerminalSession {
     pub writer: Arc<Mutex<Box<dyn Write + Send>>>,
     pub reader: Arc<Mutex<Box<dyn Read + Send>>>,
+    pub child: Arc<Mutex<Box<dyn Child + Send + Sync>>>,
     pub temp_kubeconfig: Option<PathBuf>,
 }
 
@@ -132,7 +132,7 @@ pub async fn create_terminal_session(
     if let Some(ref kubeconfig_path) = temp_kubeconfig {
         cmd.env("KUBECONFIG", kubeconfig_path.to_string_lossy().as_ref());
     }
-    let _child = pty_pair
+    let child = pty_pair
         .slave
         .spawn_command(cmd)
         .map_err(|e| Error::Terminal(format!("Failed to spawn shell: {}", e)))?;
@@ -152,6 +152,7 @@ pub async fn create_terminal_session(
     let session = TerminalSession {
         writer,
         reader: Arc::new(Mutex::new(reader)),
+        child: Arc::new(Mutex::new(child)),
         temp_kubeconfig,
     };
 
@@ -238,6 +239,10 @@ pub async fn close_terminal_session(
 ) -> Result<(), Error> {
     let mut sessions = sessions.lock().map_err(|e| Error::Lock(e.to_string()))?;
     if let Some(session) = sessions.remove(&session_id) {
+        // Kill the child process
+        if let Ok(mut child) = session.child.lock() {
+            let _ = child.kill();
+        }
         // Clean up temp kubeconfig file
         if let Some(kubeconfig_path) = session.temp_kubeconfig {
             let _ = fs::remove_file(kubeconfig_path);
