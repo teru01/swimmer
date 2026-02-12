@@ -1,4 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import './ClusterInfoPane.css';
 import { KubeResource } from './ResourceList';
 import { formatAge } from '../../lib/utils';
@@ -21,16 +30,77 @@ interface ResourceDetailPaneProps {
   isActivePanel?: boolean;
 }
 
-// Helper component to render key-value pairs nicely
+interface SearchHighlightContextType {
+  query: string;
+  activeIndex: number;
+  matchCounterRef: React.MutableRefObject<number>;
+  activeMatchRef: React.RefCallback<HTMLElement>;
+}
+
+const SearchHighlightContext = createContext<SearchHighlightContextType | undefined>(undefined);
+
+/** Renders text with search-match highlights driven by SearchHighlightContext. */
+const HighlightedText: React.FC<{ text: string }> = ({ text }) => {
+  const ctx = useContext(SearchHighlightContext);
+  if (!ctx?.query.trim() || !text) return <>{text}</>;
+
+  const { query, activeIndex, matchCounterRef, activeMatchRef } = ctx;
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+
+  if (!lowerText.includes(lowerQuery)) return <>{text}</>;
+
+  const parts: React.ReactNode[] = [];
+  let lastIdx = 0;
+  let idx = lowerText.indexOf(lowerQuery, lastIdx);
+
+  while (idx !== -1) {
+    if (idx > lastIdx) {
+      parts.push(text.slice(lastIdx, idx));
+    }
+    const matchIndex = matchCounterRef.current++;
+    const isActive = matchIndex === activeIndex;
+    parts.push(
+      <mark
+        key={`hl-${matchIndex}`}
+        className={`detail-search-highlight${isActive ? ' detail-search-highlight-active' : ''}`}
+        ref={isActive ? activeMatchRef : undefined}
+      >
+        {text.slice(idx, idx + query.length)}
+      </mark>
+    );
+    lastIdx = idx + query.length;
+    idx = lowerText.indexOf(lowerQuery, lastIdx);
+  }
+
+  if (lastIdx < text.length) {
+    parts.push(text.slice(lastIdx));
+  }
+
+  return <>{parts}</>;
+};
+
+/** Renders key-value pairs with automatic search highlighting for string/number values. */
 const DetailItem: React.FC<{ label: string; children: React.ReactNode }> = ({
   label,
   children,
-}) => (
-  <div className="detail-item">
-    <span className="detail-label">{label}:</span>
-    <span className="detail-value">{children || '-'}</span>
-  </div>
-);
+}) => {
+  const rendered = children || '-';
+  return (
+    <div className="detail-item">
+      <span className="detail-label">
+        <HighlightedText text={label} />:
+      </span>
+      <span className="detail-value">
+        {typeof rendered === 'string' || typeof rendered === 'number' ? (
+          <HighlightedText text={String(rendered)} />
+        ) : (
+          rendered
+        )}
+      </span>
+    </div>
+  );
+};
 
 /** Returns a status category string for container state to apply color styling. */
 const getContainerStateCategory = (state: any): string => {
@@ -81,12 +151,14 @@ const MetadataEntry: React.FC<{ entryKey: string; value: string }> = ({ entryKey
   return (
     <li>
       <span className="metadata-key-col">
-        <span className="metadata-key">{entryKey}</span>
+        <span className="metadata-key">
+          <HighlightedText text={entryKey} />
+        </span>
         <CopyButton text={entryKey} />
       </span>
       <span className="metadata-value-col">
         <span className={`metadata-value ${isLong && !expanded ? 'value-collapsed' : ''}`}>
-          {value}
+          <HighlightedText text={value} />
         </span>
         <CopyButton text={value} />
         {isLong && (
@@ -154,9 +226,13 @@ const ContainerEnvVars: React.FC<{ env: { name: string; value?: string; valueFro
       <ul className="env-vars-list">
         {displayedVars.map(e => (
           <li key={e.name} className="env-var-item">
-            <span className="env-var-name">{e.name}</span>
+            <span className="env-var-name">
+              <HighlightedText text={e.name} />
+            </span>
             <span className="env-var-separator">=</span>
-            <span className="env-var-value">{e.value}</span>
+            <span className="env-var-value">
+              <HighlightedText text={e.value ?? ''} />
+            </span>
           </li>
         ))}
       </ul>
@@ -292,15 +368,19 @@ const DeploymentPodsSection: React.FC<{
           <tbody>
             {pods.map(pod => (
               <tr key={pod.metadata.uid} className="pod-row" onClick={() => handlePodClick(pod)}>
-                <td>{pod.metadata.name}</td>
+                <td>
+                  <HighlightedText text={pod.metadata.name} />
+                </td>
                 <td>
                   <span
                     className={`status-badge ${(pod.status?.phase || 'unknown').toLowerCase()}`}
                   >
-                    {pod.status?.phase || 'Unknown'}
+                    <HighlightedText text={pod.status?.phase || 'Unknown'} />
                   </span>
                 </td>
-                <td>{getPodRestarts(pod)}</td>
+                <td>
+                  <HighlightedText text={String(getPodRestarts(pod))} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -395,15 +475,19 @@ const ReplicaSetPodsSection: React.FC<{
           <tbody>
             {pods.map(pod => (
               <tr key={pod.metadata.uid} className="pod-row" onClick={() => handlePodClick(pod)}>
-                <td>{pod.metadata.name}</td>
+                <td>
+                  <HighlightedText text={pod.metadata.name} />
+                </td>
                 <td>
                   <span
                     className={`status-badge ${(pod.status?.phase || 'unknown').toLowerCase()}`}
                   >
-                    {pod.status?.phase || 'Unknown'}
+                    <HighlightedText text={pod.status?.phase || 'Unknown'} />
                   </span>
                 </td>
-                <td>{getPodRestarts(pod)}</td>
+                <td>
+                  <HighlightedText text={String(getPodRestarts(pod))} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -488,16 +572,22 @@ const NodePodsSection: React.FC<{
           <tbody>
             {pods.map(pod => (
               <tr key={pod.metadata.uid} className="pod-row" onClick={() => handlePodClick(pod)}>
-                <td>{pod.metadata.name}</td>
-                <td>{pod.metadata.namespace || '-'}</td>
+                <td>
+                  <HighlightedText text={pod.metadata.name} />
+                </td>
+                <td>
+                  <HighlightedText text={pod.metadata.namespace || '-'} />
+                </td>
                 <td>
                   <span
                     className={`status-badge ${(pod.status?.phase || 'unknown').toLowerCase()}`}
                   >
-                    {pod.status?.phase || 'Unknown'}
+                    <HighlightedText text={pod.status?.phase || 'Unknown'} />
                   </span>
                 </td>
-                <td>{getPodRestarts(pod)}</td>
+                <td>
+                  <HighlightedText text={String(getPodRestarts(pod))} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -524,138 +614,56 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [debouncedSearchText, setDebouncedSearchText] = useState('');
   const [matchCount, setMatchCount] = useState(0);
   const [currentMatch, setCurrentMatch] = useState(0);
   const [showRawYaml, setShowRawYaml] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const highlightClass = 'detail-search-highlight';
-  const activeHighlightClass = 'detail-search-highlight-active';
+  const matchCounterRef = useRef(0);
+  const activeMatchElRef = useRef<HTMLElement | null>(null);
+
+  const activeMatchCallbackRef = useCallback((el: HTMLElement | null) => {
+    activeMatchElRef.current = el;
+  }, []);
 
   const rawYamlContent = useMemo(() => {
     if (!resource) return '';
     return yamlStringify(resource, { lineWidth: 0 });
   }, [resource]);
 
-  const clearHighlights = useCallback(() => {
-    if (!contentRef.current) return;
-    const marks = contentRef.current.querySelectorAll(`mark.${highlightClass}`);
-    marks.forEach(mark => {
-      const parent = mark.parentNode;
-      if (parent) {
-        parent.replaceChild(document.createTextNode(mark.textContent || ''), mark);
-        parent.normalize();
-      }
-    });
-  }, []);
+  const searchQuery = searchOpen ? debouncedSearchText : '';
 
-  const applyHighlights = useCallback(
-    (query: string) => {
-      clearHighlights();
-      if (!contentRef.current || !query.trim()) {
-        setMatchCount(0);
-        setCurrentMatch(0);
-        return;
-      }
-
-      const walker = document.createTreeWalker(contentRef.current, NodeFilter.SHOW_TEXT, {
-        acceptNode: node => {
-          const parent = node.parentElement;
-          if (parent && (parent.tagName === 'MARK' || parent.closest('.detail-search-bar'))) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      });
-
-      const textNodes: Text[] = [];
-      let node: Node | null;
-      while ((node = walker.nextNode())) {
-        textNodes.push(node as Text);
-      }
-
-      const lowerQuery = query.toLowerCase();
-      let total = 0;
-
-      for (const textNode of textNodes) {
-        const text = textNode.textContent || '';
-        const lowerText = text.toLowerCase();
-        if (!lowerText.includes(lowerQuery)) continue;
-
-        const frag = document.createDocumentFragment();
-        let lastIdx = 0;
-        let idx = lowerText.indexOf(lowerQuery, lastIdx);
-
-        while (idx !== -1) {
-          if (idx > lastIdx) {
-            frag.appendChild(document.createTextNode(text.slice(lastIdx, idx)));
-          }
-          const mark = document.createElement('mark');
-          mark.className = highlightClass;
-          mark.dataset.matchIndex = String(total);
-          mark.textContent = text.slice(idx, idx + query.length);
-          frag.appendChild(mark);
-          total++;
-          lastIdx = idx + query.length;
-          idx = lowerText.indexOf(lowerQuery, lastIdx);
-        }
-
-        if (lastIdx < text.length) {
-          frag.appendChild(document.createTextNode(text.slice(lastIdx)));
-        }
-
-        textNode.parentNode?.replaceChild(frag, textNode);
-      }
-
-      setMatchCount(total);
-      setCurrentMatch(total > 0 ? 1 : 0);
-
-      if (total > 0) {
-        const first = contentRef.current.querySelector(
-          `mark.${highlightClass}[data-match-index="0"]`
-        );
-        first?.classList.add(activeHighlightClass);
-        first?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
-    },
-    [clearHighlights]
+  const searchHighlightValue = useMemo<SearchHighlightContextType>(
+    () => ({
+      query: searchQuery,
+      activeIndex: currentMatch - 1,
+      matchCounterRef,
+      activeMatchRef: activeMatchCallbackRef,
+    }),
+    [searchQuery, currentMatch, activeMatchCallbackRef]
   );
 
-  const jumpToMatch = useCallback(
-    (index: number) => {
-      if (!contentRef.current || matchCount === 0) return;
-      const marks = contentRef.current.querySelectorAll(`mark.${highlightClass}`);
-      marks.forEach(m => m.classList.remove(activeHighlightClass));
-      const target = marks[index - 1];
-      if (target) {
-        target.classList.add(activeHighlightClass);
-        target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
-    },
-    [matchCount]
-  );
+  // Reset match counter before each render pass
+  matchCounterRef.current = 0;
 
   const handleSearchNext = useCallback(() => {
     if (matchCount === 0) return;
-    const next = currentMatch >= matchCount ? 1 : currentMatch + 1;
-    setCurrentMatch(next);
-    jumpToMatch(next);
-  }, [currentMatch, matchCount, jumpToMatch]);
+    setCurrentMatch(prev => (prev >= matchCount ? 1 : prev + 1));
+  }, [matchCount]);
 
   const handleSearchPrev = useCallback(() => {
     if (matchCount === 0) return;
-    const prev = currentMatch <= 1 ? matchCount : currentMatch - 1;
-    setCurrentMatch(prev);
-    jumpToMatch(prev);
-  }, [currentMatch, matchCount, jumpToMatch]);
+    setCurrentMatch(prev => (prev <= 1 ? matchCount : prev - 1));
+  }, [matchCount]);
 
   const closeSearch = useCallback(() => {
     setSearchOpen(false);
     setSearchText('');
-    clearHighlights();
+    setDebouncedSearchText('');
     setMatchCount(0);
     setCurrentMatch(0);
-  }, [clearHighlights]);
+  }, []);
 
   useEffect(() => {
     if (!isActivePanel) return;
@@ -679,10 +687,20 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      applyHighlights(searchText);
+      setDebouncedSearchText(searchText);
     }, SEARCH_HIGHLIGHT_DEBOUNCE_MS);
     return () => clearTimeout(timeout);
-  }, [searchText, applyHighlights]);
+  }, [searchText]);
+
+  useLayoutEffect(() => {
+    const count = matchCounterRef.current;
+    setMatchCount(count);
+    setCurrentMatch(count > 0 ? 1 : 0);
+  }, [debouncedSearchText, resource, showRawYaml]);
+
+  useEffect(() => {
+    activeMatchElRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [currentMatch, debouncedSearchText]);
 
   useEffect(() => {
     closeSearch();
@@ -737,13 +755,21 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
                 <tr key={`${event.metadata.name}-${index}`}>
                   <td>
                     <span className={`status-badge ${eventType}`}>
-                      {(event as any).type || 'Normal'}
+                      <HighlightedText text={(event as any).type || 'Normal'} />
                     </span>
                   </td>
-                  <td>{(event as any).reason || '-'}</td>
-                  <td>{(event as any).message || '-'}</td>
-                  <td>{(event as any).count || 1}</td>
-                  <td>{formatAge(event.metadata.creationTimestamp)}</td>
+                  <td>
+                    <HighlightedText text={(event as any).reason || '-'} />
+                  </td>
+                  <td>
+                    <HighlightedText text={(event as any).message || '-'} />
+                  </td>
+                  <td>
+                    <HighlightedText text={String((event as any).count || 1)} />
+                  </td>
+                  <td>
+                    <HighlightedText text={formatAge(event.metadata.creationTimestamp)} />
+                  </td>
                 </tr>
               );
             })}
@@ -788,10 +814,18 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             <tbody>
               {status?.conditions?.map(c => (
                 <tr key={c.type}>
-                  <td>{c.type}</td>
-                  <td>{c.status}</td>
-                  <td>{c.reason || '-'}</td>
-                  <td>{c.message || '-'}</td>
+                  <td>
+                    <HighlightedText text={c.type} />
+                  </td>
+                  <td>
+                    <HighlightedText text={c.status} />
+                  </td>
+                  <td>
+                    <HighlightedText text={c.reason || '-'} />
+                  </td>
+                  <td>
+                    <HighlightedText text={c.message || '-'} />
+                  </td>
                 </tr>
               )) ?? (
                 <tr>
@@ -850,11 +884,21 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             <tbody>
               {spec?.ports?.map((p, idx) => (
                 <tr key={idx}>
-                  <td>{p.name || '-'}</td>
-                  <td>{p.protocol || 'TCP'}</td>
-                  <td>{p.port}</td>
-                  <td>{p.targetPort || '-'}</td>
-                  <td>{p.nodePort || '-'}</td>
+                  <td>
+                    <HighlightedText text={p.name || '-'} />
+                  </td>
+                  <td>
+                    <HighlightedText text={p.protocol || 'TCP'} />
+                  </td>
+                  <td>
+                    <HighlightedText text={String(p.port)} />
+                  </td>
+                  <td>
+                    <HighlightedText text={String(p.targetPort || '-')} />
+                  </td>
+                  <td>
+                    <HighlightedText text={String(p.nodePort || '-')} />
+                  </td>
                 </tr>
               )) ?? (
                 <tr>
@@ -923,8 +967,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             <tbody>
               {status?.addresses?.map((addr, idx) => (
                 <tr key={idx}>
-                  <td>{addr.type}</td>
-                  <td>{addr.address}</td>
+                  <td>
+                    <HighlightedText text={addr.type} />
+                  </td>
+                  <td>
+                    <HighlightedText text={addr.address} />
+                  </td>
                 </tr>
               )) ?? (
                 <tr>
@@ -949,10 +997,18 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             <tbody>
               {status?.conditions?.map(c => (
                 <tr key={c.type}>
-                  <td>{c.type}</td>
-                  <td>{c.status}</td>
-                  <td>{c.reason || '-'}</td>
-                  <td>{c.message || '-'}</td>
+                  <td>
+                    <HighlightedText text={c.type} />
+                  </td>
+                  <td>
+                    <HighlightedText text={c.status} />
+                  </td>
+                  <td>
+                    <HighlightedText text={c.reason || '-'} />
+                  </td>
+                  <td>
+                    <HighlightedText text={c.message || '-'} />
+                  </td>
                 </tr>
               )) ?? (
                 <tr>
@@ -1044,10 +1100,18 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
               <tbody>
                 {status.conditions.map(c => (
                   <tr key={c.type}>
-                    <td>{c.type}</td>
-                    <td>{c.status}</td>
-                    <td>{c.reason || '-'}</td>
-                    <td>{c.message || '-'}</td>
+                    <td>
+                      <HighlightedText text={c.type} />
+                    </td>
+                    <td>
+                      <HighlightedText text={c.status} />
+                    </td>
+                    <td>
+                      <HighlightedText text={c.reason || '-'} />
+                    </td>
+                    <td>
+                      <HighlightedText text={c.message || '-'} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1100,10 +1164,18 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
               <tbody>
                 {status.conditions.map(c => (
                   <tr key={c.type}>
-                    <td>{c.type}</td>
-                    <td>{c.status}</td>
-                    <td>{c.reason || '-'}</td>
-                    <td>{c.message || '-'}</td>
+                    <td>
+                      <HighlightedText text={c.type} />
+                    </td>
+                    <td>
+                      <HighlightedText text={c.status} />
+                    </td>
+                    <td>
+                      <HighlightedText text={c.reason || '-'} />
+                    </td>
+                    <td>
+                      <HighlightedText text={c.message || '-'} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1157,10 +1229,18 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
               <tbody>
                 {status.conditions.map(c => (
                   <tr key={c.type}>
-                    <td>{c.type}</td>
-                    <td>{c.status}</td>
-                    <td>{c.reason || '-'}</td>
-                    <td>{c.message || '-'}</td>
+                    <td>
+                      <HighlightedText text={c.type} />
+                    </td>
+                    <td>
+                      <HighlightedText text={c.status} />
+                    </td>
+                    <td>
+                      <HighlightedText text={c.reason || '-'} />
+                    </td>
+                    <td>
+                      <HighlightedText text={c.message || '-'} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1268,7 +1348,9 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             {Object.entries(data).map(([key, value]) => (
               <div key={key} style={{ marginBottom: '10px' }}>
                 <DetailItem label={key}>
-                  <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</pre>
+                  <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    <HighlightedText text={String(value)} />
+                  </pre>
                 </DetailItem>
               </div>
             ))}
@@ -1309,7 +1391,9 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             <ul className="metadata-list">
               {Object.keys(data).map(key => (
                 <li key={key}>
-                  <span className="metadata-key">{key}:</span>
+                  <span className="metadata-key">
+                    <HighlightedText text={key} />:
+                  </span>
                   <span className="metadata-value">(hidden)</span>
                 </li>
               ))}
@@ -1356,8 +1440,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
               <tbody>
                 {status.conditions.map(c => (
                   <tr key={c.type}>
-                    <td>{c.type}</td>
-                    <td>{c.status}</td>
+                    <td>
+                      <HighlightedText text={c.type} />
+                    </td>
+                    <td>
+                      <HighlightedText text={c.status} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1637,8 +1725,12 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
             <tbody>
               {status?.conditions?.map(c => (
                 <tr key={c.type}>
-                  <td>{c.type}</td>
-                  <td>{c.status}</td>
+                  <td>
+                    <HighlightedText text={c.type} />
+                  </td>
+                  <td>
+                    <HighlightedText text={c.status} />
+                  </td>
                 </tr>
               )) ?? (
                 <tr>
@@ -1791,93 +1883,103 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
         </div>
       )}
 
-      <div className="detail-content" ref={contentRef}>
-        {showRawYaml ? (
-          <div className="raw-yaml-wrapper">
-            <pre className="raw-yaml-lines" aria-hidden="true">
-              {rawYamlContent
-                .split('\n')
-                .map((_, i) => i + 1)
-                .join('\n')}
-            </pre>
-            <pre className="raw-yaml-content">{rawYamlContent}</pre>
-          </div>
-        ) : (
-          <>
-            {resourceKind === 'Pod' && renderPodDetails(resource)}
-            {resourceKind === 'Deployment' && renderDeploymentDetails(resource)}
-            {resourceKind === 'ReplicaSet' && renderReplicaSetDetails(resource)}
-            {resourceKind === 'StatefulSet' && renderStatefulSetDetails(resource)}
-            {resourceKind === 'DaemonSet' && renderDaemonSetDetails(resource)}
-            {resourceKind === 'Service' && renderServiceDetails(resource)}
-            {resourceKind === 'Ingress' && renderIngressDetails(resource)}
-            {resourceKind === 'ConfigMap' && renderConfigMapDetails(resource)}
-            {resourceKind === 'Secret' && renderSecretDetails(resource)}
-            {resourceKind === 'Namespace' && renderNamespaceDetails(resource)}
-            {resourceKind === 'Node' && renderNodeDetails(resource)}
-            {![
-              'Pod',
-              'Deployment',
-              'ReplicaSet',
-              'StatefulSet',
-              'DaemonSet',
-              'Service',
-              'Ingress',
-              'ConfigMap',
-              'Secret',
-              'Namespace',
-              'Node',
-            ].includes(resourceKind) && (
-              <div className="fallback-details">
-                <section className="detail-section">
-                  <h4>Basic Information</h4>
-                  <DetailItem label="Name">{resource.metadata.name}</DetailItem>
-                  <DetailItem label="Namespace">{resource.metadata.namespace}</DetailItem>
-                  <DetailItem label="Age">
-                    {formatAge(resource.metadata.creationTimestamp)}
-                  </DetailItem>
-                </section>
-
-                {resource.status?.conditions && resource.status.conditions.length > 0 && (
+      <SearchHighlightContext.Provider value={searchHighlightValue}>
+        <div className="detail-content" ref={contentRef}>
+          {showRawYaml ? (
+            <div className="raw-yaml-wrapper">
+              <pre className="raw-yaml-lines" aria-hidden="true">
+                {rawYamlContent
+                  .split('\n')
+                  .map((_, i) => i + 1)
+                  .join('\n')}
+              </pre>
+              <pre className="raw-yaml-content">
+                <HighlightedText text={rawYamlContent} />
+              </pre>
+            </div>
+          ) : (
+            <>
+              {resourceKind === 'Pod' && renderPodDetails(resource)}
+              {resourceKind === 'Deployment' && renderDeploymentDetails(resource)}
+              {resourceKind === 'ReplicaSet' && renderReplicaSetDetails(resource)}
+              {resourceKind === 'StatefulSet' && renderStatefulSetDetails(resource)}
+              {resourceKind === 'DaemonSet' && renderDaemonSetDetails(resource)}
+              {resourceKind === 'Service' && renderServiceDetails(resource)}
+              {resourceKind === 'Ingress' && renderIngressDetails(resource)}
+              {resourceKind === 'ConfigMap' && renderConfigMapDetails(resource)}
+              {resourceKind === 'Secret' && renderSecretDetails(resource)}
+              {resourceKind === 'Namespace' && renderNamespaceDetails(resource)}
+              {resourceKind === 'Node' && renderNodeDetails(resource)}
+              {![
+                'Pod',
+                'Deployment',
+                'ReplicaSet',
+                'StatefulSet',
+                'DaemonSet',
+                'Service',
+                'Ingress',
+                'ConfigMap',
+                'Secret',
+                'Namespace',
+                'Node',
+              ].includes(resourceKind) && (
+                <div className="fallback-details">
                   <section className="detail-section">
-                    <h4>Conditions</h4>
-                    <table className="detail-table">
-                      <thead>
-                        <tr>
-                          <th>Type</th>
-                          <th>Status</th>
-                          <th>Last Transition</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {resource.status.conditions.map(c => (
-                          <tr key={c.type}>
-                            <td>{c.type}</td>
-                            <td>{c.status}</td>
-                            <td>{formatAge(c.lastTransitionTime)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <h4>Basic Information</h4>
+                    <DetailItem label="Name">{resource.metadata.name}</DetailItem>
+                    <DetailItem label="Namespace">{resource.metadata.namespace}</DetailItem>
+                    <DetailItem label="Age">
+                      {formatAge(resource.metadata.creationTimestamp)}
+                    </DetailItem>
                   </section>
-                )}
 
-                <section className="detail-section">
-                  <h4>Labels</h4>
-                  {<CollapsibleMetadataMap map={resource.metadata.labels} />}
-                </section>
+                  {resource.status?.conditions && resource.status.conditions.length > 0 && (
+                    <section className="detail-section">
+                      <h4>Conditions</h4>
+                      <table className="detail-table">
+                        <thead>
+                          <tr>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Last Transition</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resource.status.conditions.map(c => (
+                            <tr key={c.type}>
+                              <td>
+                                <HighlightedText text={c.type} />
+                              </td>
+                              <td>
+                                <HighlightedText text={c.status} />
+                              </td>
+                              <td>
+                                <HighlightedText text={formatAge(c.lastTransitionTime)} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </section>
+                  )}
 
-                <section className="detail-section">
-                  <h4>Annotations</h4>
-                  {<CollapsibleMetadataMap map={resource.metadata.annotations} />}
-                </section>
+                  <section className="detail-section">
+                    <h4>Labels</h4>
+                    {<CollapsibleMetadataMap map={resource.metadata.labels} />}
+                  </section>
 
-                {renderEvents()}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+                  <section className="detail-section">
+                    <h4>Annotations</h4>
+                    {<CollapsibleMetadataMap map={resource.metadata.annotations} />}
+                  </section>
+
+                  {renderEvents()}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </SearchHighlightContext.Provider>
     </div>
   );
 };
