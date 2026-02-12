@@ -32,6 +32,6 @@ tauri-plugin-log = "2.7.1"
 log = "0.4.28"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-serde_yaml = "0.9"
+serde_yml = "0.0.12"
 futures = "0.3"
 

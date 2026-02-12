@@ -42,17 +42,17 @@ fn create_temp_kubeconfig(
         .map_err(|e| Error::Terminal(format!("Failed to read kubeconfig: {}", e)))?;
 
     // Parse and modify kubeconfig to set current-context
-    let mut config: serde_yaml::Value = serde_yaml::from_str(&kubeconfig_content)
+    let mut config: serde_yml::Value = serde_yml::from_str(&kubeconfig_content)
         .map_err(|e| Error::Terminal(format!("Failed to parse kubeconfig: {}", e)))?;
 
     if let Some(map) = config.as_mapping_mut() {
         map.insert(
-            serde_yaml::Value::String("current-context".to_string()),
-            serde_yaml::Value::String(context_name.to_string()),
+            serde_yml::Value::String("current-context".to_string()),
+            serde_yml::Value::String(context_name.to_string()),
         );
     }
 
-    let modified_content = serde_yaml::to_string(&config)
+    let modified_content = serde_yml::to_string(&config)
         .map_err(|e| Error::Terminal(format!("Failed to serialize kubeconfig: {}", e)))?;
 
     #[cfg(unix)]
