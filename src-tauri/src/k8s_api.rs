@@ -370,6 +370,15 @@ macro_rules! define_k8s_impl {
                                 _ => Api::all_with(self.client.clone(), &ar),
                             };
                             api.delete(name, &dp).await?;
+                        } else {
+                            return Err(K8sError::Kube(kube::Error::Api(
+                                kube::error::ErrorResponse {
+                                    status: "Failure".to_string(),
+                                    message: format!("Invalid custom resource kind format: {}", cr_kind),
+                                    reason: "BadRequest".to_string(),
+                                    code: 400,
+                                },
+                            )));
                         }
                     }
                     _ => {
@@ -959,7 +968,14 @@ pub async fn list_resources(
                     )
                     .await?
             } else {
-                vec![]
+                return Err(K8sError::Kube(kube::Error::Api(
+                    kube::error::ErrorResponse {
+                        status: "Failure".to_string(),
+                        message: format!("Invalid custom resource kind format: {}", cr_kind),
+                        reason: "BadRequest".to_string(),
+                        code: 400,
+                    },
+                )));
             }
         }
         _ => vec![],
@@ -1137,7 +1153,14 @@ pub async fn get_resource_detail(
                     )
                     .await?
             } else {
-                serde_json::json!({})
+                return Err(K8sError::Kube(kube::Error::Api(
+                    kube::error::ErrorResponse {
+                        status: "Failure".to_string(),
+                        message: format!("Invalid custom resource kind format: {}", cr_kind),
+                        reason: "BadRequest".to_string(),
+                        code: 400,
+                    },
+                )));
             }
         }
         _ => serde_json::json!({}),
