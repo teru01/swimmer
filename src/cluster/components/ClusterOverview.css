@@ -18,9 +18,6 @@
 
 .overview-section {
   margin-bottom: 24px;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
   padding: 16px;
 }
 
@@ -45,11 +42,6 @@
   align-items: center;
   gap: 12px;
   padding: 6px 0;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.info-item:last-child {
-  border-bottom: none;
 }
 
 .info-label {
@@ -107,9 +99,6 @@
 }
 
 .stat-card {
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
   padding: 12px;
   text-align: center;
 }
