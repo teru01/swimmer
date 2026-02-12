@@ -27,7 +27,7 @@ export const fetchResourceDetail = async (
   if (selectedKind?.startsWith('cr:')) {
     kind = selectedKind;
   } else {
-    kind = resource.kind?.endsWith('s') ? resource.kind.slice(0, -1) : resource.kind;
+    kind = resource.kind;
   }
   if (!kind) return { resource, events: [] };
 
