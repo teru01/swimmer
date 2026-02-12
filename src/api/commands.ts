@@ -20,8 +20,6 @@ export interface ClusterStats {
   namespaceCount: number;
   deploymentCount: number;
   jobCount: number;
-  cpuUsage: string;
-  memoryUsage: string;
 }
 
 export interface CrdResourceInfo {
