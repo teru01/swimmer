@@ -842,6 +842,11 @@ mark.detail-search-highlight-active {
   font-size: 10px;
 }
 
+.secret-hidden-value {
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+}
+
 .value-collapsed {
   display: -webkit-box;
   -webkit-line-clamp: 2;

@@ -167,6 +167,41 @@ const MetadataEntry: React.FC<{ entryKey: string; value: string }> = ({ entryKey
   );
 };
 
+/** A single secret data entry with show/hide toggle. Hidden by default. */
+const SecretDataEntry: React.FC<{ entryKey: string; value: string }> = ({ entryKey, value }) => {
+  const [revealed, setRevealed] = useState(false);
+
+  return (
+    <li>
+      <span className="metadata-key-col">
+        <span className="metadata-key">
+          <HighlightedText text={entryKey} />
+        </span>
+        <CopyButton text={entryKey} />
+      </span>
+      <span className="metadata-value-col">
+        {revealed ? (
+          <>
+            <span className="metadata-value">
+              <HighlightedText text={value} />
+            </span>
+            <CopyButton text={value} />
+          </>
+        ) : (
+          <span className="metadata-value secret-hidden-value">{'•'.repeat(8)}</span>
+        )}
+        <button
+          className="metadata-value-toggle"
+          onClick={() => setRevealed(prev => !prev)}
+          type="button"
+        >
+          {revealed ? 'Hide' : 'Show'}
+        </button>
+      </span>
+    </li>
+  );
+};
+
 /** Renders a metadata map with long values collapsed by default. */
 const CollapsibleMetadataMap: React.FC<{ map: { [key: string]: string } | undefined }> = ({
   map,
@@ -1390,13 +1425,8 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
           <section className="detail-section">
             <h4>Data</h4>
             <ul className="metadata-list">
-              {Object.keys(data).map(key => (
-                <li key={key}>
-                  <span className="metadata-key">
-                    <HighlightedText text={key} />:
-                  </span>
-                  <span className="metadata-value">(hidden)</span>
-                </li>
+              {Object.entries(data).map(([key, value]) => (
+                <SecretDataEntry key={key} entryKey={key} value={String(value)} />
               ))}
             </ul>
           </section>
