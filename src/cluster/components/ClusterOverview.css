@@ -55,7 +55,6 @@
 .info-value {
   font-size: 14px;
   color: var(--text-primary);
-  font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
 }
 
 .info-item-full {
