@@ -1159,7 +1159,7 @@ pub async fn get_resource_detail(
     ];
 
     let events: Vec<Value> = if event_supported_kinds.contains(&kind.as_str()) {
-        let ns = namespace_for_events.as_ref().map(|s| s.as_str());
+        let ns = namespace_for_events.as_deref();
         let all_events = client.list_events(ns).await?;
         let filtered_events: Vec<Event> = all_events
             .into_iter()

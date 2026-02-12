@@ -52,6 +52,7 @@ impl MockK8sClient {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn create_pod(
         name: String,
         namespace: String,
@@ -87,7 +88,7 @@ impl MockK8sClient {
                     name: container_name,
                     ready: true,
                     restart_count,
-                    image: image,
+                    image,
                     image_id: "docker://sha256:abc123".to_string(),
                     ..Default::default()
                 }]),
