@@ -32,9 +32,6 @@ interface ResourceDetailPaneProps {
 
 interface SearchHighlightContextType {
   query: string;
-  activeIndex: number;
-  matchCounterRef: React.MutableRefObject<number>;
-  activeMatchRef: React.RefCallback<HTMLElement>;
 }
 
 const SearchHighlightContext = createContext<SearchHighlightContextType | undefined>(undefined);
@@ -44,7 +41,7 @@ const HighlightedText: React.FC<{ text: string }> = ({ text }) => {
   const ctx = useContext(SearchHighlightContext);
   if (!ctx?.query.trim() || !text) return <>{text}</>;
 
-  const { query, activeIndex, matchCounterRef, activeMatchRef } = ctx;
+  const { query } = ctx;
   const lowerText = text.toLowerCase();
   const lowerQuery = query.toLowerCase();
 
@@ -52,20 +49,15 @@ const HighlightedText: React.FC<{ text: string }> = ({ text }) => {
 
   const parts: React.ReactNode[] = [];
   let lastIdx = 0;
+  let keyCounter = 0;
   let idx = lowerText.indexOf(lowerQuery, lastIdx);
 
   while (idx !== -1) {
     if (idx > lastIdx) {
       parts.push(text.slice(lastIdx, idx));
     }
-    const matchIndex = matchCounterRef.current++;
-    const isActive = matchIndex === activeIndex;
     parts.push(
-      <mark
-        key={`hl-${matchIndex}`}
-        className={`detail-search-highlight${isActive ? ' detail-search-highlight-active' : ''}`}
-        ref={isActive ? activeMatchRef : undefined}
-      >
+      <mark key={`hl-${keyCounter++}`} className="detail-search-highlight">
         {text.slice(idx, idx + query.length)}
       </mark>
     );
@@ -620,12 +612,6 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   const [showRawYaml, setShowRawYaml] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const matchCounterRef = useRef(0);
-  const activeMatchElRef = useRef<HTMLElement | null>(null);
-
-  const activeMatchCallbackRef = useCallback((el: HTMLElement | null) => {
-    activeMatchElRef.current = el;
-  }, []);
 
   const rawYamlContent = useMemo(() => {
     if (!resource) return '';
@@ -635,17 +621,9 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
   const searchQuery = searchOpen ? debouncedSearchText : '';
 
   const searchHighlightValue = useMemo<SearchHighlightContextType>(
-    () => ({
-      query: searchQuery,
-      activeIndex: currentMatch - 1,
-      matchCounterRef,
-      activeMatchRef: activeMatchCallbackRef,
-    }),
-    [searchQuery, currentMatch, activeMatchCallbackRef]
+    () => ({ query: searchQuery }),
+    [searchQuery]
   );
-
-  // Reset match counter before each render pass
-  matchCounterRef.current = 0;
 
   const handleSearchNext = useCallback(() => {
     if (matchCount === 0) return;
@@ -692,15 +670,38 @@ const ResourceDetailPane: React.FC<ResourceDetailPaneProps> = ({
     return () => clearTimeout(timeout);
   }, [searchText]);
 
-  useLayoutEffect(() => {
-    const count = matchCounterRef.current;
-    setMatchCount(count);
-    setCurrentMatch(count > 0 ? 1 : 0);
-  }, [debouncedSearchText, resource, showRawYaml]);
+  const prevSearchStateRef = useRef({ text: debouncedSearchText, yaml: showRawYaml });
 
-  useEffect(() => {
-    activeMatchElRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [currentMatch, debouncedSearchText]);
+  useLayoutEffect(() => {
+    if (!contentRef.current) {
+      setMatchCount(0);
+      setCurrentMatch(0);
+      return;
+    }
+
+    const marks = contentRef.current.querySelectorAll('mark.detail-search-highlight');
+    const count = marks.length;
+    setMatchCount(count);
+
+    const prev = prevSearchStateRef.current;
+    const searchChanged = prev.text !== debouncedSearchText || prev.yaml !== showRawYaml;
+    prevSearchStateRef.current = { text: debouncedSearchText, yaml: showRawYaml };
+
+    let nextMatch: number;
+    if (searchChanged) {
+      nextMatch = count > 0 ? 1 : 0;
+    } else {
+      nextMatch = currentMatch >= 1 && currentMatch <= count ? currentMatch : count > 0 ? 1 : 0;
+    }
+    setCurrentMatch(nextMatch);
+
+    marks.forEach(m => m.classList.remove('detail-search-highlight-active'));
+    if (nextMatch >= 1 && nextMatch <= count) {
+      const activeEl = marks[nextMatch - 1];
+      activeEl.classList.add('detail-search-highlight-active');
+      activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [debouncedSearchText, resource, showRawYaml, currentMatch]);
 
   useEffect(() => {
     closeSearch();
