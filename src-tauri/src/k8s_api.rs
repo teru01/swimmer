@@ -1390,7 +1390,7 @@ struct ResourceWatchEvent {
     resource: Value,
 }
 
-fn run_watcher<T>(app: AppHandle, api: Api<T>, watch_id: String)
+fn run_watcher<T>(app: AppHandle, api: Api<T>, watch_id: String) -> tokio::task::JoinHandle<()>
 where
     T: kube::Resource
         + serde::de::DeserializeOwned
@@ -1433,7 +1433,7 @@ where
                 }
             }
         }
-    });
+    })
 }
 
 fn watch_namespaced_or_all<T>(
@@ -1441,7 +1441,8 @@ fn watch_namespaced_or_all<T>(
     client: Client,
     namespace: Option<String>,
     watch_id: String,
-) where
+) -> tokio::task::JoinHandle<()>
+where
     T: kube::Resource<Scope = kube::core::NamespaceResourceScope>
         + serde::de::DeserializeOwned
         + serde::Serialize
@@ -1456,10 +1457,14 @@ fn watch_namespaced_or_all<T>(
     } else {
         Api::all(client)
     };
-    run_watcher(app, api, watch_id);
+    run_watcher(app, api, watch_id)
 }
 
-fn watch_cluster_scoped<T>(app: AppHandle, client: Client, watch_id: String)
+fn watch_cluster_scoped<T>(
+    app: AppHandle,
+    client: Client,
+    watch_id: String,
+) -> tokio::task::JoinHandle<()>
 where
     T: kube::Resource<Scope = kube::core::ClusterResourceScope>
         + serde::de::DeserializeOwned
@@ -1471,7 +1476,7 @@ where
     <T as kube::Resource>::DynamicType: Default,
 {
     let api: Api<T> = Api::all(client);
-    run_watcher(app, api, watch_id);
+    run_watcher(app, api, watch_id)
 }
 
 #[tauri::command]
@@ -1491,8 +1496,6 @@ pub async fn start_watch_resources(
         context
     );
     let watch_id = uuid::Uuid::new_v4().to_string();
-    let watch_id_clone = watch_id.clone();
-    let app_clone = app.clone();
     let kc_path = kubeconfig_path
         .lock()
         .map_err(|e| K8sError::Lock(e.to_string()))?
@@ -1500,51 +1503,42 @@ pub async fn start_watch_resources(
 
     let client = get_or_create_raw_client(&client_pool, context, kc_path).await?;
 
-    let handle = tokio::spawn(async move {
-        log::info!(
-            "Starting watch for kind: {}, namespace: {:?}, watch_id: {}",
-            kind,
-            namespace,
-            watch_id_clone
-        );
+    log::info!(
+        "Starting watch for kind: {}, namespace: {:?}, watch_id: {}",
+        kind,
+        namespace,
+        watch_id
+    );
 
-        match kind.as_str() {
-            "Pods" => watch_namespaced_or_all::<Pod>(app_clone, client, namespace, watch_id_clone),
-            "Deployments" => {
-                watch_namespaced_or_all::<Deployment>(app_clone, client, namespace, watch_id_clone)
-            }
-            "Services" => {
-                watch_namespaced_or_all::<Service>(app_clone, client, namespace, watch_id_clone)
-            }
-            "Nodes" => watch_cluster_scoped::<Node>(app_clone, client, watch_id_clone),
-            "Namespaces" => watch_cluster_scoped::<Namespace>(app_clone, client, watch_id_clone),
-            "ReplicaSets" => {
-                watch_namespaced_or_all::<ReplicaSet>(app_clone, client, namespace, watch_id_clone)
-            }
-            "StatefulSets" => {
-                watch_namespaced_or_all::<StatefulSet>(app_clone, client, namespace, watch_id_clone)
-            }
-            "DaemonSets" => {
-                watch_namespaced_or_all::<DaemonSet>(app_clone, client, namespace, watch_id_clone)
-            }
-            "Jobs" => watch_namespaced_or_all::<Job>(app_clone, client, namespace, watch_id_clone),
-            "CronJobs" => {
-                watch_namespaced_or_all::<CronJob>(app_clone, client, namespace, watch_id_clone)
-            }
-            "ConfigMaps" => {
-                watch_namespaced_or_all::<ConfigMap>(app_clone, client, namespace, watch_id_clone)
-            }
-            "Secrets" => {
-                watch_namespaced_or_all::<Secret>(app_clone, client, namespace, watch_id_clone)
-            }
-            "Ingresses" => {
-                watch_namespaced_or_all::<Ingress>(app_clone, client, namespace, watch_id_clone)
-            }
-            _ => {
-                log::warn!("Unsupported resource kind for watch: {}", kind);
-            }
-        };
-    });
+    let handle = match kind.as_str() {
+        "Pods" => watch_namespaced_or_all::<Pod>(app, client, namespace, watch_id.clone()),
+        "Deployments" => {
+            watch_namespaced_or_all::<Deployment>(app, client, namespace, watch_id.clone())
+        }
+        "Services" => watch_namespaced_or_all::<Service>(app, client, namespace, watch_id.clone()),
+        "Nodes" => watch_cluster_scoped::<Node>(app, client, watch_id.clone()),
+        "Namespaces" => watch_cluster_scoped::<Namespace>(app, client, watch_id.clone()),
+        "ReplicaSets" => {
+            watch_namespaced_or_all::<ReplicaSet>(app, client, namespace, watch_id.clone())
+        }
+        "StatefulSets" => {
+            watch_namespaced_or_all::<StatefulSet>(app, client, namespace, watch_id.clone())
+        }
+        "DaemonSets" => {
+            watch_namespaced_or_all::<DaemonSet>(app, client, namespace, watch_id.clone())
+        }
+        "Jobs" => watch_namespaced_or_all::<Job>(app, client, namespace, watch_id.clone()),
+        "CronJobs" => watch_namespaced_or_all::<CronJob>(app, client, namespace, watch_id.clone()),
+        "ConfigMaps" => {
+            watch_namespaced_or_all::<ConfigMap>(app, client, namespace, watch_id.clone())
+        }
+        "Secrets" => watch_namespaced_or_all::<Secret>(app, client, namespace, watch_id.clone()),
+        "Ingresses" => watch_namespaced_or_all::<Ingress>(app, client, namespace, watch_id.clone()),
+        _ => {
+            log::warn!("Unsupported resource kind for watch: {}", kind);
+            return Ok(watch_id);
+        }
+    };
 
     watcher_handle
         .lock()
