@@ -52,6 +52,17 @@
   cursor: default;
 }
 
+.custom-context-menu-item:focus-visible {
+  background-color: #679df9;
+  color: #ffffff;
+  outline: none;
+}
+
+.custom-context-menu-item.disabled:focus-visible {
+  background-color: transparent;
+  color: #8e8e8e;
+}
+
 .custom-context-menu-item.has-submenu {
   justify-content: space-between;
   padding-right: 8px;

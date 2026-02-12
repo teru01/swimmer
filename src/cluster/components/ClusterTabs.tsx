@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { ClusterContextTab } from '../types/panel';
 import { Menu, MenuItem } from '../../components/ui/Menu';
 import { TAB_CLOSE_ANIMATION_MS } from '../../lib/constants';
@@ -129,10 +129,46 @@ function ClusterTabs({
     }
   };
 
+  const focusTab = useCallback(
+    (index: number) => {
+      const tab = tabs[index];
+      if (tab) {
+        const el = activeTabRefs.current.get(tab.clusterContext.id);
+        el?.focus();
+      }
+    },
+    [tabs]
+  );
+
+  const handleTabKeyDown = (e: React.KeyboardEvent, tab: ClusterContextTab, index: number) => {
+    switch (e.key) {
+      case 'ArrowRight': {
+        e.preventDefault();
+        const next = (index + 1) % tabs.length;
+        onClusterSelect(tabs[next]);
+        focusTab(next);
+        break;
+      }
+      case 'ArrowLeft': {
+        e.preventDefault();
+        const prev = (index - 1 + tabs.length) % tabs.length;
+        onClusterSelect(tabs[prev]);
+        focusTab(prev);
+        break;
+      }
+      case 'Enter':
+      case ' ': {
+        e.preventDefault();
+        onClusterSelect(tab);
+        break;
+      }
+    }
+  };
+
   return (
     <>
-      <div className="cluster-tabs" ref={tabsContainerRef}>
-        {tabs.map(tab => {
+      <div className="cluster-tabs" role="tablist" ref={tabsContainerRef}>
+        {tabs.map((tab, index) => {
           const isActive = activeContextId === tab.clusterContext.id;
           const isPanelActive = tab.panelId === activePanelId;
           const shouldDim = !isPanelActive || (isPanelActive && !isActive);
@@ -143,13 +179,19 @@ function ClusterTabs({
             <div
               key={tab.id}
               ref={el => setTabRef(tab.clusterContext.id, el)}
+              role="tab"
+              tabIndex={isActive ? 0 : -1}
+              aria-selected={isActive}
               className={`cluster-tab ${isActive ? 'active' : ''} ${shouldDim ? 'dimmed' : ''} ${isClosing ? 'closing' : ''}`}
               onClick={() => onClusterSelect(tab)}
               onContextMenu={e => handleContextMenu(e, tab)}
+              onKeyDown={e => handleTabKeyDown(e, tab, index)}
             >
               <span className="tab-label">{tab.clusterContext.clusterName}</span>
               <button
                 className="close-button"
+                tabIndex={-1}
+                aria-label={`Close ${tab.clusterContext.clusterName}`}
                 onClick={e => {
                   e.stopPropagation();
                   handleCloseTab(tab);

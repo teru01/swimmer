@@ -51,6 +51,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       <div
+        role="status"
+        aria-live="polite"
         style={{
           position: 'fixed',
           bottom: '48px',
@@ -65,6 +67,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map(toast => (
           <div
             key={toast.id}
+            role="alert"
             style={{
               padding: '10px 16px',
               borderRadius: '6px',
@@ -82,10 +85,33 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                     : '#0078d4',
               color: '#ffffff',
               animation: 'toast-slide-in 0.2s ease-out',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
             }}
             onClick={() => removeToast(toast.id)}
           >
-            {toast.message}
+            <span style={{ flex: 1 }}>{toast.message}</span>
+            <button
+              aria-label="Close notification"
+              onClick={e => {
+                e.stopPropagation();
+                removeToast(toast.id);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#ffffff',
+                cursor: 'pointer',
+                fontSize: '14px',
+                padding: '0 2px',
+                lineHeight: 1,
+                opacity: 0.8,
+                flexShrink: 0,
+              }}
+            >
+              ×
+            </button>
           </div>
         ))}
       </div>

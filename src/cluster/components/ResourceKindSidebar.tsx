@@ -55,6 +55,13 @@ interface ResourceKindSidebarProps {
   contextId?: string;
 }
 
+const handleKeyDownActivate = (e: React.KeyboardEvent, action: () => void) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    action();
+  }
+};
+
 const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
   selectedKind,
   onKindSelect,
@@ -107,7 +114,7 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
   }, [expandedGroups, contextId, crdGroups.length]);
 
   return (
-    <div className="resource-kind-sidebar">
+    <nav className="resource-kind-sidebar" aria-label="Resource kinds">
       <div className="content">
         {resourceGroups.map(({ groupName, kinds, isSingle }) => {
           const isExpanded = expandedGroups.has(groupName);
@@ -118,7 +125,11 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
               <div key={groupName} className="resource-group single-item-group">
                 <div
                   className={`group-header ${selectedKind === kind ? 'selected' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-selected={selectedKind === kind}
                   onClick={() => onKindSelect(kind)}
+                  onKeyDown={e => handleKeyDownActivate(e, () => onKindSelect(kind))}
                 >
                   {groupName}
                 </div>
@@ -131,7 +142,11 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
               <div key={groupName} className="resource-group">
                 <div
                   className={`group-header ${isExpanded ? 'expanded' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isExpanded}
                   onClick={() => toggleGroup(groupName)}
+                  onKeyDown={e => handleKeyDownActivate(e, () => toggleGroup(groupName))}
                 >
                   <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
                   {groupName}
@@ -154,20 +169,32 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
                         <div key={crdGroup.group} className="cr-sub-group">
                           <div
                             className={`cr-sub-group-header ${isSubExpanded ? 'expanded' : ''}`}
+                            role="button"
+                            tabIndex={0}
+                            aria-expanded={isSubExpanded}
                             onClick={() => toggleGroup(subGroupKey)}
+                            onKeyDown={e =>
+                              handleKeyDownActivate(e, () => toggleGroup(subGroupKey))
+                            }
                           >
                             <span className="expand-icon">{isSubExpanded ? '▼' : '▶'}</span>
                             {crdGroup.group}
                           </div>
                           {isSubExpanded && (
-                            <ul className="cr-kind-list">
+                            <ul className="cr-kind-list" role="listbox">
                               {crdGroup.resources.map(res => {
                                 const kindKey = `cr:${res.group}/${res.version}/${res.plural}/${res.scope}`;
                                 return (
                                   <li
                                     key={kindKey}
+                                    role="option"
+                                    tabIndex={0}
+                                    aria-selected={selectedKind === kindKey}
                                     className={selectedKind === kindKey ? 'selected' : ''}
                                     onClick={() => onKindSelect(kindKey)}
+                                    onKeyDown={e =>
+                                      handleKeyDownActivate(e, () => onKindSelect(kindKey))
+                                    }
                                   >
                                     {res.kind}
                                   </li>
@@ -188,18 +215,26 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
             <div key={groupName} className="resource-group">
               <div
                 className={`group-header ${isExpanded ? 'expanded' : ''}`}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
                 onClick={() => toggleGroup(groupName)}
+                onKeyDown={e => handleKeyDownActivate(e, () => toggleGroup(groupName))}
               >
                 <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
                 {groupName}
               </div>
               {isExpanded && (
-                <ul className="kind-list">
+                <ul className="kind-list" role="listbox">
                   {kinds.map(kind => (
                     <li
                       key={kind}
+                      role="option"
+                      tabIndex={0}
+                      aria-selected={selectedKind === kind}
                       className={selectedKind === kind ? 'selected' : ''}
                       onClick={() => onKindSelect(kind)}
+                      onKeyDown={e => handleKeyDownActivate(e, () => onKindSelect(kind))}
                     >
                       {kind}
                     </li>
@@ -210,7 +245,7 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 };
 

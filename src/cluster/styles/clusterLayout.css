@@ -68,6 +68,11 @@
   background-color: var(--bg-tertiary);
 }
 
+.cluster-tab:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
 .cluster-tab.active {
   background-color: var(--bg-primary);
   border-bottom-color: transparent;
