@@ -1,4 +1,4 @@
-/* src/cluster/styles/terminalPane.css 
+/* src/cluster/styles/terminalPane.css
  * Styles for the terminal interface
  */
 
@@ -8,8 +8,8 @@
   min-height: 130px;
   display: flex;
   flex-direction: column;
-  background-color: #1e1e1e;
-  color: #f8f9fa;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   overflow: hidden;
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   font-size: 12px;
@@ -20,9 +20,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 4px 12px;
-  border-bottom: 1px solid #444;
-  background-color: #2d2d30;
-  color: #cccccc;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 500;
   flex-shrink: 0;
@@ -47,11 +47,11 @@
 }
 
 .terminal-container .xterm-viewport {
-  background-color: #1e1e1e !important;
+  background-color: var(--bg-primary) !important;
 }
 
 .terminal-container .xterm-screen {
-  background-color: #1e1e1e !important;
+  background-color: var(--bg-primary) !important;
 }
 
 /* Scrollbar styling for terminal */
@@ -60,14 +60,14 @@
 }
 
 .terminal-container .xterm .xterm-viewport::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: var(--bg-primary);
 }
 
 .terminal-container .xterm .xterm-viewport::-webkit-scrollbar-thumb {
-  background: #444;
+  background: var(--bg-tertiary);
   border-radius: 4px;
 }
 
 .terminal-container .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--text-secondary);
 }

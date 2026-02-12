@@ -161,6 +161,15 @@ a:hover {
   --text-tertiary: #999999;
   --text-disabled: #666666;
 
+  /* Context Menu Colors */
+  --context-menu-bg: #e4e4e4;
+  --context-menu-text: #1e1e1e;
+  --context-menu-text-disabled: #8e8e8e;
+  --context-menu-highlight: #679df9;
+  --context-menu-highlight-text: #ffffff;
+  --context-menu-border: rgba(0, 0, 0, 0.1);
+  --context-menu-separator: rgba(0, 0, 0, 0.15);
+
   /* Border Colors */
   --border-color: #3e3e42;
   --border-color-light: #4a4a4f;
