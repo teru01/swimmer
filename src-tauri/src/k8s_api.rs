@@ -23,7 +23,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
@@ -461,10 +460,13 @@ impl RealK8sClient {
             let kubeconfig = if let Some(ref path) = kubeconfig_path {
                 Kubeconfig::read_from(path)?
             } else {
-                let home_dir = env::var("HOME").map_err(|e| {
-                    K8sError::Io(std::io::Error::new(std::io::ErrorKind::NotFound, e))
+                let home_dir = dirs::home_dir().ok_or_else(|| {
+                    K8sError::Io(std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        "Could not determine home directory",
+                    ))
                 })?;
-                let default_path = PathBuf::from(home_dir).join(".kube/config");
+                let default_path = home_dir.join(".kube/config");
                 Kubeconfig::read_from(&default_path)?
             };
 

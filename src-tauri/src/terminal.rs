@@ -29,9 +29,9 @@ fn create_temp_kubeconfig(
     let original_kubeconfig = if let Some(path) = kubeconfig_path {
         PathBuf::from(path)
     } else {
-        let home_dir = std::env::var("HOME")
-            .map_err(|_| Error::Terminal("HOME environment variable not set".to_string()))?;
-        PathBuf::from(home_dir).join(".kube/config")
+        let home_dir = dirs::home_dir()
+            .ok_or_else(|| Error::Terminal("Could not determine home directory".to_string()))?;
+        home_dir.join(".kube/config")
     };
 
     if !original_kubeconfig.exists() {
@@ -70,6 +70,8 @@ fn create_temp_kubeconfig(
     }
     #[cfg(not(unix))]
     {
+        // On Windows, std::env::temp_dir() returns a per-user directory
+        // (%USERPROFILE%\AppData\Local\Temp) with appropriate ACLs.
         fs::write(&temp_file, modified_content)
             .map_err(|e| Error::Terminal(format!("Failed to write temp kubeconfig: {}", e)))?;
     }
