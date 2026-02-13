@@ -79,18 +79,21 @@ function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
   useEffect(() => {
     if (!containerRef.current || !activeTabId) return;
 
-    const resizeObserver = new ResizeObserver(() => {
-      // Fit the currently visible terminal
+    const fitActiveTerminal = () => {
       const visibleSession = allTerminalSessions.get(activeTabId);
       if (visibleSession) {
         visibleSession.fitAddon.fit();
       }
-    });
+    };
 
+    const resizeObserver = new ResizeObserver(fitActiveTerminal);
     resizeObserver.observe(containerRef.current);
+
+    window.addEventListener('webview-zoom-changed', fitActiveTerminal);
 
     return () => {
       resizeObserver.disconnect();
+      window.removeEventListener('webview-zoom-changed', fitActiveTerminal);
     };
   }, [activeTabId, allTerminalSessions]);
 

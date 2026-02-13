@@ -11,6 +11,7 @@
     "core:menu:allow-popup",
     "core:menu:allow-new",
     "core:menu:allow-append",
-    "core:menu:allow-text"
+    "core:menu:allow-text",
+    "core:webview:allow-set-webview-zoom"
   ]
 }

@@ -227,3 +227,31 @@ a:hover {
   outline: none;
   box-shadow: none;
 }
+
+.zoom-indicator {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 10000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: zoom-indicator-fade 1s ease forwards;
+}
+
+@keyframes zoom-indicator-fade {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
