@@ -106,6 +106,10 @@ Download the latest release for your OS from the [Releases](https://github.com/t
 | Windows | `.msi` / `.exe` |
 | Linux | `.deb` / `.AppImage` |
 
+> **macOS users:** Since the app is not notarized, macOS may block it on first launch. Go to **System Settings > Privacy & Security**, scroll down and click **"Open Anyway"** to allow it.
+>
+> If you prefer to verify the source yourself, see [Getting Started](#getting-started) to build from source.
+
 ## Prerequisites
 
 > The following are only needed if you want to build from source.
