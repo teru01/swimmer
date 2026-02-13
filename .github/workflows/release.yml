@@ -6,7 +6,47 @@ on:
       - 'v*'
 
 jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify version consistency
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          CARGO_VERSION=$(grep '^version' src-tauri/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          TAURI_VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+
+          echo "Tag version:       $TAG_VERSION"
+          echo "package.json:      $PKG_VERSION"
+          echo "Cargo.toml:        $CARGO_VERSION"
+          echo "tauri.conf.json:   $TAURI_VERSION"
+
+          FAILED=0
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION)"
+            FAILED=1
+          fi
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Cargo.toml version ($CARGO_VERSION) does not match tag ($TAG_VERSION)"
+            FAILED=1
+          fi
+          if [ "$TAURI_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::tauri.conf.json version ($TAURI_VERSION) does not match tag ($TAG_VERSION)"
+            FAILED=1
+          fi
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "::error::Version mismatch detected. Run 'scripts/bump-version.sh $TAG_VERSION' and commit before tagging."
+            exit 1
+          fi
+
+          echo "All versions match: $TAG_VERSION"
+
   release:
+    needs: version-check
     permissions:
       contents: write
     strategy:
