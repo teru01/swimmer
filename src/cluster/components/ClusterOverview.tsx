@@ -59,9 +59,10 @@ const fetchClusterInfo = async (contextId: string): Promise<ClusterInfo> => {
 interface ClusterOverviewProps {
   contextId: string;
   isVisible: boolean;
+  refreshKey?: number;
 }
 
-const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible }) => {
+const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible, refreshKey }) => {
   const [clusterInfo, setClusterInfo] = useState<ClusterInfo | undefined>(undefined);
   const [stats, setStats] = useState<ClusterStats | undefined>(undefined);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -110,7 +111,7 @@ const ClusterOverview: React.FC<ClusterOverviewProps> = ({ contextId, isVisible 
         clearInterval(intervalRef.current);
       }
     };
-  }, [contextId]);
+  }, [contextId, refreshKey]);
 
   if (!isVisible) {
     return null;

@@ -160,6 +160,8 @@ interface ResourceListProps {
   selectedResourceUid?: string;
   isActivePanel?: boolean;
   isDetailPaneOpen?: boolean;
+  refreshKey?: number;
+  onRefresh?: () => void;
 }
 
 /**
@@ -176,6 +178,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
   selectedResourceUid,
   isActivePanel,
   isDetailPaneOpen,
+  refreshKey,
+  onRefresh,
 }) => {
   const { preferences } = usePreferences();
   const [namespaces, setNamespaces] = useState<string[]>([]);
@@ -487,7 +491,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
         watchIdRef.current = undefined;
       }
     };
-  }, [selectedKind, contextId, updateResources]);
+  }, [selectedKind, contextId, updateResources, refreshKey]);
 
   // Filter and sort resources based on selectedNamespace and nameFilter
   const filteredResources = useMemo(() => {
@@ -1075,7 +1079,27 @@ const ResourceList: React.FC<ResourceListProps> = ({
   };
 
   if (selectedKind === 'Overview') {
-    return <ClusterOverview contextId={contextId || 'dummy-context-id'} isVisible={isVisible} />;
+    return (
+      <div className="resource-list-pane">
+        <div className="resource-list-controls">
+          <div className="controls-left">
+            <div className="resource-kind-indicator">
+              <span className="kind-label">Overview</span>
+              {onRefresh && (
+                <button className="refresh-button" onClick={onRefresh} title="Refresh">
+                  ↻
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        <ClusterOverview
+          contextId={contextId || 'dummy-context-id'}
+          isVisible={isVisible}
+          refreshKey={refreshKey}
+        />
+      </div>
+    );
   }
 
   if (!isVisible) {
@@ -1093,6 +1117,11 @@ const ResourceList: React.FC<ResourceListProps> = ({
                 {filteredResources.length} {filteredResources.length === 1 ? 'item' : 'items'}
               </span>
               {fetchError && <span className="fetch-error-badge">{fetchError}</span>}
+              {onRefresh && (
+                <button className="refresh-button" onClick={onRefresh} title="Refresh">
+                  ↻
+                </button>
+              )}
             </div>
           )}
           {checkedUids.size > 0 && (

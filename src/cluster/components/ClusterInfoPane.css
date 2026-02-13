@@ -162,6 +162,22 @@
   background-color: var(--color-primary);
 }
 
+.resource-kind-indicator .refresh-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.resource-kind-indicator .refresh-button:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-tertiary);
+}
+
 .main-content-area {
   flex-grow: 1;
   display: flex;

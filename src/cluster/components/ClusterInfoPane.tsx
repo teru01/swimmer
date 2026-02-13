@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ResourceKindSidebar from './ResourceKindSidebar';
 import ResourceList, { KubeResource } from './ResourceList';
 import ResourceDetailPane from './ResourceDetailPane';
@@ -78,10 +78,21 @@ function ClusterViewInstance({
   onNavigateToResourceInNewPanel,
   isActivePanel,
 }: ClusterViewInstanceProps) {
+  const [refreshKey, setRefreshKey] = useState(0);
   const viewStateRef = useRef(viewState);
   viewStateRef.current = viewState;
   const onViewStateChangeRef = useRef(onViewStateChange);
   onViewStateChangeRef.current = onViewStateChange;
+
+  const handleRefresh = useCallback(() => {
+    setRefreshKey(k => k + 1);
+    onViewStateChange({
+      ...viewState,
+      showDetailPane: false,
+      selectedResourceDetail: undefined,
+      selectedResourceEvents: [],
+    });
+  }, [viewState, onViewStateChange]);
 
   useEffect(() => {
     if (
@@ -209,6 +220,8 @@ function ClusterViewInstance({
                 selectedResourceUid={viewState.selectedResourceDetail?.metadata.uid}
                 isActivePanel={isActivePanel}
                 isDetailPaneOpen={viewState.showDetailPane}
+                refreshKey={refreshKey}
+                onRefresh={handleRefresh}
               />
             </Panel>
             {viewState.showDetailPane && (
