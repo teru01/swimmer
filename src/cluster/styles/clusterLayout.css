@@ -2,7 +2,7 @@
  * Layout styles for Kubernetes Cluster information and tabs
  */
 
-/* 中央エリア：クラスタタブ + クラスタ情報 */
+/* Center area: cluster tabs + cluster info */
 .center-area {
   display: flex;
   flex-direction: column;
@@ -12,13 +12,13 @@
   border-top: 1px solid var(--border-color);
 }
 
-/* 中央上部：クラスタタブ */
+/* Center top: cluster tabs */
 .center-tabs {
   background-color: var(--bg-primary);
   position: relative;
 }
 
-/* クラスタタブ */
+/* Cluster tab */
 .cluster-tabs {
   display: flex;
   padding: 2px 2px 0 2px;
@@ -166,7 +166,7 @@
   background-color: var(--bg-tertiary);
 }
 
-/* 中央中部：クラスタ情報 */
+/* Center middle: cluster info */
 .cluster-info-pane-container {
   flex: 2;
   overflow-y: auto;

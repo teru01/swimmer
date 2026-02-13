@@ -9,8 +9,8 @@ import {
 } from '../contextTree';
 
 /**
- * GKE (Google Kubernetes Engine) プロバイダー
- * コンテキスト形式: gke_<project>_<region>_<cluster>
+ * GKE (Google Kubernetes Engine) provider
+ * Context format: gke_<project>_<region>_<cluster>
  */
 export const gkeProvider: ContextProvider = {
   name: 'GKE',
@@ -39,7 +39,7 @@ export const gkeProvider: ContextProvider = {
 
       const { project, region, cluster } = parsed;
 
-      // プロジェクトノードを取得または作成
+      // Get or create project node
       let projectNode = projectsMap[project];
       if (!projectNode) {
         projectNode = newResourceContainerNode(project, root.id);
@@ -47,14 +47,14 @@ export const gkeProvider: ContextProvider = {
         root.children?.push(projectNode);
       }
 
-      // リージョンノードを取得または作成
+      // Get or create region node
       let regionNode = projectNode.children?.find(c => c.name === region);
       if (!regionNode) {
         regionNode = newRegionNode(region, projectNode.id);
         projectNode.children?.push(regionNode);
       }
 
-      // クラスターノード（コンテキスト）を追加
+      // Add cluster node (context)
       const clusterContext = newClusterContext({
         id: context,
         provider: 'GKE',

@@ -1,7 +1,7 @@
 /**
- * Tauri Rust API の型安全な呼び出しインターフェース
+ * Type-safe invocation interface for Tauri Rust API
  */
 
 export { commands } from './commands';
 
-// 将来的に他の API モジュールがあれば、ここでエクスポートします
+// Export other API modules here if added in the future

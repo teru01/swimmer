@@ -20,7 +20,7 @@ export interface SplitRightResult {
 }
 
 /**
- * ContextNodeを選択した時の状態更新ロジック
+ * State update logic when selecting a ContextNode
  */
 export function handleContextNodeSelect(state: PanelState, contextNode: ContextNode): PanelState {
   if (contextNode.type !== NodeType.Context || !contextNode.clusterContext) {
@@ -94,7 +94,7 @@ export function handleContextNodeSelect(state: PanelState, contextNode: ContextN
 }
 
 /**
- * タブを閉じた時の状態更新ロジック
+ * State update logic when closing a tab
  */
 export function handleContextNodeClose(
   state: PanelState,
@@ -110,7 +110,7 @@ export function handleContextNodeClose(
   const newTabHistory = tabHistory.filter(id => id !== tab.id);
 
   if (isClosingActiveTab) {
-    // アクティブタブを削除した時
+    // When deleting the active tab
     const updatedPanels = state.panels
       .map(panel => {
         if (panel.id === tab.panelId) {
@@ -125,7 +125,7 @@ export function handleContextNodeClose(
       })
       .filter(panel => panel.tabs.length > 0);
 
-    // パネルが0になるなら起動時と同じデフォルトパネルを作る
+    // If panels become 0, create a default panel like at startup
     if (updatedPanels.length === 0) {
       const defaultPanel = createDefaultPanel();
       return {
@@ -139,7 +139,7 @@ export function handleContextNodeClose(
       };
     }
 
-    // 最新のhistoryのtabのidを取り、そのタブ、パネルをアクティブに設定
+    // Get the latest tab ID from history and set that tab/panel as active
     let foundTab: ClusterContextTab | undefined;
     let foundPanelId: string | undefined;
 
@@ -167,9 +167,9 @@ export function handleContextNodeClose(
                 activeContextId: foundTab.clusterContext.id,
               };
             }
-            // 削除したタブのパネルで、まだタブが残っている場合
+            // If tabs remain in the deleted tab's panel
             if (panel.id === tab.panelId && panel.tabs.length > 0) {
-              // historyから最新のタブを探す
+              // Find the latest tab from history
               let panelActiveTab: ClusterContextTab | undefined;
               for (let i = newTabHistory.length - 1; i >= 0; i--) {
                 const historyTabId = newTabHistory[i];
@@ -179,7 +179,7 @@ export function handleContextNodeClose(
                   break;
                 }
               }
-              // historyになければ最後のタブを使う
+              // If not in history, use the last tab
               if (!panelActiveTab) {
                 panelActiveTab = panel.tabs[panel.tabs.length - 1];
               }
@@ -201,7 +201,7 @@ export function handleContextNodeClose(
         newTabHistory,
       };
     } else {
-      // historyに有効なタブがない場合は、最初のパネルの最初のタブをアクティブにする
+      // If no valid tab in history, activate the first tab of the first panel
       const firstPanel = updatedPanels[0];
       const firstTab = firstPanel.tabs[0];
       if (firstTab) {
@@ -240,7 +240,7 @@ export function handleContextNodeClose(
       }
     }
   } else {
-    // 非アクティブタブを削除した時
+    // When deleting a non-active tab
     return {
       state: {
         ...state,
@@ -263,7 +263,7 @@ export function handleContextNodeClose(
 }
 
 /**
- * パネルを右に分割する時の状態更新ロジック
+ * State update logic when splitting panel to the right
  */
 export function handleSplitRight(
   state: PanelState,

@@ -9,8 +9,8 @@ import {
 } from '../contextTree';
 
 /**
- * EKS (Amazon Elastic Kubernetes Service) プロバイダー
- * コンテキスト形式: arn:aws:eks:<region>:<account>:cluster/<cluster>
+ * EKS (Amazon Elastic Kubernetes Service) provider
+ * Context format: arn:aws:eks:<region>:<account>:cluster/<cluster>
  */
 export const eksProvider: ContextProvider = {
   name: 'AWS',
@@ -39,7 +39,7 @@ export const eksProvider: ContextProvider = {
 
       const { region, account, cluster } = parsed;
 
-      // アカウントノードを取得または作成
+      // Get or create account node
       let accountNode = accountsMap[account];
       if (!accountNode) {
         accountNode = newResourceContainerNode(account, root.id);
@@ -47,14 +47,14 @@ export const eksProvider: ContextProvider = {
         root.children?.push(accountNode);
       }
 
-      // リージョンノードを取得または作成
+      // Get or create region node
       let regionNode = accountNode.children?.find(c => c.name === region);
       if (!regionNode) {
         regionNode = newRegionNode(region, accountNode.id);
         accountNode.children?.push(regionNode);
       }
 
-      // クラスターノード（コンテキスト）を追加
+      // Add cluster node (context)
       const clusterContext = newClusterContext({
         id: context,
         provider: 'AWS',

@@ -14,7 +14,7 @@ function App() {
   );
 
   useEffect(() => {
-    // メニューからのPreferencesイベントをリッスン
+    // Listen for Preferences event from menu
     const unlisten = listen('menu-preferences', () => {
       setPreferencesSection(undefined);
       setCurrentPage('preferences');

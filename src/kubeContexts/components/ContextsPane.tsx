@@ -29,7 +29,7 @@ interface ContextsPaneProps {
   onNavigateToPreferences?: (section?: PreferencesSection) => void;
 }
 
-// 使用するプロバイダーのリスト（Othersは最後に配置）
+// List of providers to use (Others placed last)
 const PROVIDERS = [gkeProvider, eksProvider, othersProvider];
 
 /**
@@ -140,7 +140,7 @@ function ContextsPane({
   }, [contextMenu]);
 
   /**
-   * すべてのフォルダIDを取得
+   * Get all folder IDs
    */
   function getAllFolderIds(nodes: ContextNode[]): string[] {
     const ids: string[] = [];
@@ -169,7 +169,7 @@ function ContextsPane({
   }
 
   /**
-   * フォルダの展開/折りたたみをトグル
+   * Toggle folder expand/collapse
    */
   const toggleExpanded = (nodeId: string) => {
     setExpandedIds(prev => {
@@ -184,10 +184,10 @@ function ContextsPane({
   };
 
   /**
-   * ノードをフィルタリング
-   * textとtagの両方にマッチするcontextを表示
-   * textにマッチ: folderがtextにマッチ || context nameがマッチ
-   * tag: 全てのタグにマッチ
+   * Filter nodes
+   * Show contexts matching both text and tag filters
+   * Text match: folder matches text || context name matches
+   * Tag: matches all selected tags
    */
   const filterNodes = (nodes: ContextNode[]): ContextNode[] => {
     const hasSearchText = searchText.trim().length > 0;
@@ -314,7 +314,7 @@ function ContextsPane({
   };
 
   /**
-   * ツリーノードをレンダリング
+   * Render tree node
    */
   const renderNode = (
     node: ContextNode,

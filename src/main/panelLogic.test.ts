@@ -10,8 +10,8 @@ import { createDefaultPanel } from '../cluster/types/panel';
 
 describe('panelLogic', () => {
   describe('handleContextNodeClose', () => {
-    it('context1を開く、context2を開く、context3を開く、tab1を消すと、tab2,3が残っていてtab3がactiveである', () => {
-      // 初期状態: 空のパネル1つ
+    it('open ctx1, ctx2, ctx3, close tab1 → tab2,3 remain with tab3 active', () => {
+      // Initial state: one empty panel
       let state: PanelState = {
         panels: [createDefaultPanel()],
         activePanelId: '',
@@ -63,56 +63,56 @@ describe('panelLogic', () => {
 
       let tabHistory: string[] = [];
 
-      // Context1を開く
+      // Open Context1
       state = handleContextNodeSelect(state, node1);
       const tab1 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context1');
       expect(tab1).toBeDefined();
       tabHistory.push(tab1!.id);
 
-      // Context2を開く
+      // Open Context2
       state = handleContextNodeSelect(state, node2);
       const tab2 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context2');
       expect(tab2).toBeDefined();
       tabHistory.push(tab2!.id);
 
-      // Context3を開く
+      // Open Context3
       state = handleContextNodeSelect(state, node3);
       const tab3 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context3');
       expect(tab3).toBeDefined();
       tabHistory.push(tab3!.id);
 
-      // この時点で3つのタブがあることを確認
+      // Verify 3 tabs exist
       expect(state.panels[0].tabs.length).toBe(3);
       expect(state.panels[0].activeContextId).toBe('context3');
 
-      // Tab1を削除
+      // Delete Tab1
       const result = handleContextNodeClose(state, tab1!, tabHistory);
       state = result.state;
       tabHistory = result.newTabHistory;
 
-      // Tab1が削除されたことを確認
+      // Verify Tab1 is deleted
       expect(state.panels[0].tabs.length).toBe(2);
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context1')).toBeUndefined();
 
-      // Tab2とTab3が残っていることを確認
+      // Verify Tab2 and Tab3 remain
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context2')).toBeDefined();
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context3')).toBeDefined();
 
-      // Tab3がアクティブであることを確認
+      // Verify Tab3 is active
       expect(state.panels[0].activeContextId).toBe('context3');
       expect(state.selectedContext?.clusterContext?.id).toBe('context3');
 
-      // Active panelは最初のパネルのまま
+      // Active panel is still the first panel
       expect(state.activePanelId).toBe(state.panels[0].id);
 
-      // Historyからtab1が削除されていることを確認
+      // Verify tab1 is removed from history
       expect(tabHistory).not.toContain(tab1!.id);
       expect(tabHistory).toContain(tab2!.id);
       expect(tabHistory).toContain(tab3!.id);
     });
 
-    it('非アクティブタブを削除した時、アクティブタブとパネルはそのまま', () => {
-      // 初期状態
+    it('closing a non-active tab keeps active tab and panel unchanged', () => {
+      // Initial state
       let state: PanelState = {
         panels: [createDefaultPanel()],
         activePanelId: '',
@@ -150,45 +150,45 @@ describe('panelLogic', () => {
 
       let tabHistory: string[] = [];
 
-      // Context1を開く
+      // Open Context1
       state = handleContextNodeSelect(state, node1);
       const tab1 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context1');
       tabHistory.push(tab1!.id);
 
-      // Context2を開く
+      // Open Context2
       state = handleContextNodeSelect(state, node2);
       const tab2 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context2');
       tabHistory.push(tab2!.id);
 
-      // Context2がアクティブ
+      // Context2 is active
       expect(state.panels[0].activeContextId).toBe('context2');
 
-      // Tab1（非アクティブ）を削除
+      // Delete Tab1 (non-active)
       const result = handleContextNodeClose(state, tab1!, tabHistory);
       state = result.state;
       tabHistory = result.newTabHistory;
 
-      // Tab1が削除されたことを確認
+      // Verify Tab1 is deleted
       expect(state.panels[0].tabs.length).toBe(1);
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context1')).toBeUndefined();
 
-      // Tab2が残っていることを確認
+      // Verify Tab2 remains
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context2')).toBeDefined();
 
-      // アクティブタブはそのまま（context2）
+      // Active tab unchanged (context2)
       expect(state.panels[0].activeContextId).toBe('context2');
 
-      // Active panelもそのまま
+      // Active panel unchanged
       const originalPanelId = state.panels[0].id;
       expect(state.activePanelId).toBe(originalPanelId);
 
-      // Historyからtab1が削除されていることを確認
+      // Verify tab1 is removed from history
       expect(tabHistory).not.toContain(tab1!.id);
       expect(tabHistory).toContain(tab2!.id);
     });
 
-    it('全てのタブを削除するとデフォルトパネルが作成される', () => {
-      // 初期状態
+    it('closing all tabs creates a default panel', () => {
+      // Initial state
       let state: PanelState = {
         panels: [createDefaultPanel()],
         activePanelId: '',
@@ -212,30 +212,30 @@ describe('panelLogic', () => {
 
       let tabHistory: string[] = [];
 
-      // Context1を開く
+      // Open Context1
       state = handleContextNodeSelect(state, node1);
       const tab1 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context1');
       tabHistory.push(tab1!.id);
 
-      // Tab1を削除
+      // Delete Tab1
       const result = handleContextNodeClose(state, tab1!, tabHistory);
       state = result.state;
       tabHistory = result.newTabHistory;
 
-      // デフォルトパネルが作成されていることを確認
+      // Verify default panel is created
       expect(state.panels.length).toBe(1);
       expect(state.panels[0].tabs.length).toBe(0);
       expect(state.selectedContext).toBeUndefined();
       expect(tabHistory.length).toBe(0);
 
-      // Active panelは新しく作成されたデフォルトパネル
+      // Active panel is the newly created default panel
       expect(state.activePanelId).toBe(state.panels[0].id);
     });
   });
 
   describe('handleSplitRight', () => {
-    it('ctx1を開く, splitする: panelが2つできてそれぞれ1つずつ同じcontextidのtabができる. 2つ目の方にactive panel, active tabがある', () => {
-      // 初期状態
+    it('open ctx1, split → 2 panels each with one tab of same context, second panel is active', () => {
+      // Initial state
       let state: PanelState = {
         panels: [createDefaultPanel()],
         activePanelId: '',
@@ -257,7 +257,7 @@ describe('panelLogic', () => {
         clusterContext: context1,
       };
 
-      // Context1を開く
+      // Open Context1
       state = handleContextNodeSelect(state, node1);
       const tab1 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context1');
       expect(tab1).toBeDefined();
@@ -267,26 +267,26 @@ describe('panelLogic', () => {
       expect(splitResult).toBeDefined();
       state = splitResult!.state;
 
-      // パネルが2つある
+      // 2 panels exist
       expect(state.panels.length).toBe(2);
 
-      // 1つ目のパネルに元のtab1がある
+      // First panel has original tab1
       expect(state.panels[0].tabs.length).toBe(1);
       expect(state.panels[0].tabs[0].clusterContext.id).toBe('context1');
 
-      // 2つ目のパネルに新しいタブがある（同じcontext id）
+      // Second panel has new tab (same context id)
       expect(state.panels[1].tabs.length).toBe(1);
       expect(state.panels[1].tabs[0].clusterContext.id).toBe('context1');
 
-      // 2つ目のパネルがアクティブ
+      // Second panel is active
       expect(state.activePanelId).toBe(state.panels[1].id);
 
-      // 2つ目のパネルのタブがアクティブ
+      // Second panel's tab is active
       expect(state.panels[1].activeContextId).toBe('context1');
     });
 
-    it('ctx1, ctx2, ctx3を開く、ctx2をsplitする, 2つ目のパネルのctx2を消す: パネルは1つだけ。ctx1, ctx3が残る。ctx3がactive', () => {
-      // 初期状態
+    it('open ctx1,2,3, split ctx2, close ctx2 in panel2 → 1 panel with ctx1,ctx3, ctx3 active', () => {
+      // Initial state
       let state: PanelState = {
         panels: [createDefaultPanel()],
         activePanelId: '',
@@ -338,59 +338,59 @@ describe('panelLogic', () => {
 
       let tabHistory: string[] = [];
 
-      // Context1を開く
+      // Open Context1
       state = handleContextNodeSelect(state, node1);
       const tab1 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context1');
       tabHistory.push(tab1!.id);
 
-      // Context2を開く
+      // Open Context2
       state = handleContextNodeSelect(state, node2);
       const tab2 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context2');
       tabHistory.push(tab2!.id);
 
-      // Context3を開く
+      // Open Context3
       state = handleContextNodeSelect(state, node3);
       const tab3 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context3');
       tabHistory.push(tab3!.id);
 
-      // ctx2をsplitする
+      // Split ctx2
       const splitResult = handleSplitRight(state, tab2!);
       expect(splitResult).toBeDefined();
       state = splitResult!.state;
       tabHistory.push(splitResult!.newTab.id);
 
-      // パネルが2つある
+      // 2 panels exist
       expect(state.panels.length).toBe(2);
 
-      // 1つ目のパネルにctx1, ctx2, ctx3がある
+      // First panel has ctx1, ctx2, ctx3
       expect(state.panels[0].tabs.length).toBe(3);
 
-      // 2つ目のパネルにctx2がある
+      // Second panel has ctx2
       expect(state.panels[1].tabs.length).toBe(1);
       expect(state.panels[1].tabs[0].clusterContext.id).toBe('context2');
       const panel2Tab2 = state.panels[1].tabs[0];
 
-      // 2つ目のパネルのctx2を消す
+      // Close ctx2 in second panel
       const closeResult = handleContextNodeClose(state, panel2Tab2, tabHistory);
       state = closeResult.state;
       tabHistory = closeResult.newTabHistory;
 
-      // パネルは1つだけ
+      // Only 1 panel
       expect(state.panels.length).toBe(1);
 
-      // ctx1, ctx3が残る
+      // ctx1, ctx3 remain
       expect(state.panels[0].tabs.length).toBe(3);
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context1')).toBeDefined();
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context2')).toBeDefined();
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context3')).toBeDefined();
 
-      // ctx3がactive
+      // ctx3 is active
       expect(state.panels[0].activeContextId).toBe('context3');
       expect(state.activePanelId).toBe(state.panels[0].id);
     });
 
-    it('ctx1, ctx2, ctx3を開く、ctx2をsplitする, 1つ目のパネルのctx2タブを開く、それを閉じる: パネルは2つ。パネル1にはctx1, ctx3が残りパネルはactiveではないがctx3がアクティブ。パネル2にはctx2が残りactiveでパネル自体もactive', () => {
-      // 初期状態
+    it('open ctx1,2,3, split ctx2, select ctx2 in panel1 then close it → 2 panels, panel1 has ctx1,ctx3 with ctx3 active, panel2 has ctx2 and is active', () => {
+      // Initial state
       let state: PanelState = {
         panels: [createDefaultPanel()],
         activePanelId: '',
@@ -442,31 +442,31 @@ describe('panelLogic', () => {
 
       let tabHistory: string[] = [];
 
-      // Context1を開く
+      // Open Context1
       state = handleContextNodeSelect(state, node1);
       const tab1 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context1');
       tabHistory.push(tab1!.id);
 
-      // Context2を開く
+      // Open Context2
       state = handleContextNodeSelect(state, node2);
       const tab2Panel1 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context2');
       tabHistory.push(tab2Panel1!.id);
 
-      // Context3を開く
+      // Open Context3
       state = handleContextNodeSelect(state, node3);
       const tab3 = state.panels[0].tabs.find(t => t.clusterContext.id === 'context3');
       tabHistory.push(tab3!.id);
 
-      // ctx2をsplitする
+      // Split ctx2
       const splitResult = handleSplitRight(state, tab2Panel1!);
       expect(splitResult).toBeDefined();
       state = splitResult!.state;
       tabHistory.push(splitResult!.newTab.id);
 
-      // パネルが2つある
+      // 2 panels exist
       expect(state.panels.length).toBe(2);
 
-      // 1つ目のパネルのctx2タブを開く（アクティブにする）
+      // Select ctx2 tab in first panel (make active)
       state = {
         ...state,
         activePanelId: state.panels[0].id,
@@ -481,31 +481,31 @@ describe('panelLogic', () => {
         }),
       };
 
-      // 1つ目のパネルのctx2を閉じる
+      // Close ctx2 in first panel
       const closeResult = handleContextNodeClose(state, tab2Panel1!, tabHistory);
       state = closeResult.state;
       tabHistory = closeResult.newTabHistory;
 
-      // パネルは2つ
+      // 2 panels exist
       expect(state.panels.length).toBe(2);
 
-      // パネル1にはctx1, ctx3が残る
+      // Panel1 has ctx1, ctx3
       expect(state.panels[0].tabs.length).toBe(2);
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context1')).toBeDefined();
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context3')).toBeDefined();
       expect(state.panels[0].tabs.find(t => t.clusterContext.id === 'context2')).toBeUndefined();
 
-      // パネル1はactiveではないがctx3がアクティブ
+      // Panel1 is not active but ctx3 is its active tab
       expect(state.panels[0].activeContextId).toBe('context3');
 
-      // パネル2にはctx2が残る
+      // Panel2 has ctx2
       expect(state.panels[1].tabs.length).toBe(1);
       expect(state.panels[1].tabs[0].clusterContext.id).toBe('context2');
 
-      // パネル2がactive
+      // Panel2 is active
       expect(state.activePanelId).toBe(state.panels[1].id);
 
-      // パネル2のctx2がアクティブ
+      // Panel2's ctx2 is active
       expect(state.panels[1].activeContextId).toBe('context2');
     });
   });

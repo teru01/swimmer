@@ -14,10 +14,10 @@ function getDefaultShellPath(): string {
 const defaultShellPath = getDefaultShellPath();
 
 /**
- * アプリケーションの設定スキーマ
+ * Application preferences schema
  */
 export const PreferencesSchema = z.object({
-  // General設定
+  // General settings
   general: z
     .object({
       kubeconfigPath: z.string().default(''),
@@ -25,7 +25,7 @@ export const PreferencesSchema = z.object({
       theme: z.enum(['dark', 'light', 'system']).default('light'),
     })
     .default({}),
-  // Terminal設定
+  // Terminal settings
   terminal: z
     .object({
       shellPath: z.string().default(defaultShellPath),
@@ -57,7 +57,7 @@ export const PreferencesSchema = z.object({
       contextLabelColor: z.enum(['tag-text', 'tag-background', 'theme']).default('tag-text'),
     })
     .default({}),
-  // タブ履歴設定
+  // Tab history settings
   tabHistory: z
     .object({
       maxSize: z.number().default(100),
@@ -68,7 +68,7 @@ export const PreferencesSchema = z.object({
 export type Preferences = z.infer<typeof PreferencesSchema>;
 
 /**
- * デフォルトの設定値
+ * Default preference values
  */
 export const defaultPreferences: Preferences = {
   general: {

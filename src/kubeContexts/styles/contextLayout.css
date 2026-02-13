@@ -2,7 +2,7 @@
  * Layout styles for Kubernetes Contexts pane 
  */
 
-/* 左ペイン：コンテキスト階層一覧 (フルハイト) */
+/* Left pane: context hierarchy list (full height) */
 .contexts-pane-container {
   width: 220px;
   min-width: 180px;
@@ -10,7 +10,7 @@
   border-right: 1px solid var(--border-color);
   overflow-y: auto;
   background-color: var(--bg-primary);
-  height: 100%; /* フルハイトに */
+  height: 100%; /* Full height */
 }
 
 .contexts-list {

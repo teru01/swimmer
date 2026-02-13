@@ -118,7 +118,7 @@ function ClusterViewInstance({
           selectedResourceEvents: result.events,
         });
       } catch {
-        // ポーリング失敗は無視する
+        // Ignore polling failures
       }
     }, RESOURCE_DETAIL_POLL_INTERVAL_MS);
     return () => clearInterval(intervalId);

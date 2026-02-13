@@ -7,12 +7,12 @@ import {
 } from '../contextTree';
 
 /**
- * Others プロバイダー
- * GKEやEKSなど、他のプロバイダーにマッチしないコンテキストをすべて受け入れる
+ * Others provider
+ * Accepts all contexts that don't match other providers like GKE or EKS
  */
 export const othersProvider: ContextProvider = {
   name: 'Others',
-  // すべてにマッチする正規表現（実際には他のプロバイダーでマッチしなかったものを受け取る）
+  // Regex that matches everything (receives contexts not matched by other providers)
   pattern: /.+/,
   resourceContainerLabel: 'Project/Account',
 

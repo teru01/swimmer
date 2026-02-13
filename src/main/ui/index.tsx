@@ -1,6 +1,6 @@
 import React, { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 
-// ボタンコンポーネント
+// Button component
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'small' | 'medium' | 'large';
   danger?: boolean;
@@ -35,7 +35,7 @@ export const Button: React.FC<ButtonProps> = ({
   );
 };
 
-// 入力フィールドコンポーネント
+// Input field component
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix'> {
   size?: 'small' | 'medium' | 'large';
   prefix?: ReactNode;
@@ -66,7 +66,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
   );
 });
 
-// タグコンポーネント
+// Tag component
 interface TagProps {
   children: ReactNode;
   className?: string;
@@ -97,7 +97,7 @@ export const Tag: React.FC<TagProps> = ({ children, className, closable, onClose
   );
 };
 
-// ドロップダウンコンポーネント
+// Dropdown component
 interface DropdownProps {
   overlay: ReactNode;
   children: ReactNode;
@@ -107,7 +107,7 @@ export const Dropdown: React.FC<DropdownProps> = ({ overlay, children }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  // 外部クリックでドロップダウンを閉じる
+  // Close dropdown on outside click
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -133,7 +133,7 @@ export const Dropdown: React.FC<DropdownProps> = ({ overlay, children }) => {
   );
 };
 
-// メニューコンポーネント
+// Menu component
 export const Menu = {
   Item: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => (
     <div className="px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-100 rounded" onClick={onClick}>

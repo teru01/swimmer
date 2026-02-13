@@ -1,4 +1,4 @@
-// ノードタイプを定義する
+// Define node types
 export const NodeType = {
   Folder: 'folder',
   Context: 'context',
@@ -126,7 +126,7 @@ export const newClusterContextNode = (
 };
 
 /**
- * コンテキストをプロバイダーごとに分類する
+ * Classify contexts by provider
  */
 export const groupContextsByProvider = (
   contexts: string[],
@@ -134,12 +134,12 @@ export const groupContextsByProvider = (
 ): Map<ContextProvider, string[]> => {
   const grouped = new Map<ContextProvider, string[]>();
 
-  // プロバイダーを初期化
+  // Initialize providers
   providers.forEach(provider => {
     grouped.set(provider, []);
   });
 
-  // コンテキストを分類
+  // Classify contexts
   contexts.forEach(context => {
     for (const provider of providers) {
       if (provider.pattern.test(context)) {
@@ -153,7 +153,7 @@ export const groupContextsByProvider = (
 };
 
 /**
- * 複数のプロバイダーを使用してツリー構造を構築する
+ * Build tree structure using multiple providers
  */
 export const buildTreeFromContexts = (
   contexts: string[],

@@ -189,7 +189,7 @@
   cursor: pointer;
   border-radius: 4px;
   color: var(--text-primary);
-  user-select: none; /* テキスト選択を防止 */
+  user-select: none; /* Prevent text selection */
   transition: background-color 0.2s;
 }
 
@@ -214,7 +214,7 @@
   color: var(--color-primary);
 }
 
-/* ドラッグ中のノードスタイル */
+/* Dragging node style */
 .tree-node[aria-grabbed='true'] {
   opacity: 0.7;
   background-color: var(--color-primary-low);
@@ -224,7 +224,7 @@
   z-index: 2;
 }
 
-/* ドロップターゲットのスタイル */
+/* Drop target style */
 .arborist-drop-target::before {
   content: '';
   position: absolute;
@@ -235,39 +235,39 @@
   z-index: 2;
 }
 
-/* ドロップターゲットが上側の場合 */
+/* Drop target top */
 .arborist-drop-target.drop-target-top::before {
   top: 0;
 }
 
-/* ドロップターゲットが下側の場合 */
+/* Drop target bottom */
 .arborist-drop-target.drop-target-bottom::before {
   bottom: 0;
 }
 
-/* ドロップターゲットがフォルダー内部の場合 */
+/* Drop target inside folder */
 .arborist-drop-target.drop-target-inside {
   background-color: var(--color-primary-low);
   border: 1px dashed var(--color-primary);
 }
 
-/* ドラッグハンドルスタイル強化 */
+/* Enhanced drag handle style */
 .drag-handle {
-  cursor: grab !important; /* 重要な優先度を持つカーソルスタイル */
+  cursor: grab !important; /* High priority cursor style */
   display: flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
-  min-width: 28px; /* 幅が縮小されないように */
+  min-width: 28px; /* Prevent width from shrinking */
   border-radius: 3px;
   color: var(--text-secondary);
   opacity: 0;
   transition: opacity 0.2s;
-  pointer-events: auto !important; /* ドラッグハンドルが常にクリック可能 */
+  pointer-events: auto !important; /* Drag handle always clickable */
   position: relative;
   margin-left: 4px;
-  z-index: 10; /* 他の要素よりも前面に */
+  z-index: 10; /* In front of other elements */
 }
 
 .tree-node:hover .drag-handle {
@@ -282,14 +282,14 @@
 }
 
 .drag-handle:active {
-  cursor: grabbing !important; /* ドラッグ中のカーソルスタイル */
+  cursor: grabbing !important; /* Cursor style while dragging */
   opacity: 1 !important;
 }
 
 .drag-icon {
   font-size: 14px;
   font-weight: bold;
-  pointer-events: none; /* アイコン自体はイベントを受け取らない */
+  pointer-events: none; /* Icon does not receive events */
   user-select: none;
 }
 
@@ -298,10 +298,10 @@
   align-items: center;
   gap: 4px;
   flex: 1;
-  pointer-events: none; /* 子要素のクリックイベントをツリーノード全体に伝播 */
-  overflow: hidden; /* 長いテキストを切り詰める */
-  text-overflow: ellipsis; /* 長いテキストを省略記号で表示 */
-  white-space: nowrap; /* テキストを折り返さない */
+  pointer-events: none; /* Propagate click events to tree node */
+  overflow: hidden; /* Truncate long text */
+  text-overflow: ellipsis; /* Show ellipsis for long text */
+  white-space: nowrap; /* No text wrapping */
 }
 
 .node-content input,
@@ -321,7 +321,7 @@
   justify-content: center;
   width: 16px;
   height: 16px;
-  flex-shrink: 0; /* アイコンが縮小されないように */
+  flex-shrink: 0; /* Prevent icon from shrinking */
 }
 
 .context-icon img {
@@ -337,7 +337,7 @@
   margin-left: 6px;
   background: var(--bg-tertiary);
   color: var(--text-secondary);
-  flex-shrink: 0; /* タグが縮小されないように */
+  flex-shrink: 0; /* Prevent tag from shrinking */
 }
 
 .node-context-info {
@@ -366,7 +366,7 @@
   opacity: 1;
 }
 
-/* react-arboristのドラッグ操作関連のスタイル */
+/* react-arborist drag operation styles */
 [data-rbd-draggable-context-id] {
   user-select: none !important;
 }

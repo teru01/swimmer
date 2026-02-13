@@ -1,5 +1,5 @@
 /**
- * Rust の Tauri コマンドを型安全に呼び出すためのラッパー関数を提供します。
+ * Provides type-safe wrapper functions for invoking Rust Tauri commands.
  */
 
 import { invoke } from '@tauri-apps/api/core';
@@ -36,46 +36,46 @@ export interface CrdGroup {
 }
 
 /**
- * サポートされている全ての Rust コマンドをラップしたオブジェクト
+ * Object wrapping all supported Rust commands
  */
 export const commands = {
   /**
-   * 利用可能な Kubernetes コンテキストのリストを取得します
+   * Get list of available Kubernetes contexts
    */
   getKubeContexts: async (): Promise<string[]> => {
     return invoke('get_kube_contexts');
   },
 
   /**
-   * Kubeconfig パスを設定します
+   * Set kubeconfig path
    */
   setKubeconfigPath: async (path: string | undefined): Promise<void> => {
     return invoke('set_kubeconfig_path', { path });
   },
 
   /**
-   * 現在の Kubeconfig パスを取得します
+   * Get current kubeconfig path
    */
   getKubeconfigPath: async (): Promise<string | undefined> => {
     return invoke('get_kubeconfig_path');
   },
 
   /**
-   * クラスタ概要情報を取得します
+   * Get cluster overview information
    */
   getClusterOverviewInfo: async (contextId: string): Promise<ClusterOverviewInfo> => {
     return invoke('get_cluster_overview_info', { contextId });
   },
 
   /**
-   * クラスタ統計情報を取得します
+   * Get cluster statistics
    */
   getClusterStats: async (contextId: string): Promise<ClusterStats> => {
     return invoke('get_cluster_stats', { contextId });
   },
 
   /**
-   * Kubernetesリソースのリストを取得します
+   * Get list of Kubernetes resources
    */
   listResources: async (
     context: string | undefined,
@@ -86,7 +86,7 @@ export const commands = {
   },
 
   /**
-   * Kubernetesリソースの詳細を取得します
+   * Get Kubernetes resource details
    */
   getResourceDetail: async (
     context: string | undefined,
@@ -98,7 +98,7 @@ export const commands = {
   },
 
   /**
-   * リソースのwatch監視を開始します
+   * Start watching resources
    */
   startWatchResources: async (
     context: string | undefined,
@@ -109,21 +109,21 @@ export const commands = {
   },
 
   /**
-   * リソースのwatch監視を停止します
+   * Stop watching resources
    */
   stopWatchResources: async (watchId: string): Promise<void> => {
     return invoke('stop_watch_resources', { watchId });
   },
 
   /**
-   * CRDグループ一覧を取得します
+   * Get list of CRD groups
    */
   listCrdGroups: async (context: string | undefined): Promise<CrdGroup[]> => {
     return invoke('list_crd_groups', { context });
   },
 
   /**
-   * Kubernetesリソースを削除します
+   * Delete a Kubernetes resource
    */
   deleteResource: async (
     context: string | undefined,
@@ -135,7 +135,7 @@ export const commands = {
   },
 
   /**
-   * Deploymentのrollout restartを実行します
+   * Execute rollout restart for a Deployment
    */
   rolloutRestartDeployment: async (
     context: string | undefined,

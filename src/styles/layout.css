@@ -1,5 +1,5 @@
 /* layout.css 
- * グローバルなレイアウトスタイル
+ * Global layout styles
  */
 
 [data-theme='light'] {
@@ -21,7 +21,7 @@
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.07);
 }
 
-/* 基本レイアウト */
+/* Base layout */
 .app {
   display: flex;
   flex-direction: column;
@@ -41,14 +41,14 @@
   color: var(--text-primary);
 }
 
-/* メインコンテンツ */
+/* Main content */
 .main-content {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
-/* 共通スタイル */
+/* Common styles */
 .pane-header {
   padding: 10px;
   background-color: var(--bg-secondary);

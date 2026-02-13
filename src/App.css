@@ -1,13 +1,13 @@
-/* グローバルなスタイル定義 */
+/* Global style definitions */
 @import './styles/layout.css';
 
-/* 機能別スタイルのインポート */
+/* Feature-specific style imports */
 @import './kubeContexts/styles/contextsPane.css';
 @import './kubeContexts/styles/contextLayout.css';
 @import './cluster/styles/clusterLayout.css';
 @import './cluster/styles/terminalPane.css';
 
-/* グローバルリセットとベーススタイル */
+/* Global reset and base styles */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -27,7 +27,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ボタンの共通スタイル */
+/* Common button styles */
 button {
   cursor: pointer;
   padding: 6px 12px;
@@ -53,7 +53,7 @@ button.primary:hover {
   background-color: #0069bd;
 }
 
-/* 入力フィールドの共通スタイル */
+/* Common input field styles */
 input,
 textarea,
 select {
@@ -92,7 +92,7 @@ button:focus:not(:focus-visible),
   outline: none;
 }
 
-/* リンクの共通スタイル */
+/* Common link styles */
 a {
   color: var(--color-primary);
   text-decoration: none;
@@ -103,7 +103,7 @@ a:hover {
   text-decoration: underline;
 }
 
-/* スクロールバーのスタイル */
+/* Scrollbar styles */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
