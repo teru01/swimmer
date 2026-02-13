@@ -157,7 +157,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 16px 16px calc(16px + 22px);
+  padding: 0 8px 16px 16px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -289,9 +289,10 @@
 
 .node-content input,
 .node-content .context-tag,
+.node-content .favorite-button,
 .folder-icon,
 .context-icon {
-  pointer-events: auto; /* 特定の要素はクリック可能にする */
+  pointer-events: auto;
 }
 
 .folder-icon,
@@ -403,22 +404,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: transparent;
   cursor: pointer;
   border-radius: 3px;
-  font-size: 16px;
+  font-size: 12px;
   line-height: 1;
-  transition: all 0.2s;
+  position: relative;
+  z-index: 1;
+  transition:
+    color 0.2s,
+    transform 0.2s;
+}
+
+.tree-node:hover .favorite-button {
+  color: var(--text-secondary);
 }
 
 .favorite-button:hover {
-  background-color: var(--bg-hover);
-  color: #fbbf24;
+  color: #fbbf24 !important;
   transform: scale(1.1);
 }
 

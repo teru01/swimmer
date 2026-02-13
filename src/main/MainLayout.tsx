@@ -399,7 +399,7 @@ function MainLayout({ onNavigateToPreferences }: MainLayoutProps) {
       <div className="main-content">
         <PanelGroup direction="horizontal">
           {/* Left pane: Context hierarchy (full height) */}
-          <Panel defaultSize={15} minSize={10} maxSize={25}>
+          <Panel defaultSize={15} minSize={10} maxSize={40}>
             <div className="contexts-pane-container">
               <ContextsPane
                 selectedContext={selectedContext}

@@ -334,6 +334,14 @@ function ContextsPane({
             {isFolder && <span className="folder-icon">{isExpanded ? '▼' : '▶'}</span>}
             {isContext && (
               <>
+                <button
+                  className={`favorite-button ${favorites.has(node.clusterContext?.id || '') ? 'favorited' : ''}`}
+                  onClick={e => handleFavoriteClick(node.clusterContext?.id || '', e)}
+                  aria-label="Toggle favorite"
+                  title="Toggle favorite"
+                >
+                  ★
+                </button>
                 {getContextIcon(node.clusterContext?.provider) ? (
                   <img
                     src={getContextIcon(node.clusterContext?.provider)}
@@ -358,25 +366,6 @@ function ContextsPane({
               </span>
             )}
           </div>
-          {isContext && (
-            <div className="node-actions">
-              <button
-                className={`favorite-button ${favorites.has(node.clusterContext?.id || '') ? 'favorited' : ''}`}
-                onClick={e => handleFavoriteClick(node.clusterContext?.id || '', e)}
-                aria-label="Toggle favorite"
-                title="Toggle favorite"
-              >
-                ★
-              </button>
-              <button
-                className="menu-button"
-                onClick={e => handleContextMenu(node, e)}
-                aria-label="Menu"
-              >
-                ⋮
-              </button>
-            </div>
-          )}
         </div>
         {isFolder && isExpanded && node.children && (
           <div className="node-children">
@@ -483,7 +472,15 @@ function ContextsPane({
               .flatMap(node => {
                 const collectContexts = (n: ContextNode): ContextNode[] => {
                   if (n.type === NodeType.Context && n.clusterContext) {
-                    return favorites.has(n.clusterContext.id) ? [n] : [];
+                    if (!favorites.has(n.clusterContext.id)) return [];
+                    if (selectedTagIds.size > 0) {
+                      const contextTags = getContextTags(n.clusterContext.id);
+                      const matchesAllTags = Array.from(selectedTagIds).every(tagId =>
+                        contextTags.includes(tagId)
+                      );
+                      if (!matchesAllTags) return [];
+                    }
+                    return [n];
                   }
                   if (n.type === NodeType.Folder && n.children) {
                     return n.children.flatMap(collectContexts);
