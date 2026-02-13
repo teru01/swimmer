@@ -10,6 +10,37 @@ use thiserror::Error;
 
 use terminal::TerminalSessions;
 
+/// Inherit PATH and KUBECONFIG from the user's shell on macOS/Linux app launch
+fn fix_shell_env() {
+    #[cfg(not(target_os = "windows"))]
+    {
+        use std::process::Command;
+
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+        // -ilc: launch as interactive + login shell to source .zshrc/.zprofile etc.
+        if let Ok(output) = Command::new(&shell)
+            .args(["-ilc", "echo \"__PATH=${PATH}\\n__KUBECONFIG=${KUBECONFIG}\""])
+            .stderr(std::process::Stdio::null())
+            .output()
+        {
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                for line in stdout.lines() {
+                    if let Some(value) = line.strip_prefix("__PATH=") {
+                        if !value.is_empty() {
+                            std::env::set_var("PATH", value);
+                        }
+                    } else if let Some(value) = line.strip_prefix("__KUBECONFIG=") {
+                        if !value.is_empty() {
+                            std::env::set_var("KUBECONFIG", value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 pub type KubeconfigPath = Arc<Mutex<Option<String>>>;
 
 #[derive(Debug, Error)]
@@ -105,6 +136,8 @@ async fn get_kubeconfig_path(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    fix_shell_env();
+
     let terminal_sessions: TerminalSessions = Arc::new(Mutex::new(HashMap::new()));
     let watcher_handle: k8s_api::WatcherHandle = Arc::new(Mutex::new(HashMap::new()));
     let kubeconfig_path: KubeconfigPath = Arc::new(Mutex::new(None));
@@ -148,7 +181,7 @@ pub fn run() {
         .setup(|app| {
             use tauri::{menu::*, Emitter};
 
-            // メニューバーを作成
+            // Create menu bar
             let menu = MenuBuilder::new(app)
                 .items(&[&SubmenuBuilder::new(app, "swimmer")
                     .items(&[
@@ -163,7 +196,7 @@ pub fn run() {
 
             app.set_menu(menu)?;
 
-            // メニューイベントハンドラ
+            // Menu event handler
             app.on_menu_event(|app, event| {
                 if event.id() == "preferences" {
                     let _ = app.emit("menu-preferences", ());
