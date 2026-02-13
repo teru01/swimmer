@@ -10,10 +10,16 @@
 
 ## Table of Contents
 
+- [Table of Contents](#table-of-contents)
 - [What is Swimmer?](#what-is-swimmer)
 - [Why Swimmer?](#why-swimmer)
 - [Features](#features)
-- [Tech Stack](#tech-stack)
+  - [Multi-Cluster Context Management](#multi-cluster-context-management)
+  - [Tabbed \& Split-Panel Workspaces](#tabbed--split-panel-workspaces)
+  - [Resource Browser](#resource-browser)
+  - [Cluster Overview](#cluster-overview)
+  - [Integrated Terminal](#integrated-terminal)
+- [Installation](#installation)
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
 - [Development](#development)
@@ -22,11 +28,21 @@
 
 ## What is Swimmer?
 
-Swimmer is a native desktop application for managing multiple Kubernetes clusters from a single window. It provides an intuitive hierarchical context tree, tabbed workspaces with split-panel layouts, a built-in resource browser covering 27+ resource types, and an integrated terminal — all powered by Tauri and Rust for fast, lightweight performance.
+Swimmer is a native desktop GUI for Kubernetes. From a single window you can:
+
+- Browse and inspect 27+ resource types across any number of clusters
+- Open multiple clusters side-by-side in tabbed, split-panel workspaces
+- Organize contexts with a hierarchical tree, favorites, and color-coded tags
+- Run kubectl and other commands in a built-in terminal scoped to each cluster
+- View cluster dashboards with node health, pod status, and version info
+
+Built with Tauri and Rust for fast startup, low memory usage, and native OS integration.
 
 ## Why Swimmer?
 
-Modern infrastructure often spans many Kubernetes clusters across multiple cloud providers and regions. Swimmer is designed from the ground up for this reality: its hierarchical context tree, favorites, tags, and split-panel workspaces let you navigate and compare clusters as naturally as browsing folders in a file manager.
+Modern infrastructure often spans dozens of Kubernetes clusters across multiple cloud providers and regions. Existing tools make you deal with them one at a time — switching contexts, losing your place, and repeating the same navigation for each cluster.
+
+Swimmer treats multi-cluster as the default. Its context tree groups clusters by provider, region, and project so you can find the right cluster instantly. Favorites and tags let you bookmark the clusters you care about and filter out the rest. Split panels let you compare resources across clusters without switching windows. Each tab remembers its own terminal session and view state, so context-switching has zero overhead.
 
 ## Features
 
@@ -51,15 +67,15 @@ Modern infrastructure often spans many Kubernetes clusters across multiple cloud
 
 Browse and inspect 27+ built-in resource types organized by category:
 
-| Category | Resources |
-|---|---|
-| Workloads | Pods, Deployments, ReplicaSets, StatefulSets, DaemonSets, Jobs, CronJobs, HPAs |
-| Network | Services, Endpoints, Ingresses, NetworkPolicies |
-| Storage | PersistentVolumes, PersistentVolumeClaims, StorageClasses |
-| Configuration | ConfigMaps, Secrets, LimitRanges, ResourceQuotas |
-| RBAC | Roles, ClusterRoles, RoleBindings, ClusterRoleBindings, ServiceAccounts |
-| Cluster | Nodes, Namespaces, Events |
-| Custom Resources | Dynamically discovered CRDs |
+| Category         | Resources                                                                      |
+| ---------------- | ------------------------------------------------------------------------------ |
+| Workloads        | Pods, Deployments, ReplicaSets, StatefulSets, DaemonSets, Jobs, CronJobs, HPAs |
+| Network          | Services, Endpoints, Ingresses, NetworkPolicies                                |
+| Storage          | PersistentVolumes, PersistentVolumeClaims, StorageClasses                      |
+| Configuration    | ConfigMaps, Secrets, LimitRanges, ResourceQuotas                               |
+| RBAC             | Roles, ClusterRoles, RoleBindings, ClusterRoleBindings, ServiceAccounts        |
+| Cluster          | Nodes, Namespaces, Events                                                      |
+| Custom Resources | Dynamically discovered CRDs                                                    |
 
 - Namespace filtering with autocomplete
 - Real-time updates via Kubernetes watch API
@@ -68,7 +84,7 @@ Browse and inspect 27+ built-in resource types organized by category:
 
 ### Cluster Overview
 
-At-a-glance dashboard showing provider, region, cluster name, Kubernetes version, node readiness, pod status, and more. Auto-refreshes every 30 seconds.
+At-a-glance dashboard showing provider, region, cluster name, Kubernetes version, node readiness, pod status, and more.
 
 ### Integrated Terminal
 
@@ -77,17 +93,20 @@ At-a-glance dashboard showing provider, region, cluster name, Kubernetes version
 - Automatically configured with the selected cluster's kubeconfig context
 - Customizable theme, font, and shell path via Preferences
 
-## Tech Stack
+## Installation
 
-| Layer | Technology |
+Download the latest release for your OS from the [Releases](https://github.com/teru01/swimmer/releases) page.
+
+| OS | File |
 |---|---|
-| Desktop Runtime | [Tauri 2](https://tauri.app/) |
-| Frontend | React 18, TypeScript, Vite |
-| Backend | Rust, [kube-rs](https://kube.rs/), tokio |
-| Terminal | xterm.js, portable-pty |
-| Layout | react-resizable-panels |
+| macOS (Apple Silicon) | `.dmg` (aarch64) |
+| macOS (Intel) | `.dmg` (x64) |
+| Windows | `.msi` / `.exe` |
+| Linux | `.deb` / `.AppImage` |
 
 ## Prerequisites
+
+> The following are only needed if you want to build from source.
 
 - [Rust](https://www.rust-lang.org/tools/install) (stable)
 - [Node.js](https://nodejs.org/) (v18+)
