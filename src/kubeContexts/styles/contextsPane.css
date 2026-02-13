@@ -151,6 +151,23 @@
   font-size: 10px;
   color: var(--text-secondary);
   font-weight: 500;
+  flex: 1;
+}
+
+.refresh-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.refresh-button:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
 }
 
 .context-tree-container {

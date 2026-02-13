@@ -94,27 +94,38 @@ function ContextsPane({
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [handleGlobalKeyDown]);
 
-  useEffect(() => {
-    async function loadContexts() {
-      try {
-        setLoading(true);
-        setLoadError(undefined);
-        const contexts = await commands.getKubeContexts();
-        const tree = buildTreeFromContexts(contexts, PROVIDERS);
-        setContextTree(tree);
+  const refreshContexts = useCallback(async (preserveExpanded = false) => {
+    try {
+      setLoading(true);
+      setLoadError(undefined);
+      const contexts = await commands.getKubeContexts();
+      const tree = buildTreeFromContexts(contexts, PROVIDERS);
+      setContextTree(tree);
+      if (!preserveExpanded) {
         setExpandedIds(new Set(getAllOpenFolderIds(tree)));
-      } catch (error) {
-        console.error('Failed to load contexts:', error);
-        setLoadError(String(error));
-      } finally {
-        setLoading(false);
       }
+    } catch (error) {
+      console.error('Failed to load contexts:', error);
+      setLoadError(String(error));
+    } finally {
+      setLoading(false);
     }
-    loadContexts();
-    setTags(loadTags());
-    setFavorites(loadFavorites());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    refreshContexts(false);
+    setTags(loadTags());
+    setFavorites(loadFavorites());
+  }, [refreshContexts]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      refreshContexts(true);
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refreshContexts]);
 
   useEffect(() => {
     const handleTagsChanged = () => setTags(loadTags());
@@ -512,6 +523,14 @@ function ContextsPane({
             {showClusters ? '▾' : '▸'}
           </button>
           <span className="context-tree-label">Clusters</span>
+          <button
+            type="button"
+            className="refresh-button"
+            onClick={() => refreshContexts(true)}
+            title="Refresh contexts"
+          >
+            ↻
+          </button>
         </div>
         {showClusters && (
           <div className="context-tree-container">
