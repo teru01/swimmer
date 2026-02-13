@@ -92,6 +92,18 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
     });
   };
 
+  const handleContextLabelColorChange = async (
+    contextLabelColor: 'tag-text' | 'tag-background' | 'theme'
+  ) => {
+    await updatePreferences({
+      ...preferences,
+      terminal: {
+        ...preferences.terminal,
+        contextLabelColor,
+      },
+    });
+  };
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -294,6 +306,29 @@ const PreferencesPage: React.FC<PreferencesPageProps> = ({
                   placeholder='Menlo, Monaco, "Courier New", monospace'
                   className="text-input"
                 />
+              </div>
+
+              <div className="preference-row">
+                <div className="preference-label-wrapper">
+                  <label htmlFor="context-label-color">Context Label Color</label>
+                  <p className="preference-description">
+                    How to color the context name displayed above the terminal.
+                  </p>
+                </div>
+                <select
+                  id="context-label-color"
+                  className="select-input"
+                  value={preferences.terminal.contextLabelColor}
+                  onChange={e =>
+                    handleContextLabelColorChange(
+                      e.target.value as 'tag-text' | 'tag-background' | 'theme'
+                    )
+                  }
+                >
+                  <option value="theme">Match theme</option>
+                  <option value="tag-text">First tag color (text)</option>
+                  <option value="tag-background">First tag color (background)</option>
+                </select>
               </div>
             </section>
           )}

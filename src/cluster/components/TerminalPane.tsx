@@ -7,6 +7,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { debug } from '@tauri-apps/plugin-log';
 import { ClusterContext } from '../../lib/contextTree';
+import { usePreferences } from '../../contexts/PreferencesContext';
 import { loadPreferences } from '../../lib/fs';
 import { getContextTags, getTagById } from '../../lib/tag';
 
@@ -71,7 +72,8 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
  */
 function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [contextColor, setContextColor] = useState<string | undefined>(undefined);
+  const { preferences } = usePreferences();
+  const [tagColor, setTagColor] = useState<string | undefined>(undefined);
 
   // Handle terminal pane resize
   useEffect(() => {
@@ -98,21 +100,37 @@ function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
       const tagIds = getContextTags(activeSession.clusterContext.id);
       if (tagIds.length > 0) {
         const firstTag = getTagById(tagIds[0]);
-        setContextColor(firstTag?.color);
+        setTagColor(firstTag?.color);
       } else {
-        setContextColor(undefined);
+        setTagColor(undefined);
       }
     } else {
-      setContextColor(undefined);
+      setTagColor(undefined);
     }
   }, [activeTabId, allTerminalSessions]);
 
   const activeSession = activeTabId ? allTerminalSessions.get(activeTabId) : undefined;
+  const contextLabelColor = preferences.terminal.contextLabelColor;
+
+  const labelStyle: React.CSSProperties = (() => {
+    if (contextLabelColor === 'tag-text' && tagColor) {
+      return { color: tagColor };
+    }
+    if (contextLabelColor === 'tag-background' && tagColor) {
+      return {
+        backgroundColor: tagColor,
+        color: '#ffffff',
+        padding: '2px 8px',
+        borderRadius: '4px',
+      };
+    }
+    return {};
+  })();
 
   return (
     <div className="terminal-pane">
       <div className="terminal-header">
-        <span style={{ color: contextColor }}>
+        <span style={labelStyle}>
           {activeSession ? `Context: ${activeSession.clusterContext.id}` : 'No context selected'}
         </span>
       </div>

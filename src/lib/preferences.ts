@@ -54,6 +54,7 @@ export const PreferencesSchema = z.object({
         .default({}),
       fontSize: z.number().default(12),
       fontFamily: z.string().default('Menlo, Monaco, "Courier New", monospace'),
+      contextLabelColor: z.enum(['tag-text', 'tag-background', 'theme']).default('tag-text'),
     })
     .default({}),
   // タブ履歴設定
@@ -100,6 +101,7 @@ export const defaultPreferences: Preferences = {
     },
     fontSize: 12,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    contextLabelColor: 'tag-text',
   },
   tabHistory: {
     maxSize: 100,
