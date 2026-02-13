@@ -19,7 +19,10 @@ fn fix_shell_env() {
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
         // -ilc: launch as interactive + login shell to source .zshrc/.zprofile etc.
         if let Ok(output) = Command::new(&shell)
-            .args(["-ilc", "echo \"__PATH=${PATH}\\n__KUBECONFIG=${KUBECONFIG}\""])
+            .args([
+                "-ilc",
+                "echo \"__PATH=${PATH}\\n__KUBECONFIG=${KUBECONFIG}\"",
+            ])
             .stderr(std::process::Stdio::null())
             .output()
         {
