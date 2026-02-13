@@ -130,6 +130,8 @@ pub async fn create_terminal_session(
         cmd.arg("emacs");
     }
 
+    cmd.env("TERM", "xterm-256color");
+
     // Set KUBECONFIG environment variable if temp kubeconfig was created
     if let Some(ref kubeconfig_path) = temp_kubeconfig {
         cmd.env("KUBECONFIG", kubeconfig_path.to_string_lossy().as_ref());
