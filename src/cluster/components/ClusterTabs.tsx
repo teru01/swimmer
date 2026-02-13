@@ -48,15 +48,23 @@ function ClusterTabs({
 
   const closeMenu = () => setContextMenu(undefined);
 
+  useEffect(() => {
+    const currentTabIds = new Set(tabs.map(t => t.id));
+    setClosingTabs(prev => {
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (currentTabIds.has(id)) {
+          next.add(id);
+        }
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [tabs]);
+
   const handleCloseTab = (tab: ClusterContextTab) => {
     setClosingTabs(prev => new Set(prev).add(tab.id));
     setTimeout(() => {
       onCloseCluster(tab);
-      setClosingTabs(prev => {
-        const next = new Set(prev);
-        next.delete(tab.id);
-        return next;
-      });
     }, TAB_CLOSE_ANIMATION_MS);
   };
 

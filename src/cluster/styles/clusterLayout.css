@@ -108,19 +108,28 @@
 }
 
 .cluster-tab.closing {
-  animation: slideOutAndFade 0.05s ease-out forwards;
+  animation: slideOutAndFade 0.2s ease-in-out forwards;
   pointer-events: none;
+  overflow: hidden;
 }
 
 @keyframes slideOutAndFade {
-  from {
+  0% {
     opacity: 1;
-    transform: translateX(0);
     max-width: 200px;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-right: 2px;
   }
-  to {
+  50% {
     opacity: 0;
-    transform: translateX(-20px);
+    max-width: 200px;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-right: 2px;
+  }
+  100% {
+    opacity: 0;
     max-width: 0;
     padding-left: 0;
     padding-right: 0;

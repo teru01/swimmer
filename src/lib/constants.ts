@@ -5,7 +5,7 @@ export const RESOURCE_DETAIL_POLL_INTERVAL_MS = 5000;
 export const CLUSTER_OVERVIEW_REFRESH_INTERVAL_MS = 30000;
 
 /** Duration of tab close animation (ms) */
-export const TAB_CLOSE_ANIMATION_MS = 60;
+export const TAB_CLOSE_ANIMATION_MS = 200;
 
 /** Duration to show "Copied!" feedback after copy action (ms) */
 export const COPY_FEEDBACK_DURATION_MS = 1500;
