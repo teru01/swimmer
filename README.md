@@ -8,6 +8,8 @@
   A user-friendly Kubernetes GUI client built for the multi-cluster era.
 </p>
 
+<video src="https://github.com/user-attachments/assets/2948493f-1f50-4331-a5f7-9d2321358e83" autoplay loop muted playsinline width="100%"></video>
+
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
