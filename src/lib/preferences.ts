@@ -22,7 +22,7 @@ export const PreferencesSchema = z.object({
     .object({
       kubeconfigPath: z.string().default(''),
       resourceFetchTimeoutSec: z.number().default(10),
-      theme: z.enum(['dark', 'light', 'system']).default('dark'),
+      theme: z.enum(['dark', 'light', 'system']).default('light'),
     })
     .default({}),
   // Terminal設定
@@ -74,7 +74,7 @@ export const defaultPreferences: Preferences = {
   general: {
     kubeconfigPath: '',
     resourceFetchTimeoutSec: 10,
-    theme: 'dark',
+    theme: 'light',
   },
   terminal: {
     shellPath: defaultShellPath,
