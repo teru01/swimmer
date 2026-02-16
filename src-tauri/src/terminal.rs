@@ -87,7 +87,7 @@ pub async fn create_terminal_session(
     shell_path: String,
     context_name: Option<String>,
 ) -> Result<String, Error> {
-    // Validate shell path exists
+    // Validate shell path exists and resolve relative paths via PATH
     let resolved_shell_path = {
         let path = std::path::Path::new(&shell_path);
         if path.is_absolute() {
@@ -152,10 +152,12 @@ pub async fn create_terminal_session(
     if let Some(ref kubeconfig_path) = temp_kubeconfig {
         cmd.env("KUBECONFIG", kubeconfig_path.to_string_lossy().as_ref());
     }
+    log::debug!("Spawning shell: {}", resolved_shell_path);
     let child = pty_pair
         .slave
         .spawn_command(cmd)
         .map_err(|e| Error::Terminal(format!("Failed to spawn shell: {}", e)))?;
+    log::debug!("Shell spawned successfully");
 
     let reader = pty_pair
         .master
@@ -182,17 +184,27 @@ pub async fn create_terminal_session(
     let app_handle_clone = app_handle.clone();
 
     let _read_task = tokio::task::spawn_blocking(move || {
+        log::debug!(
+            "Terminal reader task started for session {}",
+            session_id_clone
+        );
         let mut buffer = [0u8; 4096];
         loop {
             let read_result = {
                 match reader_clone.lock() {
                     Ok(mut reader) => reader.read(&mut buffer),
-                    Err(_) => break,
+                    Err(e) => {
+                        log::error!("Terminal reader lock error: {}", e);
+                        break;
+                    }
                 }
             };
 
             match read_result {
-                Ok(0) => break, // EOF
+                Ok(0) => {
+                    log::debug!("Terminal reader EOF for session {}", session_id_clone);
+                    break;
+                }
                 Ok(n) => {
                     let output = String::from_utf8_lossy(&buffer[..n]).to_string();
                     let _ = app_handle_clone.emit(
@@ -203,9 +215,20 @@ pub async fn create_terminal_session(
                         }),
                     );
                 }
-                Err(_) => break,
+                Err(e) => {
+                    log::error!(
+                        "Terminal reader error for session {}: {}",
+                        session_id_clone,
+                        e
+                    );
+                    break;
+                }
             }
         }
+        log::debug!(
+            "Terminal reader task ended for session {}",
+            session_id_clone
+        );
     });
 
     sessions
