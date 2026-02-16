@@ -88,12 +88,28 @@ pub async fn create_terminal_session(
     context_name: Option<String>,
 ) -> Result<String, Error> {
     // Validate shell path exists
-    if !std::path::Path::new(&shell_path).exists() {
-        return Err(Error::Terminal(format!(
-            "Shell not found: {}. Please check the path in preferences.",
-            shell_path
-        )));
-    }
+    let resolved_shell_path = {
+        let path = std::path::Path::new(&shell_path);
+        if path.is_absolute() {
+            if !path.exists() {
+                return Err(Error::Terminal(format!(
+                    "Shell not found: {}. Please check the path in preferences.",
+                    shell_path
+                )));
+            }
+            shell_path.clone()
+        } else {
+            which::which(&shell_path)
+                .map_err(|_| {
+                    Error::Terminal(format!(
+                        "Shell not found: {}. Please check the path in preferences.",
+                        shell_path
+                    ))
+                })?
+                .to_string_lossy()
+                .to_string()
+        }
+    };
 
     let session_id = Uuid::new_v4().to_string();
 
@@ -118,10 +134,10 @@ pub async fn create_terminal_session(
         })
         .map_err(|e| Error::Terminal(format!("Failed to create PTY: {}", e)))?;
 
-    let mut cmd = CommandBuilder::new(shell_path.clone());
+    let mut cmd = CommandBuilder::new(resolved_shell_path.clone());
     // Enable emacs mode via shell option if supported
     // zsh and bash support -o emacs option
-    let shell_name = std::path::Path::new(&shell_path)
+    let shell_name = std::path::Path::new(&resolved_shell_path)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("");
