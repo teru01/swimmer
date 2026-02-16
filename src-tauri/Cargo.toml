@@ -1,6 +1,6 @@
 [package]
 name = "swimmer"
-version = "0.1.5"
+version = "0.1.6"
 description = "A user-friendly Kubernetes GUI client for multi-cluster management"
 authors = ["teru01"]
 edition = "2021"
