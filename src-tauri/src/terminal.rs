@@ -157,6 +157,10 @@ pub async fn create_terminal_session(
         .slave
         .spawn_command(cmd)
         .map_err(|e| Error::Terminal(format!("Failed to spawn shell: {}", e)))?;
+    // Drop the slave PTY in the parent process after spawning.
+    // On Windows (ConPTY), keeping the slave open causes the master reader
+    // to receive EOF immediately.
+    drop(pty_pair.slave);
     log::debug!("Shell spawned successfully");
 
     let reader = pty_pair
@@ -168,6 +172,12 @@ pub async fn create_terminal_session(
         .master
         .take_writer()
         .map_err(|e| Error::Terminal(format!("Failed to take writer: {}", e)))?;
+
+    // Move master out of pty_pair to keep the ConPTY alive.
+    // On Windows, dropping the master closes the ConPTY (ClosePseudoConsole),
+    // which invalidates all associated pipe handles including the cloned reader.
+    // On Unix this is harmless since dup()'d fds are independent.
+    let master = pty_pair.master;
 
     let writer = Arc::new(Mutex::new(Box::new(writer) as Box<dyn Write + Send>));
 
@@ -184,6 +194,10 @@ pub async fn create_terminal_session(
     let app_handle_clone = app_handle.clone();
 
     let _read_task = tokio::task::spawn_blocking(move || {
+        // Hold master to keep the PTY (ConPTY on Windows) alive
+        // for the entire duration of the reader task.
+        let _master_guard = master;
+
         log::debug!(
             "Terminal reader task started for session {}",
             session_id_clone
