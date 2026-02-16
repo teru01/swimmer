@@ -39,7 +39,7 @@ const getContextIcon = (provider?: string): string | undefined => {
   switch (provider) {
     case 'GKE':
       return gkeIcon;
-    case 'EKS':
+    case 'AWS':
       return eksIcon;
     default:
       return undefined;
