@@ -186,15 +186,28 @@ pub fn run() {
 
             // Create menu bar
             let menu = MenuBuilder::new(app)
-                .items(&[&SubmenuBuilder::new(app, "swimmer")
-                    .items(&[
-                        &MenuItemBuilder::with_id("preferences", "Preferences...")
-                            .accelerator("CmdOrCtrl+,")
-                            .build(app)?,
-                        &PredefinedMenuItem::separator(app)?,
-                        &PredefinedMenuItem::quit(app, Some("Quit"))?,
-                    ])
-                    .build()?])
+                .items(&[
+                    &SubmenuBuilder::new(app, "swimmer")
+                        .items(&[
+                            &MenuItemBuilder::with_id("preferences", "Preferences...")
+                                .accelerator("CmdOrCtrl+,")
+                                .build(app)?,
+                            &PredefinedMenuItem::separator(app)?,
+                            &PredefinedMenuItem::quit(app, Some("Quit"))?,
+                        ])
+                        .build()?,
+                    &SubmenuBuilder::new(app, "Edit")
+                        .items(&[
+                            &PredefinedMenuItem::undo(app, None)?,
+                            &PredefinedMenuItem::redo(app, None)?,
+                            &PredefinedMenuItem::separator(app)?,
+                            &PredefinedMenuItem::cut(app, None)?,
+                            &PredefinedMenuItem::copy(app, None)?,
+                            &PredefinedMenuItem::paste(app, None)?,
+                            &PredefinedMenuItem::select_all(app, None)?,
+                        ])
+                        .build()?,
+                ])
                 .build()?;
 
             app.set_menu(menu)?;
