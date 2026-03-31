@@ -182,20 +182,6 @@ export const createTerminalSession = async (
     invoke('write_to_terminal', { sessionId, data }).catch(console.error);
   });
 
-  // Handle paste (Ctrl+V / Cmd+V)
-  term.attachCustomKeyEventHandler(e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'v' && e.type === 'keydown') {
-      navigator.clipboard
-        .readText()
-        .then(text => {
-          term.paste(text);
-        })
-        .catch(console.error);
-      return false;
-    }
-    return true;
-  });
-
   // Setup output listener
   const unlisten = await listen<{ session_id: string; data: string }>('terminal-output', event => {
     const { session_id, data } = event.payload;

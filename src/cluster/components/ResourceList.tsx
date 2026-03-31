@@ -564,8 +564,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const getSingularKind = (kind: string): string => {
     if (kind.startsWith('cr:')) {
-      const parts = kind.slice(3).split('/');
-      return parts[2] || kind;
+      return kind;
     }
     const mapping: Record<string, string> = {
       Pods: 'Pod',
