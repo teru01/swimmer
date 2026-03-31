@@ -860,29 +860,25 @@ pub async fn get_resource_detail(
         _ => serde_json::json!({}),
     };
 
-    let event_supported_kinds = [
-        "Pod",
-        "Deployment",
-        "ReplicaSet",
-        "StatefulSet",
-        "DaemonSet",
-        "Service",
-        "Job",
-        "CronJob",
-        "ConfigMap",
-        "Secret",
-        "PersistentVolume",
-        "PersistentVolumeClaim",
-    ];
+    // Determine the actual kind name for event filtering.
+    // For custom resources, extract it from the resource's "kind" field.
+    let event_kind = if kind.starts_with("cr:") {
+        resource
+            .get("kind")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+    } else {
+        Some(kind.clone())
+    };
 
-    let events: Vec<Value> = if event_supported_kinds.contains(&kind.as_str()) {
+    let events: Vec<Value> = if let Some(ref event_kind) = event_kind {
         let ns = namespace_for_events.as_deref();
         let all_events = client.list_events(ns).await?;
         let filtered_events: Vec<Event> = all_events
             .into_iter()
             .filter(|event| {
                 let involved_object = &event.involved_object;
-                involved_object.kind.as_deref() == Some(&kind)
+                involved_object.kind.as_deref() == Some(event_kind)
                     && involved_object.name.as_deref() == Some(&name)
                     && (involved_object.namespace.as_deref() == ns
                         || (involved_object.namespace.is_none() && ns.is_none()))
