@@ -63,10 +63,20 @@ export interface KubeResource {
     numberReady?: number;
     numberAvailable?: number;
     updatedNumberScheduled?: number;
-    active?: number;
+    active?:
+      | number
+      | {
+          apiVersion: string;
+          kind: string;
+          name: string;
+          namespace: string;
+          resourceVersion: string;
+          uid: string;
+        }[];
     succeeded?: number;
     failed?: number;
     completionTime?: string;
+    lastScheduleTime?: string;
     loadBalancer?: {
       ingress?: { hostname?: string; ip?: string }[];
     };
@@ -870,9 +880,13 @@ const ResourceList: React.FC<ResourceListProps> = ({
       case 'Suspend':
         return resource.spec?.suspend ? 'True' : 'False';
       case 'Active':
-        return resource.status?.active ?? 0;
+        return Array.isArray(resource.status?.active)
+          ? resource.status.active.length
+          : (resource.status?.active ?? 0);
       case 'Last Schedule':
-        return resource.spec?.lastScheduleTime ? formatAge(resource.spec.lastScheduleTime) : '-';
+        return resource.status?.lastScheduleTime
+          ? formatAge(resource.status.lastScheduleTime)
+          : '-';
       case 'Type':
         if (resource.kind === 'Service') {
           return resource.spec?.type || 'ClusterIP';
