@@ -170,6 +170,7 @@ pub fn run() {
             get_kubeconfig_path,
             terminal::create_terminal_session,
             terminal::write_to_terminal,
+            terminal::resize_terminal,
             terminal::close_terminal_session,
             k8s_api::list_resources,
             k8s_api::get_resource_detail,

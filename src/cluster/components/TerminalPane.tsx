@@ -19,7 +19,6 @@ interface TerminalPaneProps {
 interface TerminalInstanceProps {
   session: TerminalSession;
   isVisible: boolean;
-  onResize?: () => void;
 }
 
 export interface TerminalSession {
@@ -30,6 +29,38 @@ export interface TerminalSession {
   tabId: string;
   mounted: boolean;
   clusterContext: ClusterContext;
+}
+
+/**
+ * Fit an opened xterm instance to its container.
+ * Skips when the container has no layout size yet, which would otherwise
+ * leave the terminal stuck at the default 80x24 geometry.
+ */
+function fitTerminal(session: TerminalSession, container?: HTMLElement | null): void {
+  if (container) {
+    const { width, height } = container.getBoundingClientRect();
+    if (width === 0 || height === 0) {
+      return;
+    }
+  }
+
+  try {
+    session.fitAddon.fit();
+  } catch (error) {
+    console.error('Failed to fit terminal:', error);
+  }
+}
+
+/**
+ * Run fit after two animation frames so flex/panel layout can settle first.
+ * Needed when a split pane is created and the first frame still has 0 size.
+ */
+function scheduleFit(session: TerminalSession, container: HTMLElement | null): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fitTerminal(session, container);
+    });
+  });
 }
 
 /**
@@ -44,23 +75,32 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
 
     debug(`TerminalInstance: Mounting terminal for tab ${session.tabId}`);
     session.terminal.open(terminalRef.current);
-    session.fitAddon.fit();
     session.mounted = true;
+    scheduleFit(session, terminalRef.current);
   }, [session, isVisible]);
 
-  // Fit terminal when visibility changes
+  // Fit this instance to its own pane so split panels do not share one size
   useEffect(() => {
-    if (isVisible && session.mounted) {
-      session.fitAddon.fit();
-    }
+    if (!isVisible || !terminalRef.current) return;
+
+    const container = terminalRef.current;
+    const fit = () => fitTerminal(session, terminalRef.current);
+    const resizeObserver = new ResizeObserver(fit);
+    resizeObserver.observe(container);
+    window.addEventListener('webview-zoom-changed', fit);
+    scheduleFit(session, container);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('webview-zoom-changed', fit);
+    };
   }, [isVisible, session]);
 
   return (
     <div
       ref={terminalRef}
+      className="terminal-instance"
       style={{
-        width: '100%',
-        height: '100%',
         display: isVisible ? 'block' : 'none',
       }}
     />
@@ -71,31 +111,8 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
  * Terminal pane component with real terminal functionality
  */
 function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const { preferences } = usePreferences();
   const [tagColor, setTagColor] = useState<string | undefined>(undefined);
-
-  // Handle terminal pane resize
-  useEffect(() => {
-    if (!containerRef.current || !activeTabId) return;
-
-    const fitActiveTerminal = () => {
-      const visibleSession = allTerminalSessions.get(activeTabId);
-      if (visibleSession) {
-        visibleSession.fitAddon.fit();
-      }
-    };
-
-    const resizeObserver = new ResizeObserver(fitActiveTerminal);
-    resizeObserver.observe(containerRef.current);
-
-    window.addEventListener('webview-zoom-changed', fitActiveTerminal);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('webview-zoom-changed', fitActiveTerminal);
-    };
-  }, [activeTabId, allTerminalSessions]);
 
   useEffect(() => {
     const activeSession = activeTabId ? allTerminalSessions.get(activeTabId) : undefined;
@@ -137,7 +154,7 @@ function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
           {activeSession ? `Context: ${activeSession.clusterContext.id}` : 'No context selected'}
         </span>
       </div>
-      <div className="terminal-container" ref={containerRef}>
+      <div className="terminal-container">
         {Array.from(allTerminalSessions.entries()).map(([tabId, session]) => {
           const isVisible = tabId === activeTabId;
           return <TerminalInstance key={tabId} session={session} isVisible={isVisible} />;
@@ -180,6 +197,10 @@ export const createTerminalSession = async (
   // Handle terminal input
   term.onData(data => {
     invoke('write_to_terminal', { sessionId, data }).catch(console.error);
+  });
+
+  term.onResize(({ cols, rows }) => {
+    invoke('resize_terminal', { sessionId, cols, rows }).catch(console.error);
   });
 
   // Setup output listener

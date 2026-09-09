@@ -1,4 +1,4 @@
-use portable_pty::{native_pty_system, Child, CommandBuilder, PtySize};
+use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};
@@ -13,6 +13,7 @@ pub struct TerminalSession {
     pub writer: Arc<Mutex<Box<dyn Write + Send>>>,
     pub reader: Arc<Mutex<Box<dyn Read + Send>>>,
     pub child: Arc<Mutex<Box<dyn Child + Send + Sync>>>,
+    pub master: Arc<Mutex<Box<dyn MasterPty + Send>>>,
     pub temp_kubeconfig: Option<PathBuf>,
 }
 
@@ -173,11 +174,11 @@ pub async fn create_terminal_session(
         .take_writer()
         .map_err(|e| Error::Terminal(format!("Failed to take writer: {}", e)))?;
 
-    // Move master out of pty_pair to keep the ConPTY alive.
-    // On Windows, dropping the master closes the ConPTY (ClosePseudoConsole),
-    // which invalidates all associated pipe handles including the cloned reader.
-    // On Unix this is harmless since dup()'d fds are independent.
-    let master = pty_pair.master;
+    // Keep master in an Arc so we can resize the PTY while the reader task
+    // also holds it. On Windows, dropping the master closes the ConPTY
+    // (ClosePseudoConsole), which invalidates all associated pipe handles.
+    let master = Arc::new(Mutex::new(pty_pair.master));
+    let master_for_reader = master.clone();
 
     let writer = Arc::new(Mutex::new(Box::new(writer) as Box<dyn Write + Send>));
 
@@ -185,6 +186,7 @@ pub async fn create_terminal_session(
         writer,
         reader: Arc::new(Mutex::new(reader)),
         child: Arc::new(Mutex::new(child)),
+        master,
         temp_kubeconfig,
     };
 
@@ -196,7 +198,7 @@ pub async fn create_terminal_session(
     let _read_task = tokio::task::spawn_blocking(move || {
         // Hold master to keep the PTY (ConPTY on Windows) alive
         // for the entire duration of the reader task.
-        let _master_guard = master;
+        let _master_guard = master_for_reader;
 
         log::debug!(
             "Terminal reader task started for session {}",
@@ -283,6 +285,39 @@ pub async fn write_to_terminal(
         writer
             .flush()
             .map_err(|e| Error::Terminal(format!("Failed to flush terminal: {}", e)))?;
+    } else {
+        return Err(Error::Terminal("Session not found".to_string()));
+    }
+    Ok(())
+}
+
+/// Resize the PTY so the shell's column/row count matches the xterm viewport.
+#[tauri::command]
+pub async fn resize_terminal(
+    sessions: State<'_, TerminalSessions>,
+    session_id: String,
+    cols: u16,
+    rows: u16,
+) -> Result<(), Error> {
+    if cols == 0 || rows == 0 {
+        return Err(Error::Terminal(
+            "Terminal size must be greater than zero".to_string(),
+        ));
+    }
+
+    let sessions = sessions.lock().map_err(|e| Error::Lock(e.to_string()))?;
+    if let Some(session) = sessions.get(&session_id) {
+        session
+            .master
+            .lock()
+            .map_err(|e| Error::Lock(e.to_string()))?
+            .resize(PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
+            .map_err(|e| Error::Terminal(format!("Failed to resize terminal: {}", e)))?;
     } else {
         return Err(Error::Terminal("Session not found".to_string()));
     }

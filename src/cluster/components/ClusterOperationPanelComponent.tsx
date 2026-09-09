@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import ClusterTabs from './ClusterTabs';
 import ClusterInfoPane, { ClusterViewState } from './ClusterInfoPane';
@@ -18,6 +19,25 @@ interface ClusterOperationPanelComponentProps {
   onViewStateChange: (tabId: string, state: ClusterViewState) => void;
   onPanelClick?: (panelId: string) => void;
   onNavigateToResourceInNewPanel?: (pod: KubeResource, contextId: string) => void;
+}
+
+/**
+ * Collect terminal sessions that belong to this panel's tabs.
+ * Each split pane must own its own xterm instances so FitAddon measures
+ * that pane's width instead of a sibling pane's.
+ */
+function collectPanelTerminalSessions(
+  tabs: ClusterContextTab[],
+  allTerminalSessions: Map<string, TerminalSession>
+): Map<string, TerminalSession> {
+  const sessions = new Map<string, TerminalSession>();
+  for (const tab of tabs) {
+    const session = allTerminalSessions.get(tab.id);
+    if (session) {
+      sessions.set(tab.id, session);
+    }
+  }
+  return sessions;
 }
 
 /**
@@ -44,6 +64,11 @@ function ClusterOperationPanelComponent({
     tabContextMap.set(tab.id, tab.clusterContext.id);
   });
 
+  const panelTerminalSessions = useMemo(
+    () => collectPanelTerminalSessions(panel.tabs, allTerminalSessions),
+    [panel.tabs, allTerminalSessions]
+  );
+
   const handlePanelClick = () => {
     if (activePanelId !== panel.id && onPanelClick) {
       onPanelClick(panel.id);
@@ -51,11 +76,7 @@ function ClusterOperationPanelComponent({
   };
 
   return (
-    <div
-      className="cluster-operation-panel"
-      style={{ width: '100%', height: '100%' }}
-      onClick={handlePanelClick}
-    >
+    <div className="cluster-operation-panel" onClick={handlePanelClick}>
       <div className="center-area">
         {/* Cluster tabs */}
         <div className="center-tabs">
@@ -91,7 +112,7 @@ function ClusterOperationPanelComponent({
 
           {/* Terminal */}
           <Panel defaultSize={30} minSize={10}>
-            <TerminalPane activeTabId={activeTab?.id} allTerminalSessions={allTerminalSessions} />
+            <TerminalPane activeTabId={activeTab?.id} allTerminalSessions={panelTerminalSessions} />
           </Panel>
         </PanelGroup>
       </div>
