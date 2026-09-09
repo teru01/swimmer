@@ -52,6 +52,18 @@ function fitTerminal(session: TerminalSession, container?: HTMLElement | null): 
 }
 
 /**
+ * Run fit after two animation frames so flex/panel layout can settle first.
+ * Needed when a split pane is created and the first frame still has 0 size.
+ */
+function scheduleFit(session: TerminalSession, container: HTMLElement | null): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fitTerminal(session, container);
+    });
+  });
+}
+
+/**
  * Individual terminal instance component
  */
 function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
@@ -64,18 +76,24 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
     debug(`TerminalInstance: Mounting terminal for tab ${session.tabId}`);
     session.terminal.open(terminalRef.current);
     session.mounted = true;
-    requestAnimationFrame(() => {
-      fitTerminal(session, terminalRef.current);
-    });
+    scheduleFit(session, terminalRef.current);
   }, [session, isVisible]);
 
-  // Fit terminal when visibility changes
+  // Fit this instance to its own pane so split panels do not share one size
   useEffect(() => {
-    if (isVisible && session.mounted) {
-      requestAnimationFrame(() => {
-        fitTerminal(session, terminalRef.current);
-      });
-    }
+    if (!isVisible || !terminalRef.current) return;
+
+    const container = terminalRef.current;
+    const fit = () => fitTerminal(session, terminalRef.current);
+    const resizeObserver = new ResizeObserver(fit);
+    resizeObserver.observe(container);
+    window.addEventListener('webview-zoom-changed', fit);
+    scheduleFit(session, container);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('webview-zoom-changed', fit);
+    };
   }, [isVisible, session]);
 
   return (
@@ -93,31 +111,8 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
  * Terminal pane component with real terminal functionality
  */
 function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const { preferences } = usePreferences();
   const [tagColor, setTagColor] = useState<string | undefined>(undefined);
-
-  // Handle terminal pane resize
-  useEffect(() => {
-    if (!containerRef.current || !activeTabId) return;
-
-    const fitActiveTerminal = () => {
-      const visibleSession = allTerminalSessions.get(activeTabId);
-      if (visibleSession) {
-        fitTerminal(visibleSession, containerRef.current);
-      }
-    };
-
-    const resizeObserver = new ResizeObserver(fitActiveTerminal);
-    resizeObserver.observe(containerRef.current);
-
-    window.addEventListener('webview-zoom-changed', fitActiveTerminal);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('webview-zoom-changed', fitActiveTerminal);
-    };
-  }, [activeTabId, allTerminalSessions]);
 
   useEffect(() => {
     const activeSession = activeTabId ? allTerminalSessions.get(activeTabId) : undefined;
@@ -159,7 +154,7 @@ function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
           {activeSession ? `Context: ${activeSession.clusterContext.id}` : 'No context selected'}
         </span>
       </div>
-      <div className="terminal-container" ref={containerRef}>
+      <div className="terminal-container">
         {Array.from(allTerminalSessions.entries()).map(([tabId, session]) => {
           const isVisible = tabId === activeTabId;
           return <TerminalInstance key={tabId} session={session} isVisible={isVisible} />;
