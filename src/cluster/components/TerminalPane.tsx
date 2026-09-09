@@ -19,7 +19,6 @@ interface TerminalPaneProps {
 interface TerminalInstanceProps {
   session: TerminalSession;
   isVisible: boolean;
-  onResize?: () => void;
 }
 
 export interface TerminalSession {
@@ -30,6 +29,26 @@ export interface TerminalSession {
   tabId: string;
   mounted: boolean;
   clusterContext: ClusterContext;
+}
+
+/**
+ * Fit an opened xterm instance to its container.
+ * Skips when the container has no layout size yet, which would otherwise
+ * leave the terminal stuck at the default 80x24 geometry.
+ */
+function fitTerminal(session: TerminalSession, container?: HTMLElement | null): void {
+  if (container) {
+    const { width, height } = container.getBoundingClientRect();
+    if (width === 0 || height === 0) {
+      return;
+    }
+  }
+
+  try {
+    session.fitAddon.fit();
+  } catch (error) {
+    console.error('Failed to fit terminal:', error);
+  }
 }
 
 /**
@@ -44,23 +63,26 @@ function TerminalInstance({ session, isVisible }: TerminalInstanceProps) {
 
     debug(`TerminalInstance: Mounting terminal for tab ${session.tabId}`);
     session.terminal.open(terminalRef.current);
-    session.fitAddon.fit();
     session.mounted = true;
+    requestAnimationFrame(() => {
+      fitTerminal(session, terminalRef.current);
+    });
   }, [session, isVisible]);
 
   // Fit terminal when visibility changes
   useEffect(() => {
     if (isVisible && session.mounted) {
-      session.fitAddon.fit();
+      requestAnimationFrame(() => {
+        fitTerminal(session, terminalRef.current);
+      });
     }
   }, [isVisible, session]);
 
   return (
     <div
       ref={terminalRef}
+      className="terminal-instance"
       style={{
-        width: '100%',
-        height: '100%',
         display: isVisible ? 'block' : 'none',
       }}
     />
@@ -82,7 +104,7 @@ function TerminalPane({ activeTabId, allTerminalSessions }: TerminalPaneProps) {
     const fitActiveTerminal = () => {
       const visibleSession = allTerminalSessions.get(activeTabId);
       if (visibleSession) {
-        visibleSession.fitAddon.fit();
+        fitTerminal(visibleSession, containerRef.current);
       }
     };
 
@@ -180,6 +202,10 @@ export const createTerminalSession = async (
   // Handle terminal input
   term.onData(data => {
     invoke('write_to_terminal', { sessionId, data }).catch(console.error);
+  });
+
+  term.onResize(({ cols, rows }) => {
+    invoke('resize_terminal', { sessionId, cols, rows }).catch(console.error);
   });
 
   // Setup output listener
