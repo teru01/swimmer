@@ -87,35 +87,27 @@
   min-width: 0;
 }
 
-.cr-reload-button {
+.group-header .refresh-button {
   margin-left: 4px;
   flex-shrink: 0;
   background: none;
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 13px;
-  padding: 0 2px;
-  line-height: 1;
-  border-radius: 3px;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
-.cr-reload-button:hover:not(:disabled) {
+.group-header .refresh-button:hover {
   color: var(--text-primary);
-  background-color: var(--bg-primary);
+  background-color: var(--bg-tertiary);
 }
 
-.cr-reload-button:focus-visible {
+.group-header .refresh-button:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: -1px;
-}
-
-.cr-reload-button.loading {
-  animation: spin 0.8s linear infinite;
-}
-
-.cr-reload-button:disabled {
-  cursor: default;
 }
 
 .expand-icon {

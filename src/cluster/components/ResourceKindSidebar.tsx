@@ -167,10 +167,9 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
                   </div>
                   <button
                     type="button"
-                    className={`cr-reload-button${crdLoading ? ' loading' : ''}`}
-                    title="Reload custom resources"
-                    aria-label="Reload custom resources"
-                    disabled={crdLoading}
+                    className="refresh-button"
+                    title="Refresh"
+                    aria-label="Refresh"
                     onClick={handleReloadCrdGroups}
                   >
                     ↻
