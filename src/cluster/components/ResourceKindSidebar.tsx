@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './ClusterInfoPane.css';
 import { commands, CrdGroup } from '../../api/commands';
 
@@ -71,6 +71,7 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
 }) => {
   const [crdGroups, setCrdGroups] = useState<CrdGroup[]>([]);
   const [crdLoading, setCrdLoading] = useState(false);
+  const loadRequestRef = useRef(0);
 
   const toggleGroup = (groupName: string) => {
     const newExpanded = new Set(expandedGroups);
@@ -82,36 +83,48 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
     onExpandedGroupsChange(newExpanded);
   };
 
+  /**
+   * Fetch CRD groups for the current cluster and replace the sidebar list.
+   * A newer call supersedes any in-flight request.
+   * @returns Resolves when the latest request finishes
+   */
+  const fetchCrdGroups = useCallback(async () => {
+    const requestId = ++loadRequestRef.current;
+    setCrdLoading(true);
+    try {
+      const groups = await commands.listCrdGroups(contextId);
+      if (loadRequestRef.current !== requestId) return;
+      setCrdGroups(groups);
+    } catch (err) {
+      if (loadRequestRef.current !== requestId) return;
+      console.error('Failed to fetch CRD groups:', err);
+    } finally {
+      if (loadRequestRef.current === requestId) {
+        setCrdLoading(false);
+      }
+    }
+  }, [contextId]);
+
+  /**
+   * Reload custom resource definitions without toggling the group.
+   * @param e Click event from the reload button
+   */
+  const handleReloadCrdGroups = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    void fetchCrdGroups();
+  };
+
   useEffect(() => {
+    loadRequestRef.current += 1;
     setCrdGroups([]);
+    setCrdLoading(false);
   }, [contextId]);
 
   useEffect(() => {
     if (!expandedGroups.has('Custom Resources')) return;
     if (crdGroups.length > 0) return;
-
-    let cancelled = false;
-    const load = async () => {
-      setCrdLoading(true);
-      try {
-        const groups = await commands.listCrdGroups(contextId);
-        if (!cancelled) {
-          setCrdGroups(groups);
-        }
-      } catch (err) {
-        console.error('Failed to fetch CRD groups:', err);
-      } finally {
-        if (!cancelled) {
-          setCrdLoading(false);
-        }
-      }
-    };
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [expandedGroups, contextId, crdGroups.length]);
+    void fetchCrdGroups();
+  }, [expandedGroups, contextId, crdGroups.length, fetchCrdGroups]);
 
   return (
     <nav className="resource-kind-sidebar" aria-label="Resource kinds">
@@ -140,20 +153,32 @@ const ResourceKindSidebar: React.FC<ResourceKindSidebarProps> = ({
           if (groupName === 'Custom Resources') {
             return (
               <div key={groupName} className="resource-group">
-                <div
-                  className={`group-header ${isExpanded ? 'expanded' : ''}`}
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={isExpanded}
-                  onClick={() => toggleGroup(groupName)}
-                  onKeyDown={e => handleKeyDownActivate(e, () => toggleGroup(groupName))}
-                >
-                  <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
-                  {groupName}
+                <div className={`group-header ${isExpanded ? 'expanded' : ''}`}>
+                  <div
+                    className="group-header-main"
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    onClick={() => toggleGroup(groupName)}
+                    onKeyDown={e => handleKeyDownActivate(e, () => toggleGroup(groupName))}
+                  >
+                    <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
+                    {groupName}
+                  </div>
+                  <button
+                    type="button"
+                    className={`cr-reload-button${crdLoading ? ' loading' : ''}`}
+                    title="Reload custom resources"
+                    aria-label="Reload custom resources"
+                    disabled={crdLoading}
+                    onClick={handleReloadCrdGroups}
+                  >
+                    ↻
+                  </button>
                 </div>
                 {isExpanded && (
                   <div className="kind-list">
-                    {crdLoading && (
+                    {crdLoading && crdGroups.length === 0 && (
                       <div className="cr-loading">
                         <div className="cr-loading-spinner"></div>
                         <span>Loading...</span>
